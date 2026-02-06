@@ -16,6 +16,7 @@ import { StarRating } from '../display/StarRating';
 import { CurrencyDisplay } from '../display/CurrencyDisplay';
 import { StringDisplay } from '../display/StringDisplay';
 import { Avatar } from '../display/Avatar';
+import { evaluateDisplayRules, styleForRule } from '../../utils/displayRuleEvaluator';
 import { ArrowUp, ArrowDown } from 'lucide-react';
 import { cn } from '../../utils/cn';
 
@@ -82,7 +83,8 @@ export function DataTable({ columns, fields, data, entityRoute }: DataTableProps
             return (
               <button
                 onClick={() => navigate(`${entityRoute}/${info.row.original.id}`)}
-                className="text-blue-600 hover:text-blue-800 hover:underline font-medium text-left"
+                className="hover:underline font-medium text-left"
+                style={{ color: 'var(--color-primary)' }}
               >
                 {String(value ?? '')}
               </button>
@@ -94,7 +96,17 @@ export function DataTable({ columns, fields, data, entityRoute }: DataTableProps
             return <StringDisplay value={info.row.original[col.display_field] ?? value} />;
           }
 
-          return <StringDisplay value={value} sensitive={field?.sensitive} mask_pattern={field?.mask_pattern} />;
+          // Apply display rule styling if defined
+          const ruleResult = evaluateDisplayRules(field?.display_rules, value);
+          if (ruleResult) {
+            return (
+              <span className={styleForRule(ruleResult.style)} title={ruleResult.tooltip}>
+                {ruleResult.label || <StringDisplay value={value} sensitive={field?.sensitive} mask_pattern={field?.mask_pattern} />}
+              </span>
+            );
+          }
+
+          return <StringDisplay value={value} sensitive={field?.sensitive} mask_pattern={field?.mask_pattern} input_type={field?.input_type} />;
         },
         enableSorting: field?.sortable ?? false,
         size: typeof col.width === 'number' ? col.width : undefined,

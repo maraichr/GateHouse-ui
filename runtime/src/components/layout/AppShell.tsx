@@ -1,16 +1,19 @@
 import { useState, ReactNode } from 'react';
-import { SidebarConfig } from '../../types';
+import { SidebarConfig, HeaderConfig } from '../../types';
 import { cn } from '../../utils/cn';
+import { Header } from './Header';
 
 interface AppShellProps {
   sidebar?: ReactNode;
   children?: ReactNode;
   app_name?: string;
-  shell?: { sidebar?: SidebarConfig };
+  shell?: { sidebar?: SidebarConfig; header?: HeaderConfig };
+  entities?: string[];
 }
 
-export function AppShell({ sidebar, children, shell }: AppShellProps) {
+export function AppShell({ sidebar, children, shell, entities }: AppShellProps) {
   const sidebarConfig = shell?.sidebar;
+  const headerConfig = shell?.header;
   const [collapsed, setCollapsed] = useState(sidebarConfig?.default_collapsed ?? false);
 
   const sidebarWidth = collapsed
@@ -37,9 +40,12 @@ export function AppShell({ sidebar, children, shell }: AppShellProps) {
           )}
         </aside>
       )}
-      <main className="flex-1 overflow-auto">
-        {children}
-      </main>
+      <div className="flex-1 flex flex-col min-w-0">
+        <Header config={headerConfig} entities={entities} />
+        <main className="flex-1 overflow-auto">
+          {children}
+        </main>
+      </div>
     </div>
   );
 }

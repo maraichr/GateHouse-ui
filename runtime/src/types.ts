@@ -221,6 +221,7 @@ export interface DetailHeader {
 export interface HeaderStat {
   label: string;
   value: any;
+  icon?: string;
   display_as?: string;
   format?: string;
   permissions?: string[];
@@ -232,6 +233,29 @@ export interface StateMachine {
   transitions: Transition[];
 }
 
+export interface Confirmation {
+  message: string;
+  type?: 'simple' | 'comment_required' | 'type_to_confirm';
+  confirm_text?: string;
+  confirm_value?: string;
+}
+
+export interface Guard {
+  type: 'field_check' | 'role_check';
+  field_check?: string;
+  expected?: any;
+  message?: string;
+}
+
+export interface TransitionFormField {
+  name: string;
+  type: string;
+  label: string;
+  required?: boolean;
+  placeholder?: string;
+  values?: EnumValue[];
+}
+
 export interface Transition {
   name: string;
   label: string;
@@ -239,9 +263,30 @@ export interface Transition {
   to: string;
   icon?: string;
   color?: string;
-  confirmation?: any;
-  guards?: any[];
+  confirmation?: Confirmation;
+  guards?: Guard[];
   permissions?: string[];
+  form?: TransitionFormField[];
+}
+
+export interface HeaderConfig {
+  show_breadcrumbs?: boolean;
+  show_search?: boolean;
+  show_notifications?: boolean;
+  actions?: HeaderAction[];
+}
+
+export interface HeaderAction {
+  type: string;
+  icon?: string;
+  label?: string;
+  target?: ActionTarget;
+}
+
+export interface ActionTarget {
+  type: string;
+  path?: string;
+  url?: string;
 }
 
 export interface Relationship {

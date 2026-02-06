@@ -80,14 +80,22 @@ func (b *Builder) buildSidebar(appSpec *spec.AppSpec) *ComponentNode {
 		},
 	}
 
+	// Build entity→api_resource lookup for nav badge support
+	entityResourceMap := make(map[string]string)
+	for _, e := range appSpec.Entities {
+		if e.APIResource != "" {
+			entityResourceMap[e.Name] = e.APIResource
+		}
+	}
+
 	for _, item := range appSpec.Navigation.Items {
-		sidebar.Children = append(sidebar.Children, b.buildNavItem(item))
+		sidebar.Children = append(sidebar.Children, b.buildNavItem(item, entityResourceMap))
 	}
 
 	return sidebar
 }
 
-func (b *Builder) buildNavItem(item spec.NavItem) *ComponentNode {
+func (b *Builder) buildNavItem(item spec.NavItem, entityResourceMap map[string]string) *ComponentNode {
 	if len(item.Children) > 0 {
 		group := &ComponentNode{
 			ID:   fmt.Sprintf("nav_%s", item.ID),
@@ -102,7 +110,7 @@ func (b *Builder) buildNavItem(item spec.NavItem) *ComponentNode {
 			group.Conditions = []RenderCondition{{Type: "permission", Roles: item.Permissions}}
 		}
 		for _, child := range item.Children {
-			group.Children = append(group.Children, b.buildNavItem(child))
+			group.Children = append(group.Children, b.buildNavItem(child, entityResourceMap))
 		}
 		return group
 	}
@@ -119,6 +127,12 @@ func (b *Builder) buildNavItem(item spec.NavItem) *ComponentNode {
 			"page":     item.Page,
 			"position": item.Position,
 		},
+	}
+	// Pass api_resource for badge count fetching
+	if item.Entity != "" {
+		if res, ok := entityResourceMap[item.Entity]; ok {
+			node.Props["api_resource"] = res
+		}
 	}
 	if item.Badge != nil {
 		node.Props["badge"] = item.Badge
@@ -265,6 +279,8 @@ func (b *Builder) buildEntityDetail(entity *spec.Entity, route string) *Componen
 	}
 
 	if detailView == nil {
+		// Auto-generate overview tab from entity fields
+		node.Children = append(node.Children, b.buildAutoDetailTabs(entity))
 		return node
 	}
 
@@ -310,9 +326,82 @@ func (b *Builder) buildEntityDetail(entity *spec.Entity, route string) *Componen
 			tabLayout.Children = append(tabLayout.Children, tabNode)
 		}
 		node.Children = append(node.Children, tabLayout)
+	} else if detailView.Layout == "two_column" {
+		// Two-column layout with left/right sections
+		tabLayout := &ComponentNode{
+			ID:   fmt.Sprintf("%s_tabs", entity.Name),
+			Kind: KindTabLayout,
+		}
+		overviewTab := &ComponentNode{
+			ID:   fmt.Sprintf("%s_tab_overview", entity.Name),
+			Kind: KindTab,
+			Props: map[string]any{
+				"id":    "overview",
+				"label": "Overview",
+				"icon":  "info",
+			},
+		}
+		// Left sections
+		for _, section := range detailView.Left {
+			sectionNode := b.buildDetailSection(entity, section)
+			overviewTab.Children = append(overviewTab.Children, sectionNode)
+		}
+		// Right sections
+		if detailView.Right != nil {
+			for _, section := range detailView.Right.Sections {
+				sectionNode := b.buildDetailSection(entity, section)
+				overviewTab.Children = append(overviewTab.Children, sectionNode)
+			}
+		}
+		tabLayout.Children = append(tabLayout.Children, overviewTab)
+		node.Children = append(node.Children, tabLayout)
 	}
 
 	return node
+}
+
+// buildAutoDetailTabs generates a fallback "Overview" tab from entity fields when no detail view is defined.
+func (b *Builder) buildAutoDetailTabs(entity *spec.Entity) *ComponentNode {
+	tabLayout := &ComponentNode{
+		ID:   fmt.Sprintf("%s_tabs", entity.Name),
+		Kind: KindTabLayout,
+	}
+
+	// Collect visible detail fields
+	var detailFields []string
+	for _, f := range entity.Fields {
+		if f.Hidden || f.PrimaryKey {
+			continue
+		}
+		if f.ShowIn != nil && !f.ShowIn.Detail {
+			continue
+		}
+		detailFields = append(detailFields, f.Name)
+	}
+
+	overviewTab := &ComponentNode{
+		ID:   fmt.Sprintf("%s_tab_overview", entity.Name),
+		Kind: KindTab,
+		Props: map[string]any{
+			"id":    "overview",
+			"label": "Overview",
+			"icon":  "info",
+		},
+	}
+	if len(detailFields) > 0 {
+		sectionNode := &ComponentNode{
+			ID:   fmt.Sprintf("%s_section_details", entity.Name),
+			Kind: KindSection,
+			Props: map[string]any{
+				"title":  "Details",
+				"layout": "two_column",
+				"fields": detailFields,
+			},
+		}
+		overviewTab.Children = append(overviewTab.Children, sectionNode)
+	}
+	tabLayout.Children = append(tabLayout.Children, overviewTab)
+	return tabLayout
 }
 
 func (b *Builder) buildDetailSection(entity *spec.Entity, section spec.DetailSection) *ComponentNode {
@@ -405,6 +494,11 @@ func (b *Builder) buildSteppedForm(entity *spec.Entity, view *spec.FormView, rou
 func (b *Builder) buildEditForm(entity *spec.Entity, route string) *ComponentNode {
 	editView := entity.Views.Edit
 
+	cancelPath := entity.APIResource
+	if editView.CancelPath != "" {
+		cancelPath = editView.CancelPath
+	}
+
 	node := &ComponentNode{
 		ID:   fmt.Sprintf("%s_edit", entity.Name),
 		Kind: KindEditForm,
@@ -413,7 +507,9 @@ func (b *Builder) buildEditForm(entity *spec.Entity, route string) *ComponentNod
 			"api_resource": entity.APIResource,
 			"title":        editView.Title,
 			"submit_label": editView.SubmitLabel,
+			"cancel_path":  cancelPath,
 			"fields":       entity.Fields,
+			"overrides":    editView.FieldOverrides,
 		},
 	}
 

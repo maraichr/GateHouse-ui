@@ -1,13 +1,16 @@
 import { BrowserRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { Toaster } from 'sonner';
 import { SpecProvider, useSpec } from './context/SpecContext';
 import { AuthProvider } from './auth/AuthProvider';
+import { BreadcrumbProvider } from './context/BreadcrumbContext';
 import { AppShell } from './components/layout/AppShell';
 import { Sidebar } from './components/layout/Sidebar';
 import { SpecRouter } from './router/specRouter';
 import { RenderNodeWrapper } from './renderer';
-import { ComponentNode } from './types';
+import { ComponentNode, ThemeConfig } from './types';
 import { useHotReload } from './api/useHotReload';
+import { themeToVars } from './utils/themeColors';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -24,7 +27,9 @@ export default function App() {
       <AuthProvider>
         <BrowserRouter>
           <SpecProvider>
-            <AppContent />
+            <BreadcrumbProvider>
+              <AppContent />
+            </BreadcrumbProvider>
           </SpecProvider>
         </BrowserRouter>
       </AuthProvider>
@@ -40,7 +45,7 @@ function AppContent() {
     return (
       <div className="flex h-screen items-center justify-center bg-gray-50">
         <div className="text-center">
-          <div className="animate-spin h-8 w-8 border-4 border-blue-500 border-t-transparent rounded-full mx-auto" />
+          <div className="animate-spin h-8 w-8 border-4 border-[color:var(--color-primary,#1E40AF)] border-t-transparent rounded-full mx-auto" />
           <p className="mt-4 text-gray-600">Loading spec...</p>
         </div>
       </div>
@@ -64,21 +69,27 @@ function AppContent() {
   const root = tree.root;
   const sidebarNode = root.children?.find((c: ComponentNode) => c.kind === 'sidebar');
   const appName = (root.props?.app_name as string) || tree.metadata.app_name;
+  const theme = root.props?.theme as Partial<ThemeConfig> | undefined;
+  const themeStyle = themeToVars(theme);
 
   return (
-    <AppShell
-      shell={root.props?.shell as any}
-      sidebar={
-        sidebarNode && (
-          <Sidebar appName={appName}>
-            {sidebarNode.children?.map((child, i) => (
-              <RenderNodeWrapper key={child.id || i} node={child} />
-            ))}
-          </Sidebar>
-        )
-      }
-    >
-      <SpecRouter tree={tree} />
-    </AppShell>
+    <div style={themeStyle}>
+      <Toaster position="top-right" richColors />
+      <AppShell
+        shell={root.props?.shell as any}
+        entities={tree.metadata.entities}
+        sidebar={
+          sidebarNode && (
+            <Sidebar appName={appName} theme={theme}>
+              {sidebarNode.children?.map((child, i) => (
+                <RenderNodeWrapper key={child.id || i} node={child} />
+              ))}
+            </Sidebar>
+          )
+        }
+      >
+        <SpecRouter tree={tree} />
+      </AppShell>
+    </div>
   );
 }

@@ -18,11 +18,13 @@ type Server struct {
 	watch       bool
 	currentTree atomic.Pointer[engine.ComponentTree]
 	sseHub      *SSEHub
+	mockStore   *MockStore
 }
 
 type Config struct {
 	SpecPath   string
 	APIBaseURL string
+	DataPath   string
 	Port       int
 	Watch      bool
 }
@@ -34,6 +36,14 @@ func NewServer(cfg Config) (*Server, error) {
 		port:       cfg.Port,
 		watch:      cfg.Watch,
 		sseHub:     NewSSEHub(),
+	}
+
+	if cfg.DataPath != "" {
+		store, err := LoadMockData(cfg.DataPath)
+		if err != nil {
+			return nil, fmt.Errorf("loading mock data: %w", err)
+		}
+		s.mockStore = store
 	}
 
 	if err := s.loadSpec(); err != nil {

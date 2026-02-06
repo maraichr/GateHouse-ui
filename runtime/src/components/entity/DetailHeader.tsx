@@ -2,18 +2,21 @@ import { Avatar } from '../display/Avatar';
 import { EnumBadge } from '../display/EnumBadge';
 import { StarRating } from '../display/StarRating';
 import { CurrencyDisplay } from '../display/CurrencyDisplay';
+import { Icon } from '../../utils/icons';
 import { evaluateTemplate } from '../../utils/templateExpression';
 import { DetailHeader as DetailHeaderConfig, Field, StateMachine } from '../../types';
 import { usePermissions } from '../../auth/usePermissions';
+import { TransitionActions } from './TransitionActions';
 
 interface DetailHeaderProps {
   config?: DetailHeaderConfig;
   record?: Record<string, any>;
   fields?: Field[];
   state_machine?: StateMachine | null;
+  api_resource?: string;
 }
 
-export function DetailHeader({ config, record, fields, state_machine }: DetailHeaderProps) {
+export function DetailHeader({ config, record, fields, state_machine, api_resource }: DetailHeaderProps) {
   const { hasPermission } = usePermissions();
 
   if (!config || !record) return null;
@@ -35,7 +38,7 @@ export function DetailHeader({ config, record, fields, state_machine }: DetailHe
             size="lg"
           />
         )}
-        <div className="flex-1">
+        <div className="flex-1 min-w-0">
           <div className="flex items-center gap-3">
             <h1 className="text-2xl font-semibold text-gray-900">{title}</h1>
             {statusValue && statusField?.values && (
@@ -55,7 +58,8 @@ export function DetailHeader({ config, record, fields, state_machine }: DetailHe
                 }
 
                 return (
-                  <div key={i} className="text-sm">
+                  <div key={i} className="text-sm flex items-center gap-1">
+                    {stat.icon && <Icon name={stat.icon} className="h-4 w-4 text-gray-400" />}
                     <span className="text-gray-500">{stat.label}: </span>
                     {stat.display_as === 'star_rating' ? (
                       <StarRating value={Number(value)} />
@@ -70,6 +74,15 @@ export function DetailHeader({ config, record, fields, state_machine }: DetailHe
             </div>
           )}
         </div>
+        {state_machine && api_resource && (
+          <div className="flex-shrink-0">
+            <TransitionActions
+              stateMachine={state_machine}
+              record={record}
+              apiResource={api_resource}
+            />
+          </div>
+        )}
       </div>
     </div>
   );

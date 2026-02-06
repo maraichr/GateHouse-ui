@@ -1,0 +1,287 @@
+{
+  "/subcontractors": [
+    {
+      "id": "sub-001",
+      "company_name": "Apex Electrical Services",
+      "tax_id": "12-3456789",
+      "status": "approved",
+      "email": "info@apexelectric.com",
+      "phone": "(555) 123-4567",
+      "address": { "street1": "100 Industrial Blvd", "city": "Austin", "state": "TX", "zip": "78701", "country": "US" },
+      "insurance_expiry_date": "2027-03-15",
+      "trade_codes": ["ELEC", "LOW-V"],
+      "rating": 4.8,
+      "annual_revenue": 2500000,
+      "logo": null,
+      "notes": "",
+      "created_at": "2025-06-12T09:30:00Z",
+      "updated_at": "2025-11-01T14:22:00Z"
+    },
+    {
+      "id": "sub-002",
+      "company_name": "BlueLine Plumbing Co.",
+      "tax_id": "98-7654321",
+      "status": "approved",
+      "email": "contact@bluelineplumbing.com",
+      "phone": "(555) 234-5678",
+      "address": { "street1": "250 Water St", "city": "Houston", "state": "TX", "zip": "77001", "country": "US" },
+      "insurance_expiry_date": "2026-08-20",
+      "trade_codes": ["PLMB"],
+      "rating": 4.2,
+      "annual_revenue": 1800000,
+      "logo": null,
+      "notes": "",
+      "created_at": "2025-07-03T11:00:00Z",
+      "updated_at": "2025-10-15T16:45:00Z"
+    },
+    {
+      "id": "sub-003",
+      "company_name": "CoolAir HVAC Solutions",
+      "tax_id": "45-1234567",
+      "status": "pending",
+      "email": "sales@coolairhvac.com",
+      "phone": "(555) 345-6789",
+      "address": { "street1": "88 Climate Dr", "city": "Dallas", "state": "TX", "zip": "75201", "country": "US" },
+      "insurance_expiry_date": "2027-01-10",
+      "trade_codes": ["HVAC"],
+      "rating": 0,
+      "annual_revenue": 950000,
+      "logo": null,
+      "notes": "New applicant — awaiting insurance verification",
+      "created_at": "2025-12-01T08:15:00Z",
+      "updated_at": "2025-12-01T08:15:00Z"
+    },
+    {
+      "id": "sub-004",
+      "company_name": "Delta General Contractors",
+      "tax_id": "33-9876543",
+      "status": "approved",
+      "email": "ops@deltagc.com",
+      "phone": "(555) 456-7890",
+      "address": { "street1": "500 Builder Ave", "city": "San Antonio", "state": "TX", "zip": "78201", "country": "US" },
+      "insurance_expiry_date": "2026-11-30",
+      "trade_codes": ["GEN", "CONC"],
+      "rating": 3.9,
+      "annual_revenue": 4200000,
+      "logo": null,
+      "notes": "",
+      "created_at": "2025-03-20T10:00:00Z",
+      "updated_at": "2025-09-22T12:00:00Z"
+    },
+    {
+      "id": "sub-005",
+      "company_name": "EverGreen Landscaping",
+      "tax_id": "55-1112233",
+      "status": "suspended",
+      "email": "hello@evergreenland.com",
+      "phone": "(555) 567-8901",
+      "address": { "street1": "12 Garden Ln", "city": "Fort Worth", "state": "TX", "zip": "76101", "country": "US" },
+      "insurance_expiry_date": "2025-12-31",
+      "trade_codes": ["LAND"],
+      "rating": 3.1,
+      "annual_revenue": 600000,
+      "logo": null,
+      "notes": "Suspended due to expired insurance",
+      "created_at": "2025-04-10T14:30:00Z",
+      "updated_at": "2025-11-20T09:00:00Z"
+    },
+    {
+      "id": "sub-006",
+      "company_name": "FireShield Sprinkler Systems",
+      "tax_id": "66-4445566",
+      "status": "approved",
+      "email": "info@fireshield.com",
+      "phone": "(555) 678-9012",
+      "address": { "street1": "300 Safety Rd", "city": "Austin", "state": "TX", "zip": "78702", "country": "US" },
+      "insurance_expiry_date": "2027-05-01",
+      "trade_codes": ["FIRE", "PLMB"],
+      "rating": 4.5,
+      "annual_revenue": 1400000,
+      "logo": null,
+      "notes": "",
+      "created_at": "2025-05-15T13:00:00Z",
+      "updated_at": "2025-10-30T11:15:00Z"
+    },
+    {
+      "id": "sub-007",
+      "company_name": "Granite Masonry Works",
+      "tax_id": "77-6667788",
+      "status": "pending",
+      "email": "bids@granitemasonry.com",
+      "phone": "(555) 789-0123",
+      "address": { "street1": "450 Stone Way", "city": "El Paso", "state": "TX", "zip": "79901", "country": "US" },
+      "insurance_expiry_date": "2027-02-28",
+      "trade_codes": ["MASON"],
+      "rating": 0,
+      "annual_revenue": 750000,
+      "logo": null,
+      "notes": "",
+      "created_at": "2025-12-10T07:00:00Z",
+      "updated_at": "2025-12-10T07:00:00Z"
+    },
+    {
+      "id": "sub-008",
+      "company_name": "HorizonLine Roofing",
+      "tax_id": "88-9990011",
+      "status": "approved",
+      "email": "projects@horizonroofing.com",
+      "phone": "(555) 890-1234",
+      "address": { "street1": "789 Skyline Dr", "city": "Plano", "state": "TX", "zip": "75023", "country": "US" },
+      "insurance_expiry_date": "2026-07-15",
+      "trade_codes": ["ROOF"],
+      "rating": 4.0,
+      "annual_revenue": 3100000,
+      "logo": null,
+      "notes": "",
+      "created_at": "2025-02-18T09:45:00Z",
+      "updated_at": "2025-08-14T10:30:00Z"
+    },
+    {
+      "id": "sub-009",
+      "company_name": "IronWorks Structural Steel",
+      "tax_id": "99-2223344",
+      "status": "terminated",
+      "email": "admin@ironworksss.com",
+      "phone": "(555) 901-2345",
+      "address": { "street1": "1200 Forge Blvd", "city": "Houston", "state": "TX", "zip": "77002", "country": "US" },
+      "insurance_expiry_date": "2025-06-30",
+      "trade_codes": ["STEEL", "WELD"],
+      "rating": 2.5,
+      "annual_revenue": 900000,
+      "logo": null,
+      "notes": "Terminated for repeated safety violations",
+      "created_at": "2024-11-01T12:00:00Z",
+      "updated_at": "2025-07-01T15:00:00Z"
+    },
+    {
+      "id": "sub-010",
+      "company_name": "JetStream Painting",
+      "tax_id": "11-5556677",
+      "status": "approved",
+      "email": "quotes@jetstreampaint.com",
+      "phone": "(555) 012-3456",
+      "address": { "street1": "67 Color St", "city": "Arlington", "state": "TX", "zip": "76010", "country": "US" },
+      "insurance_expiry_date": "2026-04-30",
+      "trade_codes": ["PAINT"],
+      "rating": 4.6,
+      "annual_revenue": 1100000,
+      "logo": null,
+      "notes": "",
+      "created_at": "2025-01-22T16:00:00Z",
+      "updated_at": "2025-09-10T08:20:00Z"
+    },
+    {
+      "id": "sub-011",
+      "company_name": "KeyStone Flooring",
+      "tax_id": "22-8889900",
+      "status": "pending",
+      "email": "info@keystonefloor.com",
+      "phone": "(555) 111-2222",
+      "address": { "street1": "345 Tile Rd", "city": "Irving", "state": "TX", "zip": "75060", "country": "US" },
+      "insurance_expiry_date": "2027-06-01",
+      "trade_codes": ["FLOOR"],
+      "rating": 0,
+      "annual_revenue": 500000,
+      "logo": null,
+      "notes": "",
+      "created_at": "2025-12-15T10:30:00Z",
+      "updated_at": "2025-12-15T10:30:00Z"
+    },
+    {
+      "id": "sub-012",
+      "company_name": "LightPath Electric & Solar",
+      "tax_id": "44-3334455",
+      "status": "approved",
+      "email": "solar@lightpath.com",
+      "phone": "(555) 222-3333",
+      "address": { "street1": "900 Energy Pkwy", "city": "Austin", "state": "TX", "zip": "78703", "country": "US" },
+      "insurance_expiry_date": "2026-02-15",
+      "trade_codes": ["ELEC", "SOLAR"],
+      "rating": 4.3,
+      "annual_revenue": 5600000,
+      "logo": null,
+      "notes": "",
+      "created_at": "2025-04-05T08:00:00Z",
+      "updated_at": "2025-11-28T17:00:00Z"
+    }
+  ],
+
+  "/documents": [
+    { "id": "doc-001", "name": "Apex W-9 Form", "type": "w9", "status": "verified", "subcontractor_id": "sub-001", "expiry_date": null, "company_name": "Apex Electrical Services", "created_at": "2025-06-12T10:00:00Z" },
+    { "id": "doc-002", "name": "Apex Insurance Certificate", "type": "insurance_cert", "status": "verified", "subcontractor_id": "sub-001", "expiry_date": "2027-03-15", "company_name": "Apex Electrical Services", "created_at": "2025-06-12T10:05:00Z" },
+    { "id": "doc-003", "name": "Apex Electrical License", "type": "license", "status": "verified", "subcontractor_id": "sub-001", "expiry_date": "2027-12-31", "company_name": "Apex Electrical Services", "created_at": "2025-06-15T11:00:00Z" },
+    { "id": "doc-004", "name": "BlueLine W-9 Form", "type": "w9", "status": "verified", "subcontractor_id": "sub-002", "expiry_date": null, "company_name": "BlueLine Plumbing Co.", "created_at": "2025-07-03T11:30:00Z" },
+    { "id": "doc-005", "name": "BlueLine Insurance Certificate", "type": "insurance_cert", "status": "verified", "subcontractor_id": "sub-002", "expiry_date": "2026-08-20", "company_name": "BlueLine Plumbing Co.", "created_at": "2025-07-03T11:35:00Z" },
+    { "id": "doc-006", "name": "CoolAir HVAC W-9", "type": "w9", "status": "under_review", "subcontractor_id": "sub-003", "expiry_date": null, "company_name": "CoolAir HVAC Solutions", "created_at": "2025-12-01T08:30:00Z" },
+    { "id": "doc-007", "name": "CoolAir Insurance Certificate", "type": "insurance_cert", "status": "uploaded", "subcontractor_id": "sub-003", "expiry_date": "2027-01-10", "company_name": "CoolAir HVAC Solutions", "created_at": "2025-12-01T08:35:00Z" },
+    { "id": "doc-008", "name": "Delta GC Master Contract", "type": "contract", "status": "verified", "subcontractor_id": "sub-004", "expiry_date": "2026-12-31", "company_name": "Delta General Contractors", "created_at": "2025-03-25T14:00:00Z" },
+    { "id": "doc-009", "name": "EverGreen Insurance (Expired)", "type": "insurance_cert", "status": "rejected", "subcontractor_id": "sub-005", "expiry_date": "2025-12-31", "company_name": "EverGreen Landscaping", "created_at": "2025-04-10T15:00:00Z" },
+    { "id": "doc-010", "name": "FireShield W-9", "type": "w9", "status": "verified", "subcontractor_id": "sub-006", "expiry_date": null, "company_name": "FireShield Sprinkler Systems", "created_at": "2025-05-15T13:30:00Z" },
+    { "id": "doc-011", "name": "HorizonLine Roofing License", "type": "license", "status": "verified", "subcontractor_id": "sub-008", "expiry_date": "2026-12-31", "company_name": "HorizonLine Roofing", "created_at": "2025-02-20T09:00:00Z" },
+    { "id": "doc-012", "name": "Granite Masonry W-9", "type": "w9", "status": "uploaded", "subcontractor_id": "sub-007", "expiry_date": null, "company_name": "Granite Masonry Works", "created_at": "2025-12-10T07:30:00Z" },
+    { "id": "doc-013", "name": "JetStream Painting Insurance", "type": "insurance_cert", "status": "verified", "subcontractor_id": "sub-010", "expiry_date": "2026-04-30", "company_name": "JetStream Painting", "created_at": "2025-01-25T10:00:00Z" },
+    { "id": "doc-014", "name": "LightPath Solar Certification", "type": "license", "status": "verified", "subcontractor_id": "sub-012", "expiry_date": "2027-06-30", "company_name": "LightPath Electric & Solar", "created_at": "2025-04-08T09:00:00Z" },
+    { "id": "doc-015", "name": "LightPath Insurance Certificate", "type": "insurance_cert", "status": "verified", "subcontractor_id": "sub-012", "expiry_date": "2026-02-15", "company_name": "LightPath Electric & Solar", "created_at": "2025-04-08T09:05:00Z" }
+  ],
+
+  "/work-orders": [
+    { "id": "wo-001", "wo_number": "WO-2025-001", "title": "Office Building Rewiring", "status": "completed", "subcontractor_id": "sub-001", "company_name": "Apex Electrical Services", "scheduled_date": "2025-08-15", "total_amount": 45000, "created_at": "2025-07-20T09:00:00Z" },
+    { "id": "wo-002", "wo_number": "WO-2025-002", "title": "Warehouse Plumbing Overhaul", "status": "in_progress", "subcontractor_id": "sub-002", "company_name": "BlueLine Plumbing Co.", "scheduled_date": "2025-12-01", "total_amount": 28000, "created_at": "2025-10-10T11:00:00Z" },
+    { "id": "wo-003", "wo_number": "WO-2025-003", "title": "HVAC Installation - Building C", "status": "assigned", "subcontractor_id": "sub-001", "company_name": "Apex Electrical Services", "scheduled_date": "2026-01-15", "total_amount": 62000, "created_at": "2025-11-05T14:00:00Z" },
+    { "id": "wo-004", "wo_number": "WO-2025-004", "title": "Parking Lot Repaving", "status": "draft", "subcontractor_id": "sub-004", "company_name": "Delta General Contractors", "scheduled_date": "2026-03-01", "total_amount": 85000, "created_at": "2025-11-20T10:00:00Z" },
+    { "id": "wo-005", "wo_number": "WO-2025-005", "title": "Fire Sprinkler Retrofit", "status": "in_progress", "subcontractor_id": "sub-006", "company_name": "FireShield Sprinkler Systems", "scheduled_date": "2025-11-15", "total_amount": 37500, "created_at": "2025-09-01T08:00:00Z" },
+    { "id": "wo-006", "wo_number": "WO-2025-006", "title": "Roof Inspection & Repair", "status": "assigned", "subcontractor_id": "sub-008", "company_name": "HorizonLine Roofing", "scheduled_date": "2026-02-10", "total_amount": 18000, "created_at": "2025-11-25T15:00:00Z" },
+    { "id": "wo-007", "wo_number": "WO-2025-007", "title": "Interior Painting - Floors 3-5", "status": "completed", "subcontractor_id": "sub-010", "company_name": "JetStream Painting", "scheduled_date": "2025-09-20", "total_amount": 22000, "created_at": "2025-08-15T12:00:00Z" },
+    { "id": "wo-008", "wo_number": "WO-2025-008", "title": "Solar Panel Installation", "status": "in_progress", "subcontractor_id": "sub-012", "company_name": "LightPath Electric & Solar", "scheduled_date": "2025-12-10", "total_amount": 150000, "created_at": "2025-10-01T09:00:00Z" },
+    { "id": "wo-009", "wo_number": "WO-2025-009", "title": "Emergency Plumbing Repair", "status": "completed", "subcontractor_id": "sub-002", "company_name": "BlueLine Plumbing Co.", "scheduled_date": "2025-10-05", "total_amount": 5500, "created_at": "2025-10-04T16:00:00Z" },
+    { "id": "wo-010", "wo_number": "WO-2025-010", "title": "Concrete Foundation Work", "status": "cancelled", "subcontractor_id": "sub-004", "company_name": "Delta General Contractors", "scheduled_date": "2025-07-01", "total_amount": 95000, "created_at": "2025-05-20T10:00:00Z" }
+  ],
+
+  "/trades": [
+    { "id": "trade-001", "code": "ELEC", "name": "Electrical", "category": "electrical" },
+    { "id": "trade-002", "code": "PLMB", "name": "Plumbing", "category": "plumbing" },
+    { "id": "trade-003", "code": "HVAC", "name": "HVAC", "category": "hvac" },
+    { "id": "trade-004", "code": "GEN", "name": "General Construction", "category": "general" },
+    { "id": "trade-005", "code": "ROOF", "name": "Roofing", "category": "specialty" },
+    { "id": "trade-006", "code": "PAINT", "name": "Painting", "category": "general" }
+  ],
+
+  "_widgets": {
+    "/dashboard/stats": {
+      "total_subcontractors": 12,
+      "pending_approvals": 3,
+      "expiring_insurance_30d": 1,
+      "active_work_orders": 3
+    },
+    "/dashboard/charts/status-breakdown": {
+      "data": [
+        { "status": "approved", "count": 6 },
+        { "status": "pending", "count": 3 },
+        { "status": "suspended", "count": 1 },
+        { "status": "terminated", "count": 1 }
+      ]
+    },
+    "/dashboard/charts/work-orders-timeline": {
+      "data": [
+        { "month": "2025-07", "status": "completed", "count": 1 },
+        { "month": "2025-08", "status": "completed", "count": 1 },
+        { "month": "2025-09", "status": "completed", "count": 1 },
+        { "month": "2025-10", "status": "completed", "count": 1 },
+        { "month": "2025-10", "status": "in_progress", "count": 1 },
+        { "month": "2025-11", "status": "in_progress", "count": 2 },
+        { "month": "2025-11", "status": "assigned", "count": 1 },
+        { "month": "2025-12", "status": "in_progress", "count": 1 },
+        { "month": "2025-12", "status": "assigned", "count": 1 }
+      ]
+    }
+  },
+
+  "_entity_stats": {
+    "/subcontractors/{id}/stats": {
+      "active_work_orders": 3,
+      "total_revenue": 125000,
+      "completed_work_orders": 5,
+      "avg_completion_time_days": 32
+    }
+  }
+}

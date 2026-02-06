@@ -11,6 +11,7 @@ import (
 func main() {
 	specPath := flag.String("spec", "", "Path to the UI spec YAML file")
 	apiURL := flag.String("api-url", "", "Backend API URL to proxy")
+	dataPath := flag.String("data", "", "Path to mock data JSON file")
 	port := flag.Int("port", 3000, "Port to serve on")
 	watch := flag.Bool("watch", false, "Watch spec file for changes")
 	flag.Parse()
@@ -22,6 +23,7 @@ func main() {
 	cfg := serve.Config{
 		SpecPath:   *specPath,
 		APIBaseURL: *apiURL,
+		DataPath:   *dataPath,
 		Port:       *port,
 		Watch:      *watch,
 	}

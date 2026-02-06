@@ -18,7 +18,11 @@ func (s *Server) Routes() http.Handler {
 		r.Get("/events", s.sseHub.ServeHTTP)
 	})
 
-	if s.apiBaseURL != "" {
+	if s.mockStore != nil {
+		r.Route("/api/v1", func(r chi.Router) {
+			r.HandleFunc("/*", s.mockStore.ServeHTTP)
+		})
+	} else if s.apiBaseURL != "" {
 		r.Handle("/api/*", s.apiProxy())
 	}
 

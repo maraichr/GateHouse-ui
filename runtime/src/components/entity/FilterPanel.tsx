@@ -1,4 +1,7 @@
 import { FilterConfig, Field } from '../../types';
+import { DateRangeFilter } from './filters/DateRangeFilter';
+import { NumericRangeFilter } from './filters/NumericRangeFilter';
+import { MultiSelectFilter } from './filters/MultiSelectFilter';
 
 interface FilterPanelProps {
   config?: FilterConfig;
@@ -69,6 +72,47 @@ export function FilterPanel({ config, fields, filters, onFilterChange }: FilterP
                     <option key={v.value} value={v.value}>{v.label}</option>
                   ))}
                 </select>
+              );
+            }
+
+            if (ff.type === 'multi_select' && field.values) {
+              return (
+                <MultiSelectFilter
+                  key={ff.field}
+                  field={ff.field}
+                  values={field.values}
+                  selected={Array.isArray(filters[ff.field]) ? filters[ff.field] : []}
+                  onChange={(selected) =>
+                    onFilterChange({ ...filters, [ff.field]: selected.length ? selected : undefined })
+                  }
+                  searchable={ff.searchable}
+                />
+              );
+            }
+
+            if (ff.type === 'date_range') {
+              return (
+                <DateRangeFilter
+                  key={ff.field}
+                  field={ff.field}
+                  value={filters[ff.field]}
+                  onChange={(val) => onFilterChange({ ...filters, [ff.field]: val })}
+                  presets={ff.presets}
+                />
+              );
+            }
+
+            if (ff.type === 'numeric_range' || ff.type === 'range') {
+              return (
+                <NumericRangeFilter
+                  key={ff.field}
+                  field={ff.field}
+                  value={filters[ff.field]}
+                  onChange={(val) => onFilterChange({ ...filters, [ff.field]: val })}
+                  min={ff.min}
+                  max={ff.max}
+                  step={ff.step}
+                />
               );
             }
 

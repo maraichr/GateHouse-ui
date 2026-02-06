@@ -4,6 +4,8 @@ import { EnumBadge } from '../display/EnumBadge';
 import { DateDisplay } from '../display/DateDisplay';
 import { CurrencyDisplay } from '../display/CurrencyDisplay';
 import { StarRating } from '../display/StarRating';
+import { evaluateDisplayRules, styleForRule } from '../../utils/displayRuleEvaluator';
+import { sanitizeHtml } from '../../utils/sanitizeHtml';
 import { cn } from '../../utils/cn';
 
 interface SectionProps {
@@ -50,13 +52,35 @@ export function Section({ title, layout, fields: fieldNames, allFields, record }
 }
 
 function FieldDisplay({ field, value }: { field: Field; value: any }) {
-  if (field.type === 'enum') return <EnumBadge value={value} values={field.values} />;
-  if (field.type === 'date' || field.type === 'datetime') return <DateDisplay value={value} format={field.format} />;
-  if (field.type === 'currency') return <CurrencyDisplay value={value} currency={field.currency} />;
+  // Evaluate display rules for conditional styling
+  const ruleResult = evaluateDisplayRules(field.display_rules, value);
+  const ruleClass = ruleResult ? styleForRule(ruleResult.style) : '';
+
+  const wrapWithRule = (el: React.ReactElement) => {
+    if (!ruleResult) return el;
+    return (
+      <span className={ruleClass} title={ruleResult.tooltip}>
+        {ruleResult.label || el}
+      </span>
+    );
+  };
+
+  if (field.type === 'enum') return wrapWithRule(<EnumBadge value={value} values={field.values} />);
+  if (field.type === 'date' || field.type === 'datetime') return wrapWithRule(<DateDisplay value={value} format={field.format} />);
+  if (field.type === 'currency') return wrapWithRule(<CurrencyDisplay value={value} currency={field.currency} />);
   if (field.display_as === 'star_rating') return <StarRating value={value} />;
   if (field.type === 'address' && typeof value === 'object' && value) {
     const parts = [value.street1, value.street2, value.city, value.state, value.zip].filter(Boolean);
     return <span className="text-gray-900">{parts.join(', ')}</span>;
   }
-  return <StringDisplay value={value} sensitive={field.sensitive} mask_pattern={field.mask_pattern} />;
+  // Richtext fields: render sanitized HTML with prose styling
+  if (field.type === 'richtext' && value) {
+    return (
+      <div
+        className="prose prose-sm max-w-none text-gray-900"
+        dangerouslySetInnerHTML={{ __html: sanitizeHtml(String(value)) }}
+      />
+    );
+  }
+  return wrapWithRule(<StringDisplay value={value} sensitive={field.sensitive} mask_pattern={field.mask_pattern} input_type={field.input_type} />);
 }

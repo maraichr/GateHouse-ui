@@ -1,17 +1,27 @@
-import { useMemo } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useNavigate, useParams } from 'react-router-dom';
+import { toast } from 'sonner';
 import { PageHeader } from '../layout/PageHeader';
 import { FormSection } from './FormSection';
 import { StringField } from './fields/StringField';
 import { EnumField } from './fields/EnumField';
 import { DateField } from './fields/DateField';
 import { ReferenceField } from './fields/ReferenceField';
+import { CurrencyField } from './fields/CurrencyField';
+import { AddressField } from './fields/AddressField';
+import { FileField } from './fields/FileField';
+import { ImageField } from './fields/ImageField';
 import { useEntityCreate, useEntityUpdate } from '../../data/useEntityMutation';
+import { useEntityDetail } from '../../data/useEntityDetail';
 import { usePermissions } from '../../auth/usePermissions';
-import { Field } from '../../types';
+import { Field, ComponentNode } from '../../types';
+
+const LazyRichTextField = React.lazy(() =>
+  import('./fields/RichTextField').then(m => ({ default: m.RichTextField }))
+);
 
 interface DynamicFormProps {
   entity?: string;
@@ -22,6 +32,7 @@ interface DynamicFormProps {
   fields?: Field[];
   overrides?: Record<string, Partial<Field>>;
   sections?: any[];
+  childNodes?: ComponentNode[];
   children?: any;
 }
 
@@ -34,10 +45,17 @@ export function DynamicForm({
   fields,
   overrides,
   sections,
+  childNodes,
 }: DynamicFormProps) {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
   const isEdit = !!id;
+
+  // Fix 1: Fetch existing record for edit mode
+  const { data: record, isLoading: isLoadingRecord } = useEntityDetail(
+    api_resource || '',
+    isEdit ? id : undefined,
+  );
 
   const createMutation = useEntityCreate(api_resource || '');
   const updateMutation = useEntityUpdate(api_resource || '', id);
@@ -72,25 +90,79 @@ export function DynamicForm({
     return z.object(shape);
   }, [formFields]);
 
+  // Build default values from record for edit mode
+  const defaultValues = useMemo(() => {
+    if (!isEdit || !record) return {};
+    const vals: Record<string, any> = {};
+    for (const f of formFields) {
+      if (record[f.name] !== undefined) {
+        vals[f.name] = record[f.name];
+      }
+    }
+    return vals;
+  }, [isEdit, record, formFields]);
+
   const {
     register,
     handleSubmit,
+    setValue,
+    watch,
+    reset,
     formState: { errors, isSubmitting },
   } = useForm({
     resolver: zodResolver(schema),
+    defaultValues,
   });
 
-  const onSubmit = async (data: any) => {
-    if (isEdit) {
-      await updateMutation.mutateAsync(data);
-    } else {
-      await createMutation.mutateAsync(data);
+  // Fix 1: Reset form when record loads in edit mode
+  useEffect(() => {
+    if (isEdit && record) {
+      const vals: Record<string, any> = {};
+      for (const f of formFields) {
+        if (record[f.name] !== undefined) {
+          vals[f.name] = record[f.name];
+        }
+      }
+      reset(vals);
     }
-    if (cancel_path) navigate(cancel_path);
+  }, [isEdit, record, formFields, reset]);
+
+  const onSubmit = async (data: any) => {
+    try {
+      if (isEdit) {
+        await updateMutation.mutateAsync(data);
+        toast.success('Changes saved');
+        navigate(`${api_resource}/${id}`);
+      } else {
+        const result = await createMutation.mutateAsync(data);
+        toast.success('Created successfully');
+        const newId = (result as any)?.id;
+        if (newId) {
+          navigate(`${api_resource}/${newId}`);
+        } else if (cancel_path) {
+          navigate(cancel_path);
+        }
+      }
+    } catch {
+      toast.error('Something went wrong');
+    }
   };
 
-  // Group fields by sections if sections are provided
+  // Fix 4: Extract sections from childNodes if provided
   const sectionedFields = useMemo(() => {
+    // Prefer childNodes (from renderer's CHILD_NODE_KINDS)
+    if (childNodes?.length) {
+      const sectionNodes = childNodes.filter((n) => n.kind === 'form_section');
+      if (sectionNodes.length > 0) {
+        return sectionNodes.map((n) => ({
+          title: n.props?.title as string | undefined,
+          fields: formFields.filter((f) => (n.props?.fields as string[])?.includes(f.name)),
+          permissions: n.conditions?.find((c) => c.type === 'permission')?.roles,
+        }));
+      }
+    }
+
+    // Fallback to sections prop
     if (sections?.length) {
       return sections.map((s) => ({
         title: s.title,
@@ -99,9 +171,28 @@ export function DynamicForm({
       }));
     }
     return [{ title: undefined, fields: formFields, permissions: undefined }];
-  }, [sections, formFields]);
+  }, [childNodes, sections, formFields]);
 
   const { hasPermission } = usePermissions();
+
+  // Show loading state while fetching record in edit mode
+  if (isEdit && isLoadingRecord) {
+    return (
+      <div>
+        <PageHeader title={title || `Edit ${entity}`} />
+        <div className="max-w-2xl mx-auto p-6">
+          <div className="space-y-4">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="animate-pulse">
+                <div className="h-4 bg-gray-200 rounded w-1/4 mb-2" />
+                <div className="h-10 bg-gray-100 rounded" />
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div>
@@ -118,6 +209,8 @@ export function DynamicForm({
                     field={field}
                     register={register}
                     errors={errors}
+                    setValue={setValue}
+                    watch={watch}
                   />
                 ))}
               </FormSection>
@@ -128,7 +221,10 @@ export function DynamicForm({
             <button
               type="submit"
               disabled={isSubmitting}
-              className="px-6 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50"
+              className="px-6 py-2 text-white text-sm font-medium rounded-lg disabled:opacity-50 transition-colors"
+              style={{ backgroundColor: 'var(--color-primary)' }}
+              onMouseEnter={(e) => { if (!e.currentTarget.disabled) e.currentTarget.style.filter = 'brightness(0.9)'; }}
+              onMouseLeave={(e) => e.currentTarget.style.filter = ''}
             >
               {isSubmitting ? 'Saving...' : submit_label || 'Save'}
             </button>
@@ -152,11 +248,17 @@ function FieldRenderer({
   field,
   register,
   errors,
+  setValue,
+  watch,
 }: {
   field: Field;
   register: any;
   errors: any;
+  setValue: any;
+  watch: any;
 }) {
+  const error = errors[field.name]?.message as string | undefined;
+
   switch (field.type) {
     case 'enum':
       return <EnumField field={field} register={register} errors={errors} />;
@@ -165,6 +267,53 @@ function FieldRenderer({
       return <DateField field={field} register={register} errors={errors} />;
     case 'reference':
       return <ReferenceField field={field} register={register} errors={errors} />;
+    case 'currency':
+      return (
+        <CurrencyField
+          field={field}
+          value={watch(field.name)}
+          onChange={(v) => setValue(field.name, v, { shouldValidate: true })}
+          error={error}
+        />
+      );
+    case 'richtext':
+      return (
+        <React.Suspense fallback={<div className="animate-pulse bg-gray-100 rounded h-32" />}>
+          <LazyRichTextField
+            field={field}
+            value={watch(field.name)}
+            onChange={(v) => setValue(field.name, v, { shouldValidate: true })}
+            error={error}
+          />
+        </React.Suspense>
+      );
+    case 'address':
+      return (
+        <AddressField
+          field={field}
+          value={watch(field.name)}
+          onChange={(v) => setValue(field.name, v, { shouldValidate: true })}
+          error={error}
+        />
+      );
+    case 'file':
+      return (
+        <FileField
+          field={field}
+          value={watch(field.name)}
+          onChange={(v) => setValue(field.name, v, { shouldValidate: true })}
+          error={error}
+        />
+      );
+    case 'image':
+      return (
+        <ImageField
+          field={field}
+          value={watch(field.name)}
+          onChange={(v) => setValue(field.name, v, { shouldValidate: true })}
+          error={error}
+        />
+      );
     default:
       return <StringField field={field} register={register} errors={errors} />;
   }

@@ -11,13 +11,13 @@
 # --------------------------------------------------------------------------
 app:
   name: "acme-contractor-portal"
-  display_name: "Acme Contractor Portal"
+  display_name: "Contractor Portal"
   version: "1.0.0"
   description: "Subcontractor management and compliance tracking"
 
   # Branding / theming tokens consumed by the renderer
   theme:
-    mode: light                       # light | dark | system
+    mode: dark                       # light | dark | system
     primary_color: "#1E40AF"
     secondary_color: "#7C3AED"
     accent_color: "#F59E0B"
