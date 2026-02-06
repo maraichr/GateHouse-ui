@@ -70,6 +70,7 @@ export interface TreeMetadata {
   version: string;
   entities: string[];
   route_count: number;
+  target?: string;
 }
 
 // Spec types used by components

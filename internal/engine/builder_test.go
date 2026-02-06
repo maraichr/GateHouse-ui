@@ -27,7 +27,7 @@ func TestTreeRoot(t *testing.T) {
 
 func TestTreeMetadata(t *testing.T) {
 	tree := buildTestTree(t)
-	if tree.Metadata.AppName != "Acme Contractor Portal" {
+	if tree.Metadata.AppName != "Contractor Portal" {
 		t.Errorf("unexpected app name: %s", tree.Metadata.AppName)
 	}
 	if len(tree.Metadata.Entities) != 4 {

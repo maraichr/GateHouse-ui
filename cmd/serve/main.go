@@ -14,6 +14,7 @@ func main() {
 	dataPath := flag.String("data", "", "Path to mock data JSON file")
 	port := flag.Int("port", 3000, "Port to serve on")
 	watch := flag.Bool("watch", false, "Watch spec file for changes")
+	target := flag.String("target", "react", "Renderer target (react|flutter)")
 	flag.Parse()
 
 	if *specPath == "" {
@@ -26,6 +27,7 @@ func main() {
 		DataPath:   *dataPath,
 		Port:       *port,
 		Watch:      *watch,
+		Target:     *target,
 	}
 
 	srv, err := serve.NewServer(cfg)

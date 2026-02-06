@@ -12,6 +12,7 @@ type TreeMetadata struct {
 	Version    string   `json:"version"`
 	Entities   []string `json:"entities"`
 	RouteCount int      `json:"route_count"`
+	Target     string   `json:"target,omitempty"`
 }
 
 type ComponentNode struct {

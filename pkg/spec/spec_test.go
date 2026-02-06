@@ -26,8 +26,8 @@ func TestAppMetadata(t *testing.T) {
 	if s.App.Name != "acme-contractor-portal" {
 		t.Errorf("expected app name 'acme-contractor-portal', got %q", s.App.Name)
 	}
-	if s.App.DisplayName != "Acme Contractor Portal" {
-		t.Errorf("expected display name 'Acme Contractor Portal', got %q", s.App.DisplayName)
+	if s.App.DisplayName != "Contractor Portal" {
+		t.Errorf("expected display name 'Contractor Portal', got %q", s.App.DisplayName)
 	}
 }
 

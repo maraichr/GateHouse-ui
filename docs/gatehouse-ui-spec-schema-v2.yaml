@@ -1,0 +1,813 @@
+# ============================================================================
+# GateHouse Frontend UI Specification Schema v2.0 (Resolved)
+# ============================================================================
+# This file defines the resolved YAML format that a renderer (React/Svelte/
+# Flutter) consumes after v1 input normalization. It keeps existing kinds while
+# deduplicating entity definitions, splitting layout vs routes, and normalizing
+# actions, data sources, and expressions.
+# ============================================================================
+
+metadata:
+  app_name: Contractor Portal
+  version: 2.0.0
+  schema_version: gh.ui.v2
+  generated_from:
+    type: yaml
+    hash: "sha256:..."
+
+app:
+  app_name: Contractor Portal
+  accessibility:
+    aria_labels: auto
+    keyboard_navigation: true
+  theme:
+    mode: dark
+    primary_color: "#1E40AF"
+    secondary_color: "#7C3AED"
+  auth:
+    provider: oidc
+  api:
+    base_url: "${API_BASE_URL}"
+  behaviors:
+    notifications:
+      position: top-right
+
+# --------------------------------------------------------------------------
+# 1. ENTITIES (deduplicated definitions)
+# --------------------------------------------------------------------------
+entities:
+  Subcontractor:
+    label_field: company_name
+    fields:
+      - name: id
+        type: uuid
+        primary_key: true
+        hidden: true
+      - name: company_name
+        type: string
+        display_name: Company Name
+        required: true
+        min_length: 2
+        max_length: 200
+        searchable: true
+        sortable: true
+        show_in:
+          list: true
+          detail: true
+          create: true
+          edit: true
+      - name: tax_id
+        type: string
+        display_name: Tax ID (EIN)
+        required: true
+        immutable: true
+        sensitive: true
+        mask_pattern: "##-***####"
+        pattern: "^\\d{2}-\\d{7}$"
+        pattern_message: Must be in format XX-XXXXXXX
+        show_in:
+          list: false
+          detail: true
+          create: true
+          edit: false
+      - name: status
+        type: enum
+        display_name: Status
+        required: true
+        default: pending
+        sortable: true
+        filterable: true
+        values:
+          - value: pending
+            label: Pending Review
+            color: warning
+            icon: clock
+          - value: approved
+            label: Approved
+            color: success
+            icon: check-circle
+          - value: suspended
+            label: Suspended
+            color: danger
+            icon: alert-triangle
+          - value: terminated
+            label: Terminated
+            color: neutral
+            icon: x-circle
+        show_in:
+          list: true
+          detail: true
+          create: false
+          edit: false
+      - name: email
+        type: email
+        display_name: Contact Email
+        required: true
+        show_in:
+          list: false
+          detail: true
+          create: true
+          edit: true
+      - name: phone
+        type: phone
+        display_name: Contact Phone
+        required: false
+        format: national
+        show_in:
+          list: false
+          detail: true
+          create: true
+          edit: true
+      - name: address
+        type: address
+        display_name: Business Address
+        required: true
+        components:
+          city: { required: true }
+          country: { required: true, default: US }
+          state: { required: true, type: state_select }
+          street1: { required: true }
+          street2: { required: false }
+          zip: { required: true, pattern: "^\\d{5}(-\\d{4})?$" }
+        show_in:
+          list: false
+          detail: true
+          create: true
+          edit: true
+      - name: insurance_expiry_date
+        type: date
+        display_name: Insurance Expiry
+        required: false
+        future_only: true
+        sortable: true
+        filterable: true
+        display_rules:
+          - when:
+              op: "<"
+              lhs: { ref: value }
+              rhs: { date_math: "today + 30d" }
+            style: danger
+            tooltip: Insurance expiring within 30 days
+          - when:
+              op: "<"
+              lhs: { ref: value }
+              rhs: { date_math: "today + 90d" }
+            style: warning
+            tooltip: Insurance expiring within 90 days
+          - when:
+              op: ">="
+              lhs: { ref: value }
+              rhs: { date_math: "today + 90d" }
+            style: success
+        show_in:
+          list: true
+          detail: true
+          create: true
+          edit: true
+      - name: trade_codes
+        type: array
+        display_name: Trade Specialties
+        required: true
+        filterable: true
+        min_items: 1
+        items:
+          type: reference
+          entity: Trade
+          label_field: name
+        input_type: multi_select
+        show_in:
+          list: true
+          detail: true
+          create: true
+          edit: true
+      - name: rating
+        type: decimal
+        display_name: Performance Rating
+        required: false
+        computed: true
+        min: 0
+        max: 5
+        precision: 2
+        sortable: true
+        display_as: star_rating
+        show_in:
+          list: true
+          detail: true
+          create: false
+          edit: false
+      - name: annual_revenue
+        type: currency
+        display_name: Annual Revenue
+        required: false
+        currency: USD
+        permissions:
+          view_roles: [admin, compliance_officer]
+          edit_roles: [admin]
+        show_in:
+          list: false
+          detail: true
+          create: false
+          edit: true
+      - name: notes
+        type: richtext
+        display_name: Internal Notes
+        required: false
+        max_length: 5000
+        toolbar: [bold, italic, bullet_list, ordered_list, link]
+        show_in:
+          list: false
+          detail: true
+          create: false
+          edit: true
+      - name: logo
+        type: image
+        display_name: Company Logo
+        required: false
+        display_as: avatar
+        accept: [image/png, image/jpeg, image/svg+xml]
+        max_size_mb: 5
+        dimensions:
+          min_width: 100
+          max_width: 2000
+          aspect_ratio: "1:1"
+        show_in:
+          list: false
+          detail: true
+          create: true
+          edit: true
+      - name: attachments
+        type: file_list
+        display_name: Attachments
+        required: false
+        accept: [application/pdf, image/*, .docx]
+        max_size_mb: 25
+        max_files: 20
+        show_in:
+          list: false
+          detail: true
+          create: false
+          edit: true
+      - name: created_at
+        type: datetime
+        display_name: Created
+        format: relative
+        sortable: true
+        show_in:
+          list: true
+          detail: true
+          create: false
+          edit: false
+      - name: updated_at
+        type: datetime
+        display_name: Last Updated
+        sortable: true
+        show_in:
+          list: false
+          detail: true
+          create: false
+          edit: false
+    relationships:
+      - name: documents
+        type: has_many
+        entity: Document
+        foreign_key: subcontractor_id
+        display_name: Documents
+        show_in_detail: true
+        inline_create: true
+        inline_edit: false
+        default_sort:
+          field: created_at
+          order: desc
+      - name: work_orders
+        type: has_many
+        entity: WorkOrder
+        foreign_key: subcontractor_id
+        display_name: Work Orders
+        show_in_detail: true
+      - name: trades
+        type: many_to_many
+        entity: Trade
+        through: subcontractor_trade_assignments
+        display_name: Trade Specialties
+        show_in_detail: true
+      - name: primary_contact
+        type: belongs_to
+        entity: Contact
+        foreign_key: primary_contact_id
+        display_name: Primary Contact
+        show_in_detail: true
+        inline_edit: true
+    state_machine:
+      field: status
+      initial: pending
+      transitions:
+        - name: approve
+          label: Approve Subcontractor
+          from: [pending, suspended]
+          to: approved
+          icon: check-circle
+          color: success
+          confirm:
+            title: Approve Subcontractor?
+            message_tpl: "This will allow {{record.company_name}} to receive work orders."
+            style: success
+            require_comment: false
+          guards:
+            - type: field_check
+              name: insurance_not_expired
+              message: Insurance must not be expired
+              expr:
+                op: ">"
+                lhs: { ref: record.insurance_expiry_date }
+                rhs: { date_math: today }
+            - type: api_check
+              name: has_required_documents
+              message: W-9 and Insurance Certificate must be verified
+              call:
+                method: GET
+                path_tpl: "/subcontractors/{{record.id}}/compliance-status"
+              expect:
+                insurance_verified: true
+                w9_verified: true
+          visibility:
+            roles: [admin, compliance_officer]
+          form:
+            fields:
+              - name: approval_notes
+                type: text
+                display_name: Approval Notes
+                required: false
+        - name: suspend
+          label: Suspend
+          from: [approved]
+          to: suspended
+          icon: pause-circle
+          color: warning
+          confirm:
+            title: Suspend Subcontractor?
+            message_tpl: "This will cancel all pending work orders for {{record.company_name}}."
+            style: danger
+            require_comment: true
+            comment_label: Reason for suspension
+          visibility:
+            roles: [admin, compliance_officer]
+        - name: reinstate
+          label: Reinstate
+          from: [suspended]
+          to: approved
+          icon: refresh-cw
+          color: success
+          confirm:
+            title: Reinstate Subcontractor?
+            message_tpl: "Are you sure you want to reinstate {{record.company_name}}?"
+            style: info
+            require_comment: false
+          guards:
+            - type: field_check
+              name: insurance_not_expired
+              message: Insurance must be current before reinstatement
+              expr:
+                op: ">"
+                lhs: { ref: record.insurance_expiry_date }
+                rhs: { date_math: today }
+          visibility:
+            roles: [admin, compliance_officer]
+        - name: terminate
+          label: Terminate Subcontractor
+          from: [pending, approved, suspended]
+          to: terminated
+          icon: x-circle
+          color: danger
+          confirm:
+            title: Terminate Subcontractor
+            message_tpl: "This action is permanent. {{record.company_name}} will be deactivated and all data archived."
+            style: danger
+            require_comment: true
+            comment_label: Reason for termination
+            type_to_confirm: TERMINATE
+          visibility:
+            roles: [admin]
+  Document:
+    label_field: name
+    fields: []
+    relationships: []
+    state_machine: {}
+  WorkOrder:
+    label_field: title
+    fields: []
+    relationships: []
+    state_machine: null
+  Trade:
+    label_field: name
+    fields: []
+    relationships: []
+    state_machine: null
+
+# --------------------------------------------------------------------------
+# 2. LAYOUT (persistent nodes)
+# --------------------------------------------------------------------------
+layout:
+  root:
+    id: root
+    kind: app_shell
+    props:
+      shell: { layout: sidebar }
+    children: [sidebar]
+  nodes:
+    sidebar:
+      id: sidebar
+      kind: sidebar
+      props:
+        config:
+          position: left
+          collapsible: true
+      children:
+        - nav_dashboard
+        - nav_subcontractors
+        - nav_work_orders
+        - nav_documents
+        - nav_reports
+        - nav_settings
+        - nav_compliance
+    nav_dashboard:
+      id: nav_dashboard
+      kind: nav_item
+      props:
+        label: Dashboard
+        icon: layout-dashboard
+        path: /dashboard
+
+# --------------------------------------------------------------------------
+# 3. ROUTES (routing table)
+# --------------------------------------------------------------------------
+routes:
+  - path: /dashboard
+    node: page_dashboard
+  - path: /subcontractors
+    node: Subcontractor_list
+  - path: /subcontractors/new
+    node: Subcontractor_create
+  - path: /subcontractors/:id
+    node: Subcontractor_detail
+  - path: /subcontractors/:id/edit
+    node: Subcontractor_edit
+  - path: /documents
+    node: Document_list
+  - path: /documents/:id
+    node: Document_detail
+  - path: /work-orders
+    node: WorkOrder_list
+  - path: /work-orders/new
+    node: WorkOrder_create
+  - path: /work-orders/:id
+    node: WorkOrder_detail
+  - path: /trades
+    node: Trade_list
+  - path: /trades/:id
+    node: Trade_detail
+  - path: /reports
+    node: page_reports
+  - path: /settings
+    node: page_settings
+  - path: /compliance/expiring
+    node: page_expiring_insurance
+
+# --------------------------------------------------------------------------
+# 4. NODES (entity pages, custom pages, partials)
+# --------------------------------------------------------------------------
+nodes:
+  Subcontractor_list:
+    id: Subcontractor_list
+    kind: entity_list
+    scope:
+      entity: Subcontractor
+    props:
+      title: Subcontractors
+      icon: hard-hat
+      api_resource: /subcontractors
+      presentation:
+        web: table
+        flutter: card_list
+      default_sort:
+        field: company_name
+        order: asc
+      actions:
+        primary:
+          - label: Add Subcontractor
+            icon: plus
+            visibility:
+              roles: [admin, compliance_officer]
+            invoke:
+              type: navigate
+              path: /subcontractors/new
+        secondary:
+          - label: Export
+            icon: download
+            visibility:
+              roles: [admin]
+            invoke:
+              type: api_call
+              method: GET
+              path: /subcontractors/export
+              download: true
+      bulk_actions:
+        - label: Export Selected
+          icon: download
+          invoke:
+            type: api_call
+            method: POST
+            path: /subcontractors/export
+            body:
+              ids: { ref: selection.ids }
+        - label: Suspend Selected
+          icon: pause-circle
+          visibility:
+            roles: [admin]
+          invoke:
+            type: bulk_transition
+            transition: suspend
+          confirm:
+            title_tpl: "Suspend {{count}} subcontractors?"
+            style: danger
+            require_comment: false
+    children:
+      - Subcontractor_table
+      - Subcontractor_filters
+      - Subcontractor_search
+      - Subcontractor_empty
+  Subcontractor_table:
+    id: Subcontractor_table
+    kind: data_view
+    scope:
+      entity: Subcontractor
+    props:
+      presentation:
+        web: data_table
+        flutter: list_rows
+      columns:
+        - field: logo
+          width: 48
+          fixed: left
+        - field: company_name
+          width: flex
+          link_to:
+            type: route
+            path_tpl: /subcontractors/{{row.id}}
+        - field: status
+          width: 140
+        - field: trade_codes
+          width: 200
+          max_display: 2
+        - field: rating
+          width: 120
+        - field: insurance_expiry_date
+          width: 150
+        - field: created_at
+          width: 150
+  Subcontractor_filters:
+    id: Subcontractor_filters
+    kind: filter_panel
+    scope:
+      entity: Subcontractor
+    props:
+      config:
+        layout:
+          web: sidebar
+          flutter: bottom_sheet
+        persistent: true
+        groups:
+          - label: Status
+            fields:
+              - field: status
+                type: checkbox_group
+                show_counts: true
+          - label: Trades
+            fields:
+              - field: trade_codes
+                type: multi_select
+                searchable: true
+          - label: Insurance
+            fields:
+              - field: insurance_expiry_date
+                type: date_range
+                presets:
+                  - label: Expiring this month
+                    range: [today, end_of_month]
+                  - label: Expiring in 30 days
+                    range: [today, "today + 30d"]
+                  - label: Expired
+                    range: [null, today]
+          - label: Performance
+            fields:
+              - field: rating
+                type: range_slider
+                min: 0
+                max: 5
+                step: 0.5
+  Subcontractor_search:
+    id: Subcontractor_search
+    kind: search_bar
+    scope:
+      entity: Subcontractor
+    props:
+      config:
+        placeholder: Search by company name or tax ID...
+        fields: [company_name, tax_id, email]
+        debounce_ms: 300
+        min_length: 2
+  Subcontractor_empty:
+    id: Subcontractor_empty
+    kind: empty_state
+    scope:
+      entity: Subcontractor
+    props:
+      config:
+        icon: hard-hat
+        title: No subcontractors yet
+        message: Add your first subcontractor to get started.
+        action:
+          label: Add Subcontractor
+          path: /subcontractors/new
+  Subcontractor_detail:
+    id: Subcontractor_detail
+    kind: entity_detail
+    scope:
+      entity: Subcontractor
+    props:
+      api_resource: /subcontractors
+      layout: tabbed
+      record_id_param: id
+    children:
+      - Subcontractor_detail_header
+      - Subcontractor_tabs
+  Subcontractor_detail_header:
+    id: Subcontractor_detail_header
+    kind: detail_header
+    scope:
+      entity: Subcontractor
+    props:
+      config:
+        title_tpl: "{{record.company_name}}"
+        subtitle_tpl: "Tax ID: {{record.tax_id | mask}}"
+        avatar_expr: { ref: record.logo }
+        status_field: status
+        stats:
+          - label: Rating
+            value_expr: { ref: record.rating }
+            display_as: star_rating
+          - label: Active Work Orders
+            value_source:
+              type: api
+              method: GET
+              path_tpl: /subcontractors/{{record.id}}/stats
+            value_path: active_work_orders
+          - label: Total Revenue
+            visibility:
+              roles: [admin]
+            value_source:
+              type: api
+              method: GET
+              path_tpl: /subcontractors/{{record.id}}/stats
+            value_path: total_revenue
+            format: currency
+        actions:
+          type: state_machine
+          entity: Subcontractor
+  Subcontractor_tabs:
+    id: Subcontractor_tabs
+    kind: tab_layout
+    children:
+      - Subcontractor_tab_overview
+      - Subcontractor_tab_documents
+      - Subcontractor_tab_work_orders
+      - Subcontractor_tab_activity
+      - Subcontractor_tab_timeline
+  Subcontractor_tab_overview:
+    id: Subcontractor_tab_overview
+    kind: tab
+    props:
+      id: overview
+      label: Overview
+      icon: info
+    children:
+      - Subcontractor_section_company
+      - Subcontractor_section_compliance
+      - Subcontractor_section_internal
+  Subcontractor_section_company:
+    id: Subcontractor_section_company
+    kind: section
+    scope:
+      entity: Subcontractor
+    props:
+      title: Company Information
+      layout: two_column
+      fields: [company_name, email, phone, address]
+  Subcontractor_section_compliance:
+    id: Subcontractor_section_compliance
+    kind: section
+    scope:
+      entity: Subcontractor
+    props:
+      title: Compliance
+      layout: two_column
+      fields: [tax_id, insurance_expiry_date, trade_codes]
+  Subcontractor_section_internal:
+    id: Subcontractor_section_internal
+    kind: section
+    scope:
+      entity: Subcontractor
+    props:
+      title: Internal
+      layout: single_column
+      fields: [notes, attachments]
+    conditions:
+      - type: role
+        roles: [admin, compliance_officer]
+  Subcontractor_tab_documents:
+    id: Subcontractor_tab_documents
+    kind: tab
+    props:
+      id: documents
+      label: Documents
+      icon: file-text
+    children:
+      - id: Subcontractor_rel_documents
+        kind: relationship_view
+        props:
+          relationship: documents
+          presentation:
+            web: table
+            flutter: list
+          inline_create: true
+  Subcontractor_create:
+    id: Subcontractor_create
+    kind: stepped_form
+    scope:
+      entity: Subcontractor
+    props:
+      api_resource: /subcontractors
+      mode: create
+      title: Add Subcontractor
+      submit_label: Create Subcontractor
+      cancel_path: /subcontractors
+      field_overrides:
+        tax_id:
+          help_text: This cannot be changed after creation. Please verify before submitting.
+          highlight: true
+    children:
+      - Subcontractor_step_company_info
+      - Subcontractor_step_address
+      - Subcontractor_step_compliance
+      - Subcontractor_step_review
+  Subcontractor_step_company_info:
+    id: Subcontractor_step_company_info
+    kind: form_step
+    props:
+      id: company_info
+      title: Company Information
+      description: Basic company details
+      fields: [company_name, tax_id, email, phone]
+  Subcontractor_edit:
+    id: Subcontractor_edit
+    kind: edit_form
+    scope:
+      entity: Subcontractor
+    props:
+      api_resource: /subcontractors
+      mode: edit
+      title_tpl: "Edit {{record.company_name}}"
+      submit_label: Save Changes
+      cancel_path: /subcontractors
+      record_id_param: id
+    children:
+      - Subcontractor_edit_section_company
+      - Subcontractor_edit_section_compliance
+      - Subcontractor_edit_section_internal
+  Document_list: {}
+  Document_detail: {}
+  WorkOrder_list: {}
+  WorkOrder_detail: {}
+  WorkOrder_create: {}
+  Trade_list: {}
+  Trade_detail: {}
+  page_dashboard: {}
+  page_reports: {}
+  page_settings: {}
+  page_expiring_insurance: {}
+
+# --------------------------------------------------------------------------
+# 5. EXTENSIONS (work queues + audit timeline)
+# --------------------------------------------------------------------------
+extensions:
+  work_queue:
+    kind: work_queue
+    props:
+      entity: Case
+      assignment: me
+      sla: {}
+  audit_timeline:
+    kind: audit_timeline
+    props:
+      source:
+        type: api
+        path_tpl: /cases/{{record.id}}/events

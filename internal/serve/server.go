@@ -16,6 +16,7 @@ type Server struct {
 	apiBaseURL  string
 	port        int
 	watch       bool
+	target      string
 	currentTree atomic.Pointer[engine.ComponentTree]
 	sseHub      *SSEHub
 	mockStore   *MockStore
@@ -27,6 +28,7 @@ type Config struct {
 	DataPath   string
 	Port       int
 	Watch      bool
+	Target     string
 }
 
 func NewServer(cfg Config) (*Server, error) {
@@ -35,6 +37,7 @@ func NewServer(cfg Config) (*Server, error) {
 		apiBaseURL: cfg.APIBaseURL,
 		port:       cfg.Port,
 		watch:      cfg.Watch,
+		target:     cfg.Target,
 		sseHub:     NewSSEHub(),
 	}
 
@@ -65,6 +68,26 @@ func (s *Server) Start() error {
 }
 
 func (s *Server) loadSpec() error {
+	version, data, err := parser.DetectSchemaVersion(s.specPath)
+	if err != nil {
+		return fmt.Errorf("detecting schema version: %w", err)
+	}
+
+	if parser.IsResolvedSchema(version) {
+		resolved, err := parser.ParseResolved(data)
+		if err != nil {
+			return fmt.Errorf("parsing resolved spec: %w", err)
+		}
+		tree, err := engine.BuildResolvedTree(resolved)
+		if err != nil {
+			return fmt.Errorf("building resolved component tree: %w", err)
+		}
+		tree.Metadata.Target = s.target()
+		s.currentTree.Store(tree)
+		slog.Info("resolved spec loaded", "entities", len(resolved.Entities), "routes", len(resolved.Routes))
+		return nil
+	}
+
 	appSpec, err := parser.Parse(s.specPath)
 	if err != nil {
 		return fmt.Errorf("parsing spec: %w", err)
@@ -74,9 +97,14 @@ func (s *Server) loadSpec() error {
 	builder := engine.NewBuilder()
 	tree := builder.Build(appSpec, analysis)
 
+	tree.Metadata.Target = s.target()
 	s.currentTree.Store(tree)
 	slog.Info("spec loaded", "entities", len(appSpec.Entities), "pages", len(appSpec.Pages))
 	return nil
+}
+
+func (s *Server) target() string {
+	return s.target
 }
 
 func (s *Server) handleGetSpec(w http.ResponseWriter, r *http.Request) {
