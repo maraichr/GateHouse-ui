@@ -1,0 +1,35 @@
+# Go
+/serve
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+
+# Runtime / Node
+runtime/node_modules/
+runtime/dist/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Claude Code
+.claude/settings.local.json
+
+# Playwright MCP
+.playwright-mcp/
+
+# Environment
+.env
+.env.local
+.env.*.local
