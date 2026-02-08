@@ -47,7 +47,7 @@ func BuildResolvedTree(resolved *spec.ResolvedSpec) (*ComponentTree, error) {
 		entityNames = append(entityNames, name)
 	}
 
-	normalizedEntities := normalizeEntities(resolved.Entities)
+	normalizedEntities := normalizeEntities(resolved.Entities, resolved.Nodes)
 
 	cache := make(map[string]*ComponentNode)
 	var build func(node *spec.ResolvedNode, stack map[string]bool) (*ComponentNode, error)
@@ -260,17 +260,197 @@ func normalizeNodeProps(kind string, scope *Scope, props map[string]any, entitie
 	}
 }
 
-func normalizeEntities(entities map[string]spec.ResolvedEntity) map[string]spec.ResolvedEntity {
+func normalizeEntities(entities map[string]spec.ResolvedEntity, nodes map[string]spec.ResolvedNode) map[string]spec.ResolvedEntity {
 	if entities == nil {
 		return nil
 	}
+	// Build per-entity show_in maps by scanning nodes
+	showInMap := inferShowIn(entities, nodes)
+
 	normalized := make(map[string]spec.ResolvedEntity, len(entities))
 	for name, entity := range entities {
 		entity.Fields = normalizeFields(entity.Fields)
 		entity.StateMachine = normalizeStateMachine(entity.StateMachine)
+		// Inject inferred show_in if field doesn't already have one
+		if fieldShowIn, ok := showInMap[name]; ok {
+			for i, field := range entity.Fields {
+				fieldName, _ := field["name"].(string)
+				if fieldName == "" {
+					continue
+				}
+				if _, hasShowIn := field["show_in"]; !hasShowIn {
+					if si, ok := fieldShowIn[fieldName]; ok {
+						entity.Fields[i]["show_in"] = si
+					}
+				}
+			}
+		}
 		normalized[name] = entity
 	}
 	return normalized
+}
+
+// inferShowIn scans nodes to determine which fields appear in list, detail, create, edit views.
+func inferShowIn(entities map[string]spec.ResolvedEntity, nodes map[string]spec.ResolvedNode) map[string]map[string]map[string]bool {
+	// result[entityName][fieldName] = {"list": true, "detail": true, ...}
+	result := make(map[string]map[string]map[string]bool)
+
+	for entityName := range entities {
+		result[entityName] = make(map[string]map[string]bool)
+	}
+
+	for _, node := range nodes {
+		entityName := ""
+		if node.Scope != nil {
+			entityName = node.Scope.Entity
+		}
+		if entityName == "" {
+			continue
+		}
+		if _, ok := entities[entityName]; !ok {
+			continue
+		}
+
+		switch node.Kind {
+		case "data_view":
+			// Fields in columns → show_in.list
+			if columns, ok := node.Props["columns"].([]any); ok {
+				for _, col := range columns {
+					if colMap, ok := col.(map[string]any); ok {
+						if field, ok := colMap["field"].(string); ok {
+							ensureField(result, entityName, field)
+							result[entityName][field]["list"] = true
+						}
+					}
+				}
+			}
+		case "section":
+			// Fields in section → show_in.detail
+			if fields, ok := node.Props["fields"].([]any); ok {
+				for _, f := range fields {
+					if field, ok := f.(string); ok {
+						ensureField(result, entityName, field)
+						result[entityName][field]["detail"] = true
+					}
+				}
+			}
+		case "form_step", "form_section":
+			// Fields in form steps → show_in.create (parent determines create vs edit)
+			if fields, ok := node.Props["fields"].([]any); ok {
+				for _, f := range fields {
+					if field, ok := f.(string); ok {
+						ensureField(result, entityName, field)
+						// Mark both create and edit; we refine below based on parent form kind
+					}
+				}
+			}
+		}
+	}
+
+	// Scan form nodes to refine create vs edit
+	for _, node := range nodes {
+		entityName := ""
+		if node.Scope != nil {
+			entityName = node.Scope.Entity
+		}
+		if entityName == "" {
+			continue
+		}
+
+		var formKind string
+		switch node.Kind {
+		case "stepped_form", "create_form":
+			formKind = "create"
+		case "edit_form":
+			formKind = "edit"
+		default:
+			continue
+		}
+
+		// Collect fields from children
+		for _, child := range node.Children {
+			childNode := resolveChildNode(child, nodes)
+			if childNode == nil {
+				continue
+			}
+			if fields, ok := childNode.Props["fields"].([]any); ok {
+				for _, f := range fields {
+					if field, ok := f.(string); ok {
+						ensureField(result, entityName, field)
+						result[entityName][field][formKind] = true
+					}
+				}
+			}
+		}
+	}
+
+	// For entities with no views defined (stub entities), apply fallback:
+	// all non-hidden/non-computed/non-primary_key fields shown in detail+create;
+	// immutable excluded from edit
+	for entityName, entity := range entities {
+		fieldMap := result[entityName]
+		hasAnyView := false
+		for _, si := range fieldMap {
+			if len(si) > 0 {
+				hasAnyView = true
+				break
+			}
+		}
+		if hasAnyView {
+			continue
+		}
+		for _, field := range entity.Fields {
+			name, _ := field["name"].(string)
+			if name == "" {
+				continue
+			}
+			if boolVal(field, "hidden") || boolVal(field, "primary_key") {
+				continue
+			}
+			isComputed := field["computed"] != nil && field["computed"] != false
+			isImmutable := boolVal(field, "immutable")
+			ensureField(result, entityName, name)
+			result[entityName][name]["detail"] = true
+			if !isComputed {
+				result[entityName][name]["create"] = true
+				if !isImmutable {
+					result[entityName][name]["edit"] = true
+				}
+			}
+		}
+	}
+
+	return result
+}
+
+func resolveChildNode(child spec.ResolvedNodeChild, nodes map[string]spec.ResolvedNode) *spec.ResolvedNode {
+	if child.Node != nil {
+		return child.Node
+	}
+	if child.Ref != "" {
+		if n, ok := nodes[child.Ref]; ok {
+			return &n
+		}
+	}
+	return nil
+}
+
+func ensureField(result map[string]map[string]map[string]bool, entity, field string) {
+	if result[entity] == nil {
+		result[entity] = make(map[string]map[string]bool)
+	}
+	if result[entity][field] == nil {
+		result[entity][field] = make(map[string]bool)
+	}
+}
+
+func boolVal(m map[string]any, key string) bool {
+	v, ok := m[key]
+	if !ok {
+		return false
+	}
+	b, ok := v.(bool)
+	return ok && b
 }
 
 func normalizeActionConfig(actions any) any {
@@ -315,22 +495,8 @@ func normalizeActionList(actions any) any {
 }
 
 func normalizeColumns(columns any) any {
-	list, ok := columns.([]any)
-	if !ok {
-		return columns
-	}
-	for _, item := range list {
-		col, ok := item.(map[string]any)
-		if !ok {
-			continue
-		}
-		if linkTo, ok := col["link_to"].(map[string]any); ok {
-			if linkType, ok := linkTo["type"].(string); ok && linkType == "route" {
-				col["link_to"] = "detail"
-			}
-		}
-	}
-	return list
+	// Pass through columns as-is; renderers handle link_to as object or string
+	return columns
 }
 
 func normalizeDetailHeaderConfig(config any) any {
@@ -376,16 +542,8 @@ func normalizeDetailHeaderConfig(config any) any {
 }
 
 func normalizeFilterConfig(config any) any {
-	cfg, ok := config.(map[string]any)
-	if !ok {
-		return config
-	}
-	if layout, ok := cfg["layout"].(map[string]any); ok {
-		if webLayout, ok := layout["web"]; ok {
-			cfg["layout"] = webLayout
-		}
-	}
-	return cfg
+	// Pass through as-is; renderer picks config.layout.web or config.layout.flutter
+	return config
 }
 
 func normalizeFields(fields []map[string]any) []map[string]any {
@@ -411,10 +569,11 @@ func normalizeDisplayRules(rules []any) []any {
 			continue
 		}
 		if when, ok := rule["when"].(map[string]any); ok {
+			// Produce flattened condition string for React; preserve when for Flutter
 			if condition, ok := conditionFromWhen(when); ok {
 				rule["condition"] = condition
 			}
-			delete(rule, "when")
+			// Keep "when" intact — renderers that need structured data use it
 		}
 		normalized = append(normalized, rule)
 	}
@@ -555,9 +714,6 @@ func mergeRootProps(props map[string]any, resolved *spec.ResolvedSpec) map[strin
 	}
 	if resolved.App.Behaviors.Notifications.Position != "" {
 		merged["behaviors"] = resolved.App.Behaviors
-	}
-	if resolved.App.Accessibility.AriaLabels != "" {
-		merged["accessibility"] = resolved.App.Accessibility
 	}
 	return merged
 }

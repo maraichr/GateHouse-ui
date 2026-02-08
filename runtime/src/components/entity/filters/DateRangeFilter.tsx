@@ -61,23 +61,29 @@ export function DateRangeFilter({ field, value, onChange, presets }: DateRangeFi
       <button
         type="button"
         onClick={() => setOpen(!open)}
-        className="w-full flex items-center gap-2 px-3 py-1.5 border border-gray-300 rounded-md text-sm text-left hover:bg-gray-50"
+        className="w-full flex items-center gap-2 px-3 py-1.5 border rounded-md text-sm text-left"
+        style={{ borderColor: 'var(--color-border)' }}
+        onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'var(--color-surface-hover, rgba(0,0,0,0.03))'; }}
+        onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = ''; }}
       >
-        <Calendar className="h-4 w-4 text-gray-400" />
-        <span className="truncate text-gray-700">{displayValue}</span>
+        <Calendar className="h-4 w-4" style={{ color: 'var(--color-text-faint, var(--color-text-muted))' }} />
+        <span className="truncate" style={{ color: 'var(--color-text-secondary)' }}>{displayValue}</span>
       </button>
 
       {open && (
         <>
           <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
-          <div className="absolute left-0 top-full mt-1 z-50 bg-white rounded-lg shadow-lg border border-gray-200 p-3">
+          <div className="absolute left-0 top-full mt-1 z-50 surface-card rounded-lg p-3">
             <div className="flex gap-2 mb-2">
               {DEFAULT_PRESETS.map((p) => (
                 <button
                   key={p.label}
                   type="button"
                   onClick={() => handlePreset(p)}
-                  className="px-2 py-1 text-xs border border-gray-200 rounded hover:bg-gray-100"
+                  className="px-2 py-1 text-xs border rounded"
+                  style={{ borderColor: 'var(--color-border-light, var(--color-border))' }}
+                  onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'var(--color-surface-hover, rgba(0,0,0,0.03))'; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = ''; }}
                 >
                   {p.label}
                 </button>
@@ -93,7 +99,10 @@ export function DateRangeFilter({ field, value, onChange, presets }: DateRangeFi
               <button
                 type="button"
                 onClick={() => { onChange(undefined); setOpen(false); }}
-                className="mt-1 w-full text-xs text-gray-500 hover:text-gray-700 text-center"
+                className="mt-1 w-full text-xs text-center"
+                style={{ color: 'var(--color-text-muted)' }}
+                onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--color-text-secondary)'; }}
+                onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--color-text-muted)'; }}
               >
                 Clear
               </button>

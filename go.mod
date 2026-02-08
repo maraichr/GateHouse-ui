@@ -8,4 +8,7 @@ require (
 	gopkg.in/yaml.v3 v3.0.1
 )
 
-require golang.org/x/sys v0.13.0 // indirect
+require (
+	github.com/brianvoe/gofakeit/v7 v7.14.0 // indirect
+	golang.org/x/sys v0.13.0 // indirect
+)

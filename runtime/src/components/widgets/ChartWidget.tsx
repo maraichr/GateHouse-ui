@@ -17,6 +17,7 @@ import {
   Legend,
 } from 'recharts';
 import { useWidgetData } from '../../data/useWidgetData';
+import { resolveSemanticHex, getChartPalette } from '../../utils/semanticColor';
 
 interface DataMapping {
   label?: string;
@@ -33,19 +34,48 @@ interface ChartWidgetProps {
   source?: string;
   data_mapping?: DataMapping;
   height?: number;
-  children?: any;
 }
 
-const SEMANTIC_COLORS: Record<string, string> = {
-  primary: '#3b82f6',
-  success: '#10b981',
-  warning: '#f59e0b',
-  danger: '#ef4444',
-  info: '#06b6d4',
-  neutral: '#6b7280',
-};
+/** Case-insensitive lookup in color_map, then resolve semantic name → theme hex */
+function resolveFromColorMap(label: string, colorMap: Record<string, string>): string | undefined {
+  // Try exact match first, then lowercase
+  const semantic = colorMap[label] ?? colorMap[label.toLowerCase()];
+  if (!semantic) return undefined;
+  return resolveSemanticHex(semantic);
+}
 
-const DEFAULT_COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4'];
+/** Format axis values: use "k" suffix for thousands */
+function formatAxisValue(value: number): string {
+  if (value >= 10000) return `${(value / 1000).toFixed(0)}k`;
+  if (value >= 1000) return `${(value / 1000).toFixed(1)}k`;
+  if (value === Math.round(value)) return String(value);
+  return value.toFixed(1);
+}
+
+/** Balanced chart margin — right margin matches typical Y-axis width */
+const balancedMargin = { top: 5, right: 30, left: 0, bottom: 5 };
+
+/** Pivot series data: [{month:"Jan", type:"A", count:3}, ...] → [{month:"Jan", A:3, B:2}, ...] */
+function pivotSeriesData(
+  data: any[],
+  xKey: string,
+  yKey: string,
+  seriesKey: string,
+): { pivoted: any[]; seriesNames: string[] } {
+  const groups = new Map<string, any>();
+  const seriesSet = new Set<string>();
+
+  for (const item of data) {
+    const x = String(item[xKey] ?? '');
+    const s = String(item[seriesKey] ?? '');
+    const v = item[yKey] ?? 0;
+    seriesSet.add(s);
+    if (!groups.has(x)) groups.set(x, { [xKey]: x });
+    groups.get(x)![s] = v;
+  }
+
+  return { pivoted: Array.from(groups.values()), seriesNames: Array.from(seriesSet) };
+}
 
 export function ChartWidget({
   title,
@@ -59,23 +89,34 @@ export function ChartWidget({
 
   const xKey = data_mapping?.x || data_mapping?.label || 'name';
   const yKey = data_mapping?.y || data_mapping?.value || 'value';
-
+  const seriesKey = data_mapping?.series;
   const colorMap = data_mapping?.color_map;
 
+  // Theme-aware palette: reads from CSS vars so colors match the current theme
+  const palette = useMemo(() => getChartPalette(), []);
+
+  // Resolve per-cell colors for pie/donut and single-series bar charts
   const cellColors = useMemo(() => {
-    if (!colorMap || !Array.isArray(chartData)) return undefined;
+    if (!Array.isArray(chartData)) return undefined;
     const labelKey = data_mapping?.label || xKey;
-    return chartData.map((item: any) => {
-      const semantic = colorMap[item[labelKey]];
-      return semantic ? (SEMANTIC_COLORS[semantic] || semantic) : DEFAULT_COLORS[0];
+    return chartData.map((item: any, i: number) => {
+      if (colorMap) {
+        const resolved = resolveFromColorMap(String(item[labelKey] ?? ''), colorMap);
+        if (resolved) return resolved;
+      }
+      return palette[i % palette.length];
     });
-  }, [chartData, colorMap, data_mapping, xKey]);
+  }, [chartData, colorMap, data_mapping, xKey, palette]);
+
+  // Theme-aware text/grid colors
+  const textColor = 'var(--color-text-muted)';
+  const gridColor = 'var(--color-border-light)';
 
   if (!Array.isArray(chartData) || chartData.length === 0) {
     return (
-      <div className="bg-white rounded-lg border border-gray-200 p-4">
-        {title && <h3 className="text-sm font-semibold text-gray-700 mb-3">{title}</h3>}
-        <div className="flex items-center justify-center text-sm text-gray-400" style={{ height }}>
+      <div className="surface-card p-4">
+        {title && <h3 className="text-sm font-semibold mb-3" style={{ color: 'var(--color-text-secondary)' }}>{title}</h3>}
+        <div className="flex items-center justify-center text-sm" style={{ height, color: 'var(--color-text-faint)' }}>
           No chart data available
         </div>
       </div>
@@ -83,10 +124,11 @@ export function ChartWidget({
   }
 
   const isPie = chart_type === 'pie' || chart_type === 'donut';
+  const hasSeries = !!seriesKey && !isPie;
 
   return (
-    <div className="bg-white rounded-lg border border-gray-200 p-4">
-      {title && <h3 className="text-sm font-semibold text-gray-700 mb-3">{title}</h3>}
+    <div className="surface-card p-4">
+      {title && <h3 className="text-sm font-semibold mb-3" style={{ color: 'var(--color-text-secondary)' }}>{title}</h3>}
       <ResponsiveContainer width="100%" height={height}>
         {isPie ? (
           <PieChart>
@@ -101,35 +143,37 @@ export function ChartWidget({
               label
             >
               {chartData.map((_: any, i: number) => (
-                <Cell key={i} fill={cellColors?.[i] || DEFAULT_COLORS[i % DEFAULT_COLORS.length]} />
+                <Cell key={i} fill={cellColors?.[i] || palette[i % palette.length]} />
               ))}
             </Pie>
             <Tooltip />
             <Legend />
           </PieChart>
         ) : chart_type === 'line' ? (
-          <LineChart data={chartData}>
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey={xKey} tick={{ fontSize: 12 }} />
-            <YAxis tick={{ fontSize: 12 }} />
+          <LineChart data={chartData} margin={balancedMargin}>
+            <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
+            <XAxis dataKey={xKey} tick={{ fontSize: 12, fill: textColor }} />
+            <YAxis tick={{ fontSize: 12, fill: textColor }} tickFormatter={formatAxisValue} />
             <Tooltip />
-            <Line type="monotone" dataKey={yKey} stroke={DEFAULT_COLORS[0]} strokeWidth={2} />
+            <Line type="monotone" dataKey={yKey} stroke={palette[0]} strokeWidth={2} />
           </LineChart>
         ) : chart_type === 'area' ? (
-          <AreaChart data={chartData}>
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey={xKey} tick={{ fontSize: 12 }} />
-            <YAxis tick={{ fontSize: 12 }} />
+          <AreaChart data={chartData} margin={balancedMargin}>
+            <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
+            <XAxis dataKey={xKey} tick={{ fontSize: 12, fill: textColor }} />
+            <YAxis tick={{ fontSize: 12, fill: textColor }} tickFormatter={formatAxisValue} />
             <Tooltip />
-            <Area type="monotone" dataKey={yKey} stroke={DEFAULT_COLORS[0]} fill={DEFAULT_COLORS[0]} fillOpacity={0.2} />
+            <Area type="monotone" dataKey={yKey} stroke={palette[0]} fill={palette[0]} fillOpacity={0.2} />
           </AreaChart>
+        ) : hasSeries ? (
+          <SeriesBarChart data={chartData} xKey={xKey} yKey={yKey} seriesKey={seriesKey!} colorMap={colorMap} palette={palette} gridColor={gridColor} textColor={textColor} />
         ) : (
-          <BarChart data={chartData}>
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey={xKey} tick={{ fontSize: 12 }} />
-            <YAxis tick={{ fontSize: 12 }} />
+          <BarChart data={chartData} margin={balancedMargin}>
+            <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
+            <XAxis dataKey={xKey} tick={{ fontSize: 12, fill: textColor }} />
+            <YAxis tick={{ fontSize: 12, fill: textColor }} tickFormatter={formatAxisValue} />
             <Tooltip />
-            <Bar dataKey={yKey} fill={DEFAULT_COLORS[0]} radius={[4, 4, 0, 0]}>
+            <Bar dataKey={yKey} fill={palette[0]} radius={[4, 4, 0, 0]}>
               {cellColors && chartData.map((_: any, i: number) => (
                 <Cell key={i} fill={cellColors[i]} />
               ))}
@@ -138,5 +182,44 @@ export function ChartWidget({
         )}
       </ResponsiveContainer>
     </div>
+  );
+}
+
+/** Grouped bar chart for series data (e.g. leave types per month) */
+function SeriesBarChart({
+  data, xKey, yKey, seriesKey, colorMap, palette, gridColor, textColor,
+}: {
+  data: any[];
+  xKey: string;
+  yKey: string;
+  seriesKey: string;
+  colorMap?: Record<string, string>;
+  palette: string[];
+  gridColor: string;
+  textColor: string;
+}) {
+  const { pivoted, seriesNames } = useMemo(
+    () => pivotSeriesData(data, xKey, yKey, seriesKey),
+    [data, xKey, yKey, seriesKey],
+  );
+
+  return (
+    <BarChart data={pivoted} margin={balancedMargin}>
+      <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
+      <XAxis dataKey={xKey} tick={{ fontSize: 12, fill: textColor }} />
+      <YAxis tick={{ fontSize: 12, fill: textColor }} tickFormatter={formatAxisValue} />
+      <Tooltip />
+      <Legend />
+      {seriesNames.map((name, i) => {
+        let color = palette[i % palette.length];
+        if (colorMap) {
+          const resolved = resolveFromColorMap(name, colorMap);
+          if (resolved) color = resolved;
+        }
+        return (
+          <Bar key={name} dataKey={name} fill={color} radius={[4, 4, 0, 0]} />
+        );
+      })}
+    </BarChart>
   );
 }

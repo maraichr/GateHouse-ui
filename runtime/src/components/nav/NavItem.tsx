@@ -3,6 +3,7 @@ import { Icon } from '../../utils/icons';
 import { NavBadge } from '../../types';
 import { useNavBadge } from '../../data/useNavBadge';
 import { cn } from '../../utils/cn';
+import { semanticBadgeStyle } from '../../utils/semanticColor';
 
 interface NavItemProps {
   id?: string;
@@ -13,14 +14,6 @@ interface NavItemProps {
   badge?: NavBadge;
   api_resource?: string;
 }
-
-const badgeColorMap: Record<string, string> = {
-  warning: 'bg-amber-100 text-amber-700',
-  danger: 'bg-red-100 text-red-700',
-  success: 'bg-green-100 text-green-700',
-  info: 'bg-blue-100 text-blue-700',
-  primary: 'bg-blue-100 text-blue-700',
-};
 
 export function NavItem({ label, icon, path, badge, api_resource }: NavItemProps) {
   const { data: badgeCount } = useNavBadge(badge, api_resource);
@@ -46,10 +39,8 @@ export function NavItem({ label, icon, path, badge, api_resource }: NavItemProps
       <span className="truncate">{label}</span>
       {badge && badgeCount != null && badgeCount > 0 && (
         <span
-          className={cn(
-            'ml-auto text-xs font-medium px-2 py-0.5 rounded-full',
-            badgeColorMap[badge.color || 'info'] || badgeColorMap.info
-          )}
+          className="ml-auto text-xs font-medium px-2 py-0.5 rounded-full"
+          style={semanticBadgeStyle(badge.color || 'info')}
         >
           {badgeCount}
         </span>

@@ -1,0 +1,36 @@
+name: gatehouse_ui
+description: GateHouse UI Flutter Web Renderer
+version: 1.0.0
+publish_to: none
+
+environment:
+  sdk: ">=3.2.0 <4.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  go_router: ^17.1.0
+  flutter_riverpod: ^3.1.0
+  riverpod_annotation: ^4.0.0
+  dio: ^5.4.0
+  json_annotation: ^4.9.0
+  freezed_annotation: ^3.1.0
+  intl: any
+  flutter_form_builder: ^10.3.0
+  form_builder_validators: ^11.0.0
+  lucide_icons_flutter: ^3.1.9
+  collection: ^1.18.0
+  fl_chart: ^1.1.1
+  flutter_html: ^3.0.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  build_runner: ^2.4.0
+  json_serializable: ^6.8.0
+  freezed: ^3.2.3
+  riverpod_generator: ^4.0.0+1
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true

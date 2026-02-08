@@ -46,6 +46,7 @@ const StatCards = React.lazy(() => import('./components/widgets/StatCards').then
 const ChartWidget = React.lazy(() => import('./components/widgets/ChartWidget').then(m => ({ default: m.ChartWidget })));
 const EntityTableWidget = React.lazy(() => import('./components/widgets/EntityTableWidget').then(m => ({ default: m.EntityTableWidget })));
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 type ComponentRenderer = React.ComponentType<any>;
 
 const COMPONENT_MAP: Partial<Record<ComponentKind, ComponentRenderer>> = {
@@ -105,7 +106,7 @@ const COMPONENT_MAP: Partial<Record<ComponentKind, ComponentRenderer>> = {
 };
 
 // Components that receive raw childNodes instead of rendered children
-const CHILD_NODE_KINDS = new Set<ComponentKind>(['entity_list', 'entity_detail', 'create_form', 'edit_form']);
+const CHILD_NODE_KINDS = new Set<ComponentKind>(['entity_list', 'entity_detail', 'create_form', 'edit_form', 'stepped_form']);
 
 export function renderNode(node: ComponentNode): React.ReactNode {
   const { hasPermission } = usePermissions();
@@ -140,7 +141,7 @@ export function renderNode(node: ComponentNode): React.ReactNode {
 
 export function RenderNodeWrapper({ node }: { node: ComponentNode }) {
   return (
-    <React.Suspense fallback={<div className="animate-pulse bg-gray-100 rounded h-8" />}>
+    <React.Suspense fallback={<div className="animate-pulse rounded h-8" style={{ backgroundColor: 'var(--color-bg-alt, #f3f4f6)' }} />}>
       <RenderNodeInner node={node} />
     </React.Suspense>
   );
@@ -152,9 +153,9 @@ function RenderNodeInner({ node }: { node: ComponentNode }) {
 
 function PlaceholderNode({ node }: { node: ComponentNode }) {
   return (
-    <div className="p-4 border border-dashed border-gray-300 rounded-md bg-gray-50">
-      <p className="text-sm text-gray-500">
-        Component: <code className="text-xs bg-gray-200 px-1 rounded">{node.kind}</code>
+    <div className="p-4 border border-dashed rounded-md" style={{ borderColor: 'var(--color-border, #d1d5db)', backgroundColor: 'var(--color-bg, #f9fafb)' }}>
+      <p className="text-sm" style={{ color: 'var(--color-text-muted, #6b7280)' }}>
+        Component: <code className="text-xs px-1 rounded" style={{ backgroundColor: 'var(--color-bg-alt, #e5e7eb)' }}>{node.kind}</code>
         {node.id && <span className="ml-2">({node.id})</span>}
       </p>
       {node.children?.map((child, i) => (

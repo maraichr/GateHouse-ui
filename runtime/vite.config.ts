@@ -10,14 +10,16 @@ export default defineConfig({
     },
   },
   server: {
-    port: 5173,
+    port: parseInt(process.env.VITE_PORT || '5174'),
+    host: process.env.VITE_HOST || 'localhost',
+    hmr: { host: 'localhost' },
     proxy: {
       '/_renderer': {
-        target: 'http://localhost:3000',
+        target: process.env.VITE_GO_SERVER_URL || 'http://localhost:3000',
         changeOrigin: true,
       },
       '/api': {
-        target: 'http://localhost:3000',
+        target: process.env.VITE_GO_SERVER_URL || 'http://localhost:3000',
         changeOrigin: true,
       },
     },

@@ -1,0 +1,54 @@
+{
+  "/customers": [
+    { "id": "cust-001", "name": "Alice Johnson", "email": "alice@techcorp.com", "company": "TechCorp Inc", "plan": "enterprise", "mrr": 2400, "status": "active", "created_at": "2024-03-15T10:00:00Z" },
+    { "id": "cust-002", "name": "Bob Smith", "email": "bob@startup.io", "company": "StartupIO", "plan": "pro", "mrr": 99, "status": "active", "created_at": "2024-06-20T14:30:00Z" },
+    { "id": "cust-003", "name": "Carol Lee", "email": "carol@design.co", "company": "DesignCo", "plan": "starter", "mrr": 29, "status": "trial", "created_at": "2025-01-10T09:00:00Z" },
+    { "id": "cust-004", "name": "Dave Wilson", "email": "dave@bigenterprise.com", "company": "BigEnterprise", "plan": "enterprise", "mrr": 5000, "status": "active", "created_at": "2023-11-01T08:00:00Z" },
+    { "id": "cust-005", "name": "Eve Brown", "email": "eve@freelance.dev", "company": "Freelance", "plan": "free", "mrr": 0, "status": "churned", "created_at": "2024-09-05T16:00:00Z" }
+  ],
+  "/subscriptions": [
+    { "id": "sub-001", "customer_id": "cust-001", "customer_name": "Alice Johnson", "plan_name": "Enterprise Annual", "amount": 28800, "interval": "yearly", "status": "active", "current_period_end": "2026-03-15" },
+    { "id": "sub-002", "customer_id": "cust-002", "customer_name": "Bob Smith", "plan_name": "Pro Monthly", "amount": 99, "interval": "monthly", "status": "active", "current_period_end": "2026-02-20" },
+    { "id": "sub-003", "customer_id": "cust-003", "customer_name": "Carol Lee", "plan_name": "Starter Monthly", "amount": 29, "interval": "monthly", "status": "trialing", "current_period_end": "2026-02-10" },
+    { "id": "sub-004", "customer_id": "cust-004", "customer_name": "Dave Wilson", "plan_name": "Enterprise Monthly", "amount": 5000, "interval": "monthly", "status": "past_due", "current_period_end": "2026-01-31" }
+  ],
+  "/invoices": [
+    { "id": "inv-001", "invoice_number": "INV-2025-001", "customer_id": "cust-001", "customer_name": "Alice Johnson", "amount": 28800, "status": "paid", "due_date": "2025-04-01", "created_at": "2025-03-15T10:00:00Z" },
+    { "id": "inv-002", "invoice_number": "INV-2025-002", "customer_id": "cust-002", "customer_name": "Bob Smith", "amount": 99, "status": "paid", "due_date": "2025-07-20", "created_at": "2025-06-20T14:30:00Z" },
+    { "id": "inv-003", "invoice_number": "INV-2026-001", "customer_id": "cust-004", "customer_name": "Dave Wilson", "amount": 5000, "status": "overdue", "due_date": "2026-01-31", "created_at": "2026-01-01T08:00:00Z" },
+    { "id": "inv-004", "invoice_number": "INV-2026-002", "customer_id": "cust-002", "customer_name": "Bob Smith", "amount": 99, "status": "sent", "due_date": "2026-02-20", "created_at": "2026-01-20T14:30:00Z" }
+  ],
+  "/tickets": [
+    { "id": "tkt-001", "subject": "Cannot access billing page", "customer_id": "cust-001", "customer_name": "Alice Johnson", "priority": "high", "status": "open", "assigned_to": "Support Team", "description": "<p>Billing page returns 500 error when I try to update payment method.</p>", "created_at": "2026-02-05T11:00:00Z" },
+    { "id": "tkt-002", "subject": "Feature request: SSO integration", "customer_id": "cust-004", "customer_name": "Dave Wilson", "priority": "medium", "status": "in_progress", "assigned_to": "Engineering", "description": "<p>We need SAML SSO for enterprise compliance.</p>", "created_at": "2026-01-28T09:00:00Z" },
+    { "id": "tkt-003", "subject": "Invoice download broken", "customer_id": "cust-002", "customer_name": "Bob Smith", "priority": "low", "status": "resolved", "assigned_to": "Support Team", "description": "<p>PDF invoices show garbled text.</p>", "created_at": "2026-01-15T14:00:00Z" },
+    { "id": "tkt-004", "subject": "Urgent: Data loss in export", "customer_id": "cust-004", "customer_name": "Dave Wilson", "priority": "urgent", "status": "open", "assigned_to": "", "description": "<p>CSV export is missing rows for large datasets >10k records.</p>", "created_at": "2026-02-06T16:00:00Z" }
+  ],
+
+  "_widgets": {
+    "/dashboard/stats": {
+      "monthly_revenue": "$38,028",
+      "active_subscriptions": 3,
+      "open_tickets": 2,
+      "churn_rate": "2.1%"
+    },
+    "/dashboard/charts/revenue-by-plan": {
+      "data": [
+        { "plan": "Enterprise", "revenue": 89400 },
+        { "plan": "Pro", "revenue": 11880 },
+        { "plan": "Starter", "revenue": 3480 },
+        { "plan": "Free", "revenue": 0 }
+      ]
+    },
+    "/dashboard/charts/mrr-trend": {
+      "data": [
+        { "month": "2025-09", "mrr": 32500 },
+        { "month": "2025-10", "mrr": 33200 },
+        { "month": "2025-11", "mrr": 34800 },
+        { "month": "2025-12", "mrr": 36100 },
+        { "month": "2026-01", "mrr": 37500 },
+        { "month": "2026-02", "mrr": 38028 }
+      ]
+    }
+  }
+}

@@ -1,0 +1,160 @@
+# ============================================================================
+# PayBridge — Host Spec (App Shell Only)
+# ============================================================================
+
+app:
+  name: "paybridge"
+  display_name: "PayBridge"
+  version: "1.0.0"
+  description: "B2B payment processing and compliance platform"
+
+  theme:
+    mode: light
+    primary_color: "#4338CA"
+    secondary_color: "#64748B"
+    accent_color: "#F59E0B"
+    danger_color: "#DC2626"
+    success_color: "#059669"
+    info_color: "#0284C7"
+    warning_color: "#D97706"
+    border_radius: md
+    density: comfortable
+    font_family: "Inter, system-ui, sans-serif"
+    elevation: md
+    surface_style: raised
+    header_style: accent-bar
+    chart_palette: [primary, success, warning, info, danger, accent]
+    logo:
+      light: "/assets/paybridge-logo.svg"
+      dark: "/assets/paybridge-logo-dark.svg"
+      favicon: "/assets/paybridge-favicon.svg"
+
+  i18n:
+    default_locale: en-US
+    date_format: "MMM d, yyyy"
+    time_format: "h:mm a"
+    currency: USD
+    timezone: America/New_York
+
+auth:
+  provider: oidc
+  config:
+    issuer: "https://auth.paybridge.io/realms/main"
+    client_id: "paybridge-portal"
+    scopes: [openid, profile, email]
+    pkce: true
+
+  claims_mapping:
+    user_id: sub
+    tenant_id: "org_id"
+    display_name: name
+    email: email
+    avatar: picture
+    roles: "realm_access.roles"
+
+  roles:
+    admin:
+      display_name: "Administrator"
+      description: "Full platform access"
+    compliance_officer:
+      display_name: "Compliance Officer"
+      description: "KYC reviews, sanctions screening, risk management"
+    operations_manager:
+      display_name: "Operations Manager"
+      description: "Onboarding, customer management, payment oversight"
+    finance_manager:
+      display_name: "Finance Manager"
+      description: "Payment approvals, batch processing, reconciliation"
+    viewer:
+      display_name: "Read-Only"
+      description: "View-only access across all modules"
+
+shell:
+  layout: sidebar
+
+  sidebar:
+    position: left
+    collapsible: true
+    default_collapsed: false
+    width: 260
+    collapsed_width: 64
+    show_user_menu: true
+    show_search: true
+
+  header:
+    show_breadcrumbs: true
+    show_global_search: true
+    show_notifications: true
+
+navigation:
+  items:
+    - id: dashboard
+      label: "Dashboard"
+      icon: layout-dashboard
+      path: /dashboard
+      page: dashboard
+
+pages:
+  - id: dashboard
+    title: "Dashboard"
+    path: /dashboard
+    widgets:
+      - type: stat_cards
+        columns: 4
+        cards:
+          - title: "Monthly Volume"
+            value: "$2.4M"
+            icon: dollar-sign
+            color: primary
+          - title: "Active Customers"
+            value: "127"
+            icon: building-2
+            color: success
+          - title: "Pending Approvals"
+            value: "8"
+            icon: clock
+            color: warning
+          - title: "Compliance Score"
+            value: "96%"
+            icon: shield-check
+            color: info
+
+      - type: chart
+        title: "Payment Volume (30 days)"
+        chart_type: area
+        source: "api:GET /dashboard/charts/payment-volume"
+        data_mapping:
+          x: date
+          y: amount
+          label: date
+        height: 280
+
+      - type: chart
+        title: "Payments by Method"
+        chart_type: donut
+        source: "api:GET /dashboard/charts/payments-by-method"
+        data_mapping:
+          label: method
+          value: count
+        height: 280
+
+      - type: entity_table
+        title: "Recent Payments"
+        entity: Payment
+        query:
+          sort: { field: initiated_at, order: desc }
+          limit: 5
+        columns: [reference, customer_name, payee_name, amount, status]
+        link: /payments
+
+      - type: entity_table
+        title: "Pending KYC Reviews"
+        entity: KYCReview
+        query:
+          filter: { status: [pending, in_progress] }
+          sort: { field: due_date, order: asc }
+          limit: 5
+        columns: [customer_name, review_type, risk_level, due_date, status]
+        link: /kyc-reviews
+
+entities: []

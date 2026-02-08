@@ -21,7 +21,6 @@ interface EntityTableWidgetProps {
 function resolveApiResource(entity?: string, api_resource?: string): string {
   if (api_resource) return api_resource;
   if (!entity) return '';
-  // Convert PascalCase entity name to kebab-case API resource path
   return '/' + entity
     .replace(/([a-z])([A-Z])/g, '$1-$2')
     .toLowerCase()
@@ -53,11 +52,11 @@ export function EntityTableWidget({
   const displayColumns = normalizeColumns(columns);
 
   return (
-    <div className="bg-white rounded-lg border border-gray-200">
-      <div className="px-4 py-3 border-b border-gray-200 flex items-center justify-between">
-        <h3 className="text-sm font-semibold text-gray-700">{title || entity || 'Records'}</h3>
+    <div className="rounded-lg border surface-card" style={{ backgroundColor: 'var(--color-surface)', borderColor: 'var(--color-border)' }}>
+      <div className="px-4 py-3 border-b flex items-center justify-between" style={{ borderColor: 'var(--color-border)' }}>
+        <h3 className="text-sm font-semibold" style={{ color: 'var(--color-text-secondary)' }}>{title || entity || 'Records'}</h3>
         {link && (
-          <Link to={link} className="text-xs text-blue-600 hover:text-blue-700 flex items-center gap-1">
+          <Link to={link} className="text-xs flex items-center gap-1" style={{ color: 'var(--color-primary)' }}>
             View All <ArrowRight className="h-3 w-3" />
           </Link>
         )}
@@ -66,19 +65,19 @@ export function EntityTableWidget({
         <div className="p-4">
           <div className="animate-pulse space-y-2">
             {Array.from({ length: 3 }).map((_, i) => (
-              <div key={i} className="h-8 bg-gray-100 rounded" />
+              <div key={i} className="h-8 rounded" style={{ backgroundColor: 'var(--color-bg-alt)' }} />
             ))}
           </div>
         </div>
       ) : rows.length === 0 ? (
-        <div className="p-4 text-sm text-gray-400 text-center">No records</div>
+        <div className="p-4 text-sm text-center" style={{ color: 'var(--color-text-faint)' }}>No records</div>
       ) : (
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-gray-100">
+              <tr className="border-b" style={{ borderColor: 'var(--color-border-light)' }}>
                 {displayColumns.map((col) => (
-                  <th key={col} className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th key={col} className="px-4 py-2 text-left text-xs font-medium uppercase tracking-wider" style={{ color: 'var(--color-text-muted)' }}>
                     {col.replace(/_/g, ' ')}
                   </th>
                 ))}
@@ -86,9 +85,13 @@ export function EntityTableWidget({
             </thead>
             <tbody>
               {rows.map((row: any, ri: number) => (
-                <tr key={row.id || ri} className="border-b border-gray-50 hover:bg-gray-50">
+                <tr key={row.id || ri} className="border-b transition-colors"
+                  style={{ borderColor: 'var(--color-border-light)' }}
+                  onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'var(--color-surface-hover)'; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = ''; }}
+                >
                   {displayColumns.map((col) => (
-                    <td key={col} className="px-4 py-2 text-gray-700">
+                    <td key={col} className="px-4 py-2" style={{ color: 'var(--color-text-secondary)' }}>
                       {formatCellValue(row[col])}
                     </td>
                   ))}

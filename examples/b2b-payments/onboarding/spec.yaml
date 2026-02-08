@@ -1,0 +1,339 @@
+# ============================================================================
+# Onboarding Service — Business application intake and approval
+# ============================================================================
+
+app:
+  name: "paybridge-onboarding"
+  display_name: "PayBridge Onboarding"
+  version: "1.0.0"
+  description: "Business onboarding and application management"
+
+  theme:
+    mode: light
+    primary_color: "#4338CA"
+
+  i18n:
+    default_locale: en-US
+    currency: USD
+
+auth:
+  provider: oidc
+  roles:
+    admin:
+      display_name: "Administrator"
+    operations_manager:
+      display_name: "Operations Manager"
+
+shell:
+  layout: sidebar
+  sidebar:
+    position: left
+
+navigation:
+  items:
+    - id: applications
+      label: "Applications"
+      icon: file-plus
+      path: /applications
+      entity: Application
+      badge:
+        type: count
+        filter: { status: submitted }
+        color: warning
+
+entities:
+  - name: Application
+    display_name: "Application"
+    display_name_plural: "Applications"
+    icon: file-plus
+    api_resource: /applications
+    label_field: company_name
+    status_field: status
+
+    fields:
+      - name: id
+        label: "ID"
+        type: string
+        primary_key: true
+        hidden: true
+
+      - name: company_name
+        label: "Company Name"
+        type: string
+        required: true
+
+      - name: legal_name
+        label: "Legal Entity Name"
+        type: string
+        required: true
+
+      - name: ein
+        label: "EIN / Tax ID"
+        type: string
+        required: true
+        mask_pattern: "XX-XXX####"
+
+      - name: state_of_incorporation
+        label: "State of Incorporation"
+        type: enum
+        values:
+          - { value: DE, label: "Delaware" }
+          - { value: NY, label: "New York" }
+          - { value: CA, label: "California" }
+          - { value: TX, label: "Texas" }
+          - { value: FL, label: "Florida" }
+          - { value: WY, label: "Wyoming" }
+          - { value: NV, label: "Nevada" }
+          - { value: OTHER, label: "Other" }
+
+      - name: business_type
+        label: "Business Type"
+        type: enum
+        required: true
+        values:
+          - { value: llc, label: "LLC", color: info }
+          - { value: corporation, label: "Corporation", color: primary }
+          - { value: partnership, label: "Partnership", color: secondary }
+          - { value: sole_proprietor, label: "Sole Proprietor", color: warning }
+
+      - name: industry
+        label: "Industry"
+        type: string
+
+      - name: website
+        label: "Website"
+        type: string
+        format: url
+
+      - name: annual_revenue
+        label: "Annual Revenue"
+        type: currency
+        currency: USD
+
+      - name: estimated_monthly_volume
+        label: "Est. Monthly Payment Volume"
+        type: currency
+        currency: USD
+
+      - name: primary_contact_name
+        label: "Primary Contact"
+        type: string
+        required: true
+
+      - name: primary_contact_email
+        label: "Contact Email"
+        type: string
+        required: true
+
+      - name: primary_contact_phone
+        label: "Contact Phone"
+        type: string
+        format: phone
+
+      - name: submitted_at
+        label: "Submitted"
+        type: date
+
+      - name: reviewed_by
+        label: "Reviewed By"
+        type: string
+
+      - name: review_notes
+        label: "Review Notes"
+        type: richtext
+
+      - name: status
+        label: "Status"
+        type: enum
+        required: true
+        values:
+          - { value: draft, label: "Draft", color: secondary }
+          - { value: submitted, label: "Submitted", color: warning }
+          - { value: under_review, label: "Under Review", color: info }
+          - { value: info_requested, label: "Info Requested", color: warning }
+          - { value: approved, label: "Approved", color: success }
+          - { value: rejected, label: "Rejected", color: danger }
+
+    state_machine:
+      field: status
+      initial: draft
+
+      transitions:
+        - name: submit
+          label: "Submit Application"
+          from: [draft]
+          to: submitted
+          icon: send
+          color: primary
+          confirmation:
+            title: "Submit Application?"
+            message: "Submit this application for review?"
+
+        - name: begin_review
+          label: "Begin Review"
+          from: [submitted]
+          to: under_review
+          icon: eye
+          color: info
+          permissions: [admin, operations_manager]
+
+        - name: approve
+          label: "Approve"
+          from: [under_review]
+          to: approved
+          icon: check-circle
+          color: success
+          permissions: [admin, operations_manager]
+          confirmation:
+            title: "Approve Application?"
+            message: "Approve this application? A customer account will be created."
+            style: success
+
+        - name: reject
+          label: "Reject"
+          from: [under_review]
+          to: rejected
+          icon: x-circle
+          color: danger
+          permissions: [admin, operations_manager]
+          confirmation:
+            title: "Reject Application?"
+            message: "Reject this application?"
+            style: danger
+
+        - name: request_info
+          label: "Request Info"
+          from: [under_review]
+          to: info_requested
+          icon: message-circle
+          color: warning
+          permissions: [admin, operations_manager]
+
+        - name: resubmit
+          label: "Resubmit"
+          from: [info_requested]
+          to: submitted
+          icon: send
+          color: primary
+
+    views:
+      list:
+        title: "Business Applications"
+        columns:
+          - { field: company_name, link_to: detail }
+          - { field: business_type }
+          - { field: estimated_monthly_volume }
+          - { field: primary_contact_name }
+          - { field: submitted_at }
+          - { field: status }
+        default_sort: { field: submitted_at, order: desc }
+        search:
+          fields: [company_name, legal_name, primary_contact_name, primary_contact_email]
+          placeholder: "Search applications..."
+        filters:
+          layout: sidebar
+          groups:
+            - label: "Status"
+              fields:
+                - field: status
+                  type: checkbox_group
+                  presets:
+                    - label: "Pending Review"
+                      range: [submitted, under_review]
+                    - label: "Approved"
+                      range: [approved]
+                    - label: "Needs Attention"
+                      range: [info_requested]
+            - label: "Business Type"
+              fields:
+                - field: business_type
+                  type: select
+        actions:
+          primary:
+            - label: "New Application"
+              icon: plus
+              action: { type: navigate, path: "/applications/new" }
+        empty:
+          icon: file-plus
+          title: "No applications yet"
+          message: "Start by creating a new business application."
+          action:
+            label: "Create Application"
+            path: /applications/new
+
+      detail:
+        header:
+          title: "{{ company_name }}"
+          subtitle: "{{ legal_name }} · {{ business_type }}"
+
+        tabs:
+          - id: overview
+            label: "Overview"
+            icon: info
+            sections:
+              - title: "Business Information"
+                layout: two_column
+                fields:
+                  - company_name
+                  - legal_name
+                  - ein
+                  - business_type
+                  - industry
+                  - state_of_incorporation
+                  - website
+
+              - title: "Financial Profile"
+                layout: two_column
+                fields:
+                  - annual_revenue
+                  - estimated_monthly_volume
+
+              - title: "Primary Contact"
+                layout: two_column
+                fields:
+                  - primary_contact_name
+                  - primary_contact_email
+                  - primary_contact_phone
+
+          - id: review
+            label: "Review"
+            icon: clipboard-check
+            permissions: [admin, operations_manager]
+            sections:
+              - title: "Review Details"
+                fields:
+                  - reviewed_by
+                  - review_notes
+
+      create:
+        title: "New Application"
+        layout: stepped
+        submit_label: "Submit Application"
+        cancel_path: /applications
+        steps:
+          - id: business
+            title: "Business Information"
+            description: "Tell us about your company"
+            fields:
+              - company_name
+              - legal_name
+              - ein
+              - business_type
+              - industry
+              - state_of_incorporation
+              - website
+
+          - id: contact
+            title: "Contact Information"
+            description: "Who should we contact?"
+            fields:
+              - primary_contact_name
+              - primary_contact_email
+              - primary_contact_phone
+
+          - id: financials
+            title: "Financial Profile"
+            description: "Help us understand your payment needs"
+            fields:
+              - annual_revenue
+              - estimated_monthly_volume

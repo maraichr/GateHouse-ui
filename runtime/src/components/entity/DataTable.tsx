@@ -24,7 +24,7 @@ interface DataTableProps {
   columns?: ListColumn[];
   entity?: string;
   fields?: Field[];
-  data: any[];
+  data: Record<string, any>[];
   entityRoute?: string;
 }
 
@@ -33,7 +33,7 @@ export function DataTable({ columns, fields, data, entityRoute }: DataTableProps
   const navigate = useNavigate();
   const fieldMap = useMemo(() => new Map(fields?.map((f) => [f.name, f]) || []), [fields]);
 
-  const columnHelper = createColumnHelper<any>();
+  const columnHelper = createColumnHelper<Record<string, any>>();
 
   const tableCols = useMemo(() => {
     return (columns || []).map((col) => {
@@ -67,19 +67,21 @@ export function DataTable({ columns, fields, data, entityRoute }: DataTableProps
               const remaining = value.length - display.length;
               return (
                 <div className="flex gap-1 flex-wrap">
-                  {display.map((v: any, i: number) => (
-                    <span key={i} className="px-2 py-0.5 bg-gray-100 rounded text-xs">{String(v)}</span>
+                  {display.map((v: unknown, i: number) => (
+                    <span key={i} className="px-2 py-0.5 rounded text-xs" style={{ backgroundColor: 'var(--color-bg-alt, #f3f4f6)' }}>{String(v)}</span>
                   ))}
                   {remaining > 0 && (
-                    <span className="px-2 py-0.5 bg-gray-50 text-gray-500 rounded text-xs">+{remaining} more</span>
+                    <span className="px-2 py-0.5 rounded text-xs" style={{ backgroundColor: 'var(--color-bg, #f9fafb)', color: 'var(--color-text-muted, #6b7280)' }}>+{remaining} more</span>
                   )}
                 </div>
               );
             }
           }
 
-          // Link to detail
-          if (col.link_to === 'detail' && entityRoute) {
+          // Link to detail (handle link_to as object {type:"route"} or string "detail")
+          const isDetailLink = col.link_to === 'detail' ||
+            (typeof col.link_to === 'object' && (col.link_to as { type?: string })?.type === 'route');
+          if (isDetailLink && entityRoute) {
             return (
               <button
                 onClick={() => navigate(`${entityRoute}/${info.row.original.id}`)}
@@ -100,7 +102,7 @@ export function DataTable({ columns, fields, data, entityRoute }: DataTableProps
           const ruleResult = evaluateDisplayRules(field?.display_rules, value);
           if (ruleResult) {
             return (
-              <span className={styleForRule(ruleResult.style)} title={ruleResult.tooltip}>
+              <span style={styleForRule(ruleResult.style)} title={ruleResult.tooltip}>
                 {ruleResult.label || <StringDisplay value={value} sensitive={field?.sensitive} mask_pattern={field?.mask_pattern} />}
               </span>
             );
@@ -124,9 +126,9 @@ export function DataTable({ columns, fields, data, entityRoute }: DataTableProps
   });
 
   return (
-    <div className="overflow-x-auto border border-gray-200 rounded-lg">
-      <table className="min-w-full divide-y divide-gray-200">
-        <thead className="bg-gray-50">
+    <div className="overflow-x-auto surface-card">
+      <table className="min-w-full" style={{ borderCollapse: 'separate', borderSpacing: 0 }}>
+        <thead style={{ backgroundColor: 'var(--color-bg)' }}>
           {table.getHeaderGroups().map((hg) => (
             <tr key={hg.id}>
               {hg.headers.map((header) => (
@@ -134,23 +136,32 @@ export function DataTable({ columns, fields, data, entityRoute }: DataTableProps
                   key={header.id}
                   onClick={header.column.getCanSort() ? header.column.getToggleSortingHandler() : undefined}
                   className={cn(
-                    'px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider',
-                    header.column.getCanSort() && 'cursor-pointer hover:text-gray-700'
+                    'px-4 py-3 text-left text-xs font-medium uppercase tracking-wider',
+                    header.column.getCanSort() && 'cursor-pointer'
                   )}
+                  style={{ color: 'var(--color-text-muted, #6b7280)', borderBottom: '1px solid var(--color-border, #e5e7eb)' }}
+                  aria-sort={
+                    header.column.getIsSorted() === 'asc' ? 'ascending' :
+                    header.column.getIsSorted() === 'desc' ? 'descending' :
+                    header.column.getCanSort() ? 'none' : undefined
+                  }
                 >
                   <div className="flex items-center gap-1">
                     {flexRender(header.column.columnDef.header, header.getContext())}
-                    {header.column.getIsSorted() === 'asc' && <ArrowUp className="h-3 w-3" />}
-                    {header.column.getIsSorted() === 'desc' && <ArrowDown className="h-3 w-3" />}
+                    {header.column.getIsSorted() === 'asc' && <ArrowUp className="h-3 w-3" aria-hidden="true" />}
+                    {header.column.getIsSorted() === 'desc' && <ArrowDown className="h-3 w-3" aria-hidden="true" />}
                   </div>
                 </th>
               ))}
             </tr>
           ))}
         </thead>
-        <tbody className="bg-white divide-y divide-gray-200">
+        <tbody style={{ backgroundColor: 'var(--color-surface)' }}>
           {table.getRowModel().rows.map((row) => (
-            <tr key={row.id} className="hover:bg-gray-50">
+            <tr key={row.id} className="transition-colors" style={{ borderBottom: '1px solid var(--color-border, #e5e7eb)' }}
+              onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'var(--color-bg, #f9fafb)'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = ''; }}
+            >
               {row.getVisibleCells().map((cell) => (
                 <td key={cell.id} className="px-4 py-3 text-sm whitespace-nowrap">
                   {flexRender(cell.column.columnDef.cell, cell.getContext())}
@@ -161,7 +172,7 @@ export function DataTable({ columns, fields, data, entityRoute }: DataTableProps
         </tbody>
       </table>
       {data.length === 0 && (
-        <div className="py-8 text-center text-sm text-gray-500">
+        <div className="py-8 text-center text-sm" style={{ color: 'var(--color-text-muted, #6b7280)' }}>
           No data available
         </div>
       )}

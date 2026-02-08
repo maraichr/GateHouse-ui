@@ -1,4 +1,4 @@
-import { cn } from '../../../utils/cn';
+import { semanticBadgeStyle } from '../../../utils/semanticColor';
 
 interface FilterPreset {
   label: string;
@@ -10,6 +10,17 @@ interface FilterPresetsProps {
   activeFilters: Record<string, any>;
   onSelect: (filters: Record<string, any>) => void;
 }
+
+const activeStyle = {
+  ...semanticBadgeStyle('primary'),
+  borderColor: 'color-mix(in srgb, var(--color-primary) 40%, transparent)',
+};
+
+const inactiveStyle = {
+  color: 'var(--color-text-muted)',
+  borderColor: 'var(--color-border-light, var(--color-border))',
+  backgroundColor: 'transparent',
+};
 
 export function FilterPresets({ presets, activeFilters, onSelect }: FilterPresetsProps) {
   if (!presets.length) return null;
@@ -25,30 +36,41 @@ export function FilterPresets({ presets, activeFilters, onSelect }: FilterPreset
       <button
         type="button"
         onClick={() => onSelect({})}
-        className={cn(
-          'px-3 py-1 text-xs font-medium rounded-full border transition-colors',
-          Object.keys(activeFilters).length === 0
-            ? 'bg-blue-50 text-blue-700 border-blue-200'
-            : 'text-gray-600 border-gray-200 hover:bg-gray-50',
-        )}
+        className="px-3 py-1 text-xs font-medium rounded-full border transition-colors"
+        style={Object.keys(activeFilters).length === 0 ? activeStyle : inactiveStyle}
+        onMouseEnter={(e) => {
+          if (Object.keys(activeFilters).length !== 0)
+            e.currentTarget.style.backgroundColor = 'var(--color-surface-hover, rgba(0,0,0,0.03))';
+        }}
+        onMouseLeave={(e) => {
+          if (Object.keys(activeFilters).length !== 0)
+            e.currentTarget.style.backgroundColor = 'transparent';
+        }}
       >
         All
       </button>
-      {presets.map((preset) => (
-        <button
-          key={preset.label}
-          type="button"
-          onClick={() => onSelect(preset.filters)}
-          className={cn(
-            'px-3 py-1 text-xs font-medium rounded-full border transition-colors',
-            isActive(preset)
-              ? 'bg-blue-50 text-blue-700 border-blue-200'
-              : 'text-gray-600 border-gray-200 hover:bg-gray-50',
-          )}
-        >
-          {preset.label}
-        </button>
-      ))}
+      {presets.map((preset) => {
+        const active = isActive(preset);
+        return (
+          <button
+            key={preset.label}
+            type="button"
+            onClick={() => onSelect(preset.filters)}
+            className="px-3 py-1 text-xs font-medium rounded-full border transition-colors"
+            style={active ? activeStyle : inactiveStyle}
+            onMouseEnter={(e) => {
+              if (!active)
+                e.currentTarget.style.backgroundColor = 'var(--color-surface-hover, rgba(0,0,0,0.03))';
+            }}
+            onMouseLeave={(e) => {
+              if (!active)
+                e.currentTarget.style.backgroundColor = 'transparent';
+            }}
+          >
+            {preset.label}
+          </button>
+        );
+      })}
     </div>
   );
 }

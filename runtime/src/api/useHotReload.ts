@@ -8,8 +8,13 @@ export function useHotReload() {
     const eventSource = new EventSource('/_renderer/events');
 
     eventSource.addEventListener('reload', () => {
-      console.log('[HotReload] Spec updated, refetching...');
+      if (import.meta.env.DEV) console.log('[HotReload] Spec updated, refetching...');
       queryClient.invalidateQueries({ queryKey: ['spec'] });
+    });
+
+    eventSource.addEventListener('spec-changed', () => {
+      if (import.meta.env.DEV) console.log('[HotReload] Example switched, refetching all...');
+      queryClient.invalidateQueries();
     });
 
     eventSource.addEventListener('error', (event) => {
@@ -17,7 +22,7 @@ export function useHotReload() {
       if (data) {
         try {
           const parsed = JSON.parse(data);
-          console.error('[HotReload] Error:', parsed.message);
+          if (import.meta.env.DEV) console.error('[HotReload] Error:', parsed.message);
         } catch {
           // SSE connection error, not a message
         }
@@ -25,7 +30,7 @@ export function useHotReload() {
     });
 
     eventSource.addEventListener('connected', () => {
-      console.log('[HotReload] Connected to renderer SSE');
+      if (import.meta.env.DEV) console.log('[HotReload] Connected to renderer SSE');
     });
 
     eventSource.onerror = () => {

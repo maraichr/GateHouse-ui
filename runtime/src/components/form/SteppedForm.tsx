@@ -9,9 +9,14 @@ import { EnumField } from './fields/EnumField';
 import { DateField } from './fields/DateField';
 import { ReferenceField } from './fields/ReferenceField';
 import { useEntityCreate } from '../../data/useEntityMutation';
-import { Field } from '../../types';
+import { Field, ComponentNode } from '../../types';
 import { cn } from '../../utils/cn';
 import { Check } from 'lucide-react';
+import { Button } from '../shared/Button';
+import type { UseFormRegister, FieldErrors } from 'react-hook-form';
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type FormValues = Record<string, any>;
 
 interface StepConfig {
   id: string;
@@ -29,7 +34,7 @@ interface SteppedFormProps {
   cancel_path?: string;
   fields?: Field[];
   overrides?: Record<string, Partial<Field>>;
-  children?: any;
+  childNodes?: ComponentNode[];
 }
 
 export function SteppedForm({
@@ -40,25 +45,25 @@ export function SteppedForm({
   cancel_path,
   fields,
   overrides,
-  children,
+  childNodes,
 }: SteppedFormProps) {
   const navigate = useNavigate();
   const [currentStep, setCurrentStep] = useState(0);
   const createMutation = useEntityCreate(api_resource || '');
 
-  // Extract step configs from children nodes
+  // Extract step configs from childNodes
   const steps = useMemo<StepConfig[]>(() => {
-    if (!Array.isArray(children)) return [];
-    return children
-      .filter((c: any) => c?.props?.id)
-      .map((c: any) => ({
-        id: c.props.id,
-        title: c.props.title || c.props.id,
-        description: c.props.description,
-        type: c.props.type,
-        fields: c.props.fields,
+    if (!childNodes?.length) return [];
+    return childNodes
+      .filter((n) => n.kind === 'form_step' && n.props)
+      .map((n) => ({
+        id: n.props!.id as string || n.id || '',
+        title: (n.props!.title as string) || (n.props!.id as string) || '',
+        description: n.props!.description as string | undefined,
+        type: n.props!.type as string | undefined,
+        fields: n.props!.fields as string[] | undefined,
       }));
-  }, [children]);
+  }, [childNodes]);
 
   const fieldMap = useMemo(
     () => new Map(fields?.map((f) => [f.name, f]) || []),
@@ -119,7 +124,7 @@ export function SteppedForm({
     setCurrentStep((s) => Math.max(s - 1, 0));
   };
 
-  const onSubmit = async (data: any) => {
+  const onSubmit = async (data: FormValues) => {
     await createMutation.mutateAsync(data);
     if (cancel_path) navigate(cancel_path);
   };
@@ -135,29 +140,33 @@ export function SteppedForm({
               <li key={step.id} className={cn('flex items-center', i < steps.length - 1 && 'flex-1')}>
                 <div className="flex items-center gap-2">
                   <span
-                    className={cn(
-                      'flex items-center justify-center w-8 h-8 rounded-full text-sm font-medium',
+                    className="flex items-center justify-center w-8 h-8 rounded-full text-sm font-medium"
+                    style={
                       i < currentStep
-                        ? 'bg-blue-600 text-white'
+                        ? { backgroundColor: 'var(--color-primary)', color: '#fff' }
                         : i === currentStep
-                        ? 'bg-blue-100 text-blue-700 ring-2 ring-blue-600'
-                        : 'bg-gray-100 text-gray-500'
-                    )}
+                        ? {
+                            backgroundColor: 'color-mix(in srgb, var(--color-primary) 15%, transparent)',
+                            color: 'var(--color-primary)',
+                            boxShadow: '0 0 0 2px var(--color-primary)',
+                          }
+                        : { backgroundColor: 'var(--color-bg-alt)', color: 'var(--color-text-faint)' }
+                    }
                   >
                     {i < currentStep ? <Check className="h-4 w-4" /> : i + 1}
                   </span>
-                  <span className={cn(
-                    'text-sm font-medium hidden sm:inline',
-                    i === currentStep ? 'text-blue-700' : 'text-gray-500'
-                  )}>
+                  <span
+                    className="text-sm font-medium hidden sm:inline"
+                    style={{ color: i === currentStep ? 'var(--color-primary)' : 'var(--color-text-muted)' }}
+                  >
                     {step.title}
                   </span>
                 </div>
                 {i < steps.length - 1 && (
-                  <div className={cn(
-                    'flex-1 h-0.5 mx-4',
-                    i < currentStep ? 'bg-blue-600' : 'bg-gray-200'
-                  )} />
+                  <div
+                    className="flex-1 h-0.5 mx-4"
+                    style={{ backgroundColor: i < currentStep ? 'var(--color-primary)' : 'var(--color-border)' }}
+                  />
                 )}
               </li>
             ))}
@@ -167,25 +176,25 @@ export function SteppedForm({
         <form onSubmit={handleSubmit(onSubmit)}>
           {/* Step content */}
           <div className="mb-6">
-            <h2 className="text-lg font-medium text-gray-900">{currentStepConfig?.title}</h2>
+            <h2 className="text-lg font-medium" style={{ color: 'var(--color-text)' }}>{currentStepConfig?.title}</h2>
             {currentStepConfig?.description && (
-              <p className="mt-1 text-sm text-gray-500">{currentStepConfig.description}</p>
+              <p className="mt-1 text-sm" style={{ color: 'var(--color-text-muted)' }}>{currentStepConfig.description}</p>
             )}
           </div>
 
           {isReview ? (
             <div className="space-y-4">
               {steps.filter((s) => s.type !== 'summary').map((step) => (
-                <div key={step.id} className="border border-gray-200 rounded-lg p-4">
-                  <h3 className="text-sm font-medium text-gray-700 mb-2">{step.title}</h3>
+                <div key={step.id} className="surface-card p-4">
+                  <h3 className="text-sm font-medium mb-2" style={{ color: 'var(--color-text-secondary)' }}>{step.title}</h3>
                   <dl className="grid grid-cols-2 gap-2 text-sm">
                     {step.fields?.map((name) => {
                       const field = fieldMap.get(name);
                       const value = getValues(name);
                       return (
                         <div key={name}>
-                          <dt className="text-gray-500">{field?.display_name || name}</dt>
-                          <dd className="text-gray-900 font-medium">{value || '—'}</dd>
+                          <dt style={{ color: 'var(--color-text-muted)' }}>{field?.display_name || name}</dt>
+                          <dd className="font-medium" style={{ color: 'var(--color-text)' }}>{value || '—'}</dd>
                         </div>
                       );
                     })}
@@ -202,44 +211,28 @@ export function SteppedForm({
           )}
 
           {/* Navigation buttons */}
-          <div className="flex items-center justify-between mt-8 pt-4 border-t border-gray-200">
+          <div className="flex items-center justify-between mt-8 pt-4" style={{ borderTop: '1px solid var(--color-border)' }}>
             <div>
               {currentStep > 0 && (
-                <button
-                  type="button"
-                  onClick={handleBack}
-                  className="px-4 py-2 text-gray-700 text-sm font-medium rounded-lg border border-gray-300 hover:bg-gray-50"
-                >
+                <Button variant="outlined" color="neutral" type="button" onClick={handleBack}>
                   Back
-                </button>
+                </Button>
               )}
             </div>
             <div className="flex gap-3">
               {cancel_path && (
-                <button
-                  type="button"
-                  onClick={() => navigate(cancel_path)}
-                  className="px-4 py-2 text-gray-700 text-sm font-medium rounded-lg border border-gray-300 hover:bg-gray-50"
-                >
+                <Button variant="outlined" color="neutral" type="button" onClick={() => navigate(cancel_path)}>
                   Cancel
-                </button>
+                </Button>
               )}
               {isLastStep ? (
-                <button
-                  type="submit"
-                  disabled={isSubmitting}
-                  className="px-6 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50"
-                >
-                  {isSubmitting ? 'Creating...' : submit_label || 'Submit'}
-                </button>
+                <Button variant="filled" color="primary" type="submit" loading={isSubmitting}>
+                  {submit_label || 'Submit'}
+                </Button>
               ) : (
-                <button
-                  type="button"
-                  onClick={handleNext}
-                  className="px-6 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700"
-                >
+                <Button variant="filled" color="primary" type="button" onClick={handleNext}>
                   Next
-                </button>
+                </Button>
               )}
             </div>
           </div>
@@ -249,7 +242,7 @@ export function SteppedForm({
   );
 }
 
-function FieldRenderer({ field, register, errors }: { field: Field; register: any; errors: any }) {
+function FieldRenderer({ field, register, errors }: { field: Field; register: UseFormRegister<FormValues>; errors: FieldErrors<FormValues> }) {
   switch (field.type) {
     case 'enum':
       return <EnumField field={field} register={register} errors={errors} />;

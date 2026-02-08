@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef, ReactNode } from 'react';
 import { X } from 'lucide-react';
 import { Confirmation } from '../../types';
+import { Dialog } from '../layout/Dialog';
+import { Button } from '../shared/Button';
 
 interface ConfirmationDialogProps {
   open: boolean;
@@ -30,8 +32,6 @@ export function ConfirmationDialog({
     }
   }, [open]);
 
-  if (!open) return null;
-
   const requiresComment = confirmation.type === 'comment_required';
   const requiresTypeConfirm = confirmation.type === 'type_to_confirm';
   const confirmValue = confirmation.confirm_value || 'CONFIRM';
@@ -41,64 +41,68 @@ export function ConfirmationDialog({
     (!requiresTypeConfirm || confirmInput === confirmValue);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
-      <div className="fixed inset-0 bg-black/50" onClick={onClose} />
-      <div className="relative bg-white rounded-lg shadow-xl max-w-md w-full mx-4 p-6">
-        <button
-          onClick={onClose}
-          className="absolute top-3 right-3 text-gray-400 hover:text-gray-600"
-        >
-          <X className="h-5 w-5" />
-        </button>
+    <Dialog open={open} onClose={onClose} aria-label="Confirmation">
+      <button
+        onClick={onClose}
+        className="absolute top-3 right-3 hover:opacity-70"
+        style={{ color: 'var(--color-text-faint)' }}
+        aria-label="Close dialog"
+      >
+        <X className="h-5 w-5" />
+      </button>
 
-        <p className="text-sm text-gray-700 mb-4">{confirmation.message}</p>
+      <p className="text-sm mb-4" style={{ color: 'var(--color-text-secondary)' }}>{confirmation.message}</p>
 
-        {children}
+      {children}
 
-        {requiresComment && (
-          <div className="mb-4">
-            <label className="block text-sm font-medium text-gray-700 mb-1">Comment *</label>
-            <textarea
-              value={comment}
-              onChange={(e) => setComment(e.target.value)}
-              rows={3}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="Enter a comment..."
-            />
-          </div>
-        )}
-
-        {requiresTypeConfirm && (
-          <div className="mb-4">
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Type <code className="bg-gray-100 px-1 rounded text-xs">{confirmValue}</code> to confirm
-            </label>
-            <input
-              ref={inputRef}
-              type="text"
-              value={confirmInput}
-              onChange={(e) => setConfirmInput(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
-        )}
-
-        <div className="flex justify-end gap-2 mt-4">
-          <button
-            onClick={onClose}
-            className="px-4 py-2 text-sm text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50"
-          >
-            Cancel
-          </button>
-          <button
-            onClick={() => onConfirm(requiresComment ? comment : undefined)}
-            disabled={!canConfirm || isLoading}
-            className="px-4 py-2 text-sm text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50"
-          >
-            {isLoading ? 'Processing...' : confirmation.confirm_text || 'Confirm'}
-          </button>
+      {requiresComment && (
+        <div className="mb-4">
+          <label htmlFor="confirm-comment" className="block text-sm font-medium mb-1" style={{ color: 'var(--color-text-secondary)' }}>Comment *</label>
+          <textarea
+            id="confirm-comment"
+            value={comment}
+            onChange={(e) => setComment(e.target.value)}
+            rows={3}
+            className="w-full px-3 py-2 rounded-lg text-sm"
+            style={{ border: '1px solid var(--color-border)', backgroundColor: 'var(--color-surface)', color: 'var(--color-text)' }}
+            placeholder="Enter a comment..."
+            aria-required="true"
+          />
         </div>
+      )}
+
+      {requiresTypeConfirm && (
+        <div className="mb-4">
+          <label htmlFor="confirm-type-input" className="block text-sm font-medium mb-1" style={{ color: 'var(--color-text-secondary)' }}>
+            Type <code className="px-1 rounded text-xs" style={{ backgroundColor: 'var(--color-bg-alt)' }}>{confirmValue}</code> to confirm
+          </label>
+          <input
+            id="confirm-type-input"
+            ref={inputRef}
+            type="text"
+            value={confirmInput}
+            onChange={(e) => setConfirmInput(e.target.value)}
+            className="w-full px-3 py-2 rounded-lg text-sm"
+            style={{ border: '1px solid var(--color-border)', backgroundColor: 'var(--color-surface)', color: 'var(--color-text)' }}
+            aria-required="true"
+          />
+        </div>
+      )}
+
+      <div className="flex justify-end gap-2 mt-4">
+        <Button variant="outlined" color="neutral" onClick={onClose}>
+          Cancel
+        </Button>
+        <Button
+          variant="filled"
+          color="primary"
+          onClick={() => onConfirm(requiresComment ? comment : undefined)}
+          disabled={!canConfirm}
+          loading={isLoading}
+        >
+          {confirmation.confirm_text || 'Confirm'}
+        </Button>
       </div>
-    </div>
+    </Dialog>
   );
 }

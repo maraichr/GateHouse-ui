@@ -24,7 +24,7 @@ export function Section({ title, layout, fields: fieldNames, allFields, record }
   return (
     <div className="mb-6">
       {title && (
-        <h3 className="text-sm font-semibold text-gray-900 mb-3">{title}</h3>
+        <h3 className="text-sm font-semibold mb-3" style={{ color: 'var(--color-text, #111827)' }}>{title}</h3>
       )}
       <div className={cn(
         'grid gap-4',
@@ -37,11 +37,11 @@ export function Section({ title, layout, fields: fieldNames, allFields, record }
 
           return (
             <div key={name}>
-              <dt className="text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <dt className="text-xs font-medium uppercase tracking-wider" style={{ color: 'var(--color-text-muted, #6b7280)' }}>
                 {field.display_name || name}
               </dt>
               <dd className="mt-1">
-                <FieldDisplay field={field} value={value} />
+                <FieldDisplay field={field} value={value} record={record} />
               </dd>
             </div>
           );
@@ -51,15 +51,15 @@ export function Section({ title, layout, fields: fieldNames, allFields, record }
   );
 }
 
-function FieldDisplay({ field, value }: { field: Field; value: any }) {
+function FieldDisplay({ field, value, record }: { field: Field; value: any; record?: Record<string, any> }) {
   // Evaluate display rules for conditional styling
   const ruleResult = evaluateDisplayRules(field.display_rules, value);
-  const ruleClass = ruleResult ? styleForRule(ruleResult.style) : '';
+  const ruleStyle = ruleResult ? styleForRule(ruleResult.style) : undefined;
 
   const wrapWithRule = (el: React.ReactElement) => {
     if (!ruleResult) return el;
     return (
-      <span className={ruleClass} title={ruleResult.tooltip}>
+      <span style={ruleStyle} title={ruleResult.tooltip}>
         {ruleResult.label || el}
       </span>
     );
@@ -81,6 +81,12 @@ function FieldDisplay({ field, value }: { field: Field; value: any }) {
         dangerouslySetInnerHTML={{ __html: sanitizeHtml(String(value)) }}
       />
     );
+  }
+  // Reference fields: show display name if available (e.g. customer_name for customer_id)
+  if (field.type === 'reference' && record) {
+    const baseName = field.name.replace(/_id$/, '');
+    const displayValue = record[`${baseName}_name`] || record[baseName] || value;
+    return wrapWithRule(<StringDisplay value={displayValue} />);
   }
   return wrapWithRule(<StringDisplay value={value} sensitive={field.sensitive} mask_pattern={field.mask_pattern} input_type={field.input_type} />);
 }

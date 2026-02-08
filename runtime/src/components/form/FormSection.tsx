@@ -9,7 +9,7 @@ export function FormSection({ title, children }: FormSectionProps) {
   return (
     <div className="mb-6">
       {title && (
-        <h3 className="text-lg font-medium text-gray-900 mb-4 pb-2 border-b border-gray-200">
+        <h3 className="text-lg font-medium mb-4 pb-2 border-b" style={{ color: 'var(--color-text)', borderColor: 'var(--color-border)' }}>
           {title}
         </h3>
       )}

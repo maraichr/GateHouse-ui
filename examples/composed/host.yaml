@@ -1,0 +1,89 @@
+# Minimal host spec — owns the app shell (theme, auth, shell config).
+# Services contribute their own entities, pages, and nav items.
+
+app:
+  name: "gatehouse-composed-portal"
+  display_name: "GateHouse Composed Portal"
+  version: "1.0.0"
+  description: "Multi-service composed application"
+
+  theme:
+    mode: light
+    primary_color: "#1E40AF"
+    secondary_color: "#7C3AED"
+    accent_color: "#F59E0B"
+    danger_color: "#DC2626"
+    success_color: "#16A34A"
+    border_radius: md
+    density: comfortable
+    font_family: "Inter, system-ui, sans-serif"
+    elevation: md
+    surface_style: bordered
+    header_style: flat
+    chart_palette: [primary, info, warning, danger, accent, success]
+
+  i18n:
+    default_locale: en-US
+    date_format: "MMM d, yyyy"
+    currency: USD
+
+auth:
+  provider: oidc
+  config:
+    issuer: "https://auth.example.com"
+    client_id: "composed-portal"
+  roles:
+    admin:
+      display_name: "Administrator"
+      description: "Full system access"
+    viewer:
+      display_name: "Viewer"
+      description: "Read-only access"
+
+shell:
+  layout: sidebar
+
+  sidebar:
+    position: left
+    collapsible: true
+    default_collapsed: false
+    width: 260
+    collapsed_width: 64
+    show_user_menu: true
+    show_search: true
+
+  header:
+    show_breadcrumbs: true
+    show_global_search: true
+    show_notifications: true
+
+navigation:
+  items:
+    - id: home
+      label: "Home"
+      icon: home
+      path: /
+      page: home
+
+pages:
+  - id: home
+    title: "Welcome"
+    path: /
+    widgets:
+      - type: stat_cards
+        layout: { columns: 3 }
+        cards:
+          - label: "Services Active"
+            value: "3"
+            icon: server
+            color: success
+          - label: "Total Entities"
+            value: "—"
+            icon: database
+            color: primary
+          - label: "Status"
+            value: "Healthy"
+            icon: activity
+            color: info
+
+entities: []

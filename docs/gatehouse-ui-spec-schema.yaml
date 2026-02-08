@@ -17,7 +17,7 @@ app:
 
   # Branding / theming tokens consumed by the renderer
   theme:
-    mode: dark                       # light | dark | system
+    mode: light                       # light | dark | system
     primary_color: "#1E40AF"
     secondary_color: "#7C3AED"
     accent_color: "#F59E0B"
@@ -26,6 +26,11 @@ app:
     border_radius: md                 # none | sm | md | lg | full
     density: comfortable              # compact | comfortable | spacious
     font_family: "Inter, system-ui, sans-serif"
+    info_color: "#3B82F6"             # semantic color for informational elements
+    warning_color: "#F59E0B"          # semantic color for warning elements
+    elevation: md                     # none | sm | md | lg — controls shadow intensity
+    surface_style: bordered           # flat | raised | bordered — card appearance
+    header_style: flat                # flat | gradient | accent-bar — detail header style
     logo:
       light: "/assets/logo-light.svg"
       dark: "/assets/logo-dark.svg"

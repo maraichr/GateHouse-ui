@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { cn } from '../../utils/cn';
 
 interface AvatarProps {
@@ -13,16 +14,18 @@ const sizeClasses = {
 };
 
 export function Avatar({ src, name, size = 'md' }: AvatarProps) {
+  const [imgError, setImgError] = useState(false);
   const initials = name
     ? name.split(' ').map((p) => p[0]).join('').toUpperCase().slice(0, 2)
     : '?';
 
-  if (src) {
+  if (src && !imgError) {
     return (
       <img
         src={src}
         alt={name || ''}
         className={cn('rounded-full object-cover', sizeClasses[size])}
+        onError={() => setImgError(true)}
       />
     );
   }
@@ -30,9 +33,13 @@ export function Avatar({ src, name, size = 'md' }: AvatarProps) {
   return (
     <div
       className={cn(
-        'rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-medium',
+        'rounded-full flex items-center justify-center font-medium',
         sizeClasses[size]
       )}
+      style={{
+        backgroundColor: 'var(--color-primary-100)',
+        color: 'var(--color-primary-700)',
+      }}
     >
       {initials}
     </div>

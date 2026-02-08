@@ -1,19 +1,25 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { Filter } from 'lucide-react';
 import { PageHeader } from '../layout/PageHeader';
 import { DataTable } from './DataTable';
 import { SearchBar } from './SearchBar';
 import { FilterPanel } from './FilterPanel';
 import { EmptyState } from './EmptyState';
 import { FilterPresets } from './filters/FilterPresets';
+
+import { FilterSheet } from './FilterSheet';
 import { useEntityList } from '../../data/useEntityList';
 import { usePermissions } from '../../auth/usePermissions';
+import { useIsMobile } from '../../hooks/useIsMobile';
 import { Icon } from '../../utils/icons';
-import { ComponentNode, ListColumn, Field, FilterConfig, SearchConfig, EmptyStateConfig, SortConfig } from '../../types';
+import { TableSkeleton } from '../shared/Skeleton';
+import { ComponentNode, ListColumn, Field, FilterConfig, SearchConfig, EmptyStateConfig, SortConfig, FilterValue, EntityAction } from '../../types';
+import { Button } from '../shared/Button';
 
 interface FilterPresetConfig {
   label: string;
-  filters: Record<string, any>;
+  filters: Record<string, FilterValue>;
 }
 
 interface EntityListProps {
@@ -24,8 +30,8 @@ interface EntityListProps {
   icon?: string;
   title?: string;
   default_sort?: SortConfig;
-  actions?: { primary?: any[]; secondary?: any[] };
-  bulk_actions?: any[];
+  actions?: { primary?: EntityAction[]; secondary?: EntityAction[] };
+  bulk_actions?: EntityAction[];
   filter_presets?: FilterPresetConfig[];
   childNodes?: ComponentNode[];
 }
@@ -43,9 +49,23 @@ export function EntityList({
 }: EntityListProps) {
   const navigate = useNavigate();
   const { hasPermission } = usePermissions();
+  const isMobile = useIsMobile();
   const [search, setSearch] = useState('');
-  const [filters, setFilters] = useState<Record<string, any>>({});
+  const [filters, setFilters] = useState<Record<string, FilterValue>>({});
   const [page, setPage] = useState(1);
+  const [filterSheetOpen, setFilterSheetOpen] = useState(false);
+
+  // Reset local state when navigating to a different entity list
+  const prevResource = useRef(api_resource);
+  useEffect(() => {
+    if (prevResource.current !== api_resource) {
+      prevResource.current = api_resource;
+      setSearch('');
+      setFilters({});
+      setPage(1);
+      setFilterSheetOpen(false);
+    }
+  }, [api_resource]);
 
   // Extract config from child nodes
   let columns: ListColumn[] | undefined;
@@ -94,20 +114,26 @@ export function EntityList({
     setPage(1);
   }, []);
 
-  const handleFilterChange = useCallback((f: Record<string, any>) => {
+  const handleFilterChange = useCallback((f: Record<string, FilterValue>) => {
     setFilters(f);
     setPage(1);
   }, []);
 
+
   const primaryActions = actions?.primary?.filter(
-    (a: any) => !a.permissions || hasPermission(a.permissions)
+    (a) => !a.permissions || hasPermission(a.permissions)
   );
 
   // Derive entity route for DataTable detail links
   const entityRoute = api_resource || '';
 
-  const hasSidebarFilters = filterConfig?.layout === 'sidebar';
-  const hasToolbarFilters = filterConfig && filterConfig.layout !== 'sidebar';
+  const filterLayout = typeof filterConfig?.layout === 'object'
+    ? (filterConfig.layout as { web?: string })?.web ?? filterConfig.layout
+    : filterConfig?.layout;
+  const hasSidebarFilters = filterLayout === 'sidebar';
+  const hasToolbarFilters = filterConfig && filterLayout !== 'sidebar';
+
+  const activeFilterCount = Object.keys(filters).filter((k) => filters[k] !== undefined).length;
 
   return (
     <div className="flex flex-col h-full">
@@ -115,24 +141,45 @@ export function EntityList({
         title={title || display_name || entity || 'List'}
         icon={icon}
         actions={
-          primaryActions?.length ? (
+          (isMobile && filterConfig) || primaryActions?.length ? (
             <>
-              {primaryActions.map((action: any, i: number) => (
-                <button
+              {/* Mobile filter button */}
+              {isMobile && filterConfig && (
+                <Button
+                  variant="outlined"
+                  color="neutral"
+                  size="sm"
+                  icon={<Filter className="h-4 w-4" />}
+                  onClick={() => setFilterSheetOpen(true)}
+                >
+                  Filters
+                  {activeFilterCount > 0 && (
+                    <span
+                      className="ml-1 inline-flex items-center justify-center h-4 min-w-[16px] px-1 text-[10px] font-bold rounded-full"
+                      style={{
+                        backgroundColor: 'var(--color-primary)',
+                        color: '#fff',
+                      }}
+                    >
+                      {activeFilterCount}
+                    </span>
+                  )}
+                </Button>
+              )}
+              {primaryActions?.map((action, i) => (
+                <Button
                   key={i}
+                  variant="filled"
+                  color="primary"
+                  icon={action.icon ? <Icon name={action.icon} className="h-4 w-4" /> : undefined}
                   onClick={() => {
-                    if (action.action?.type === 'navigate') {
+                    if (action.action?.type === 'navigate' && action.action.path) {
                       navigate(action.action.path);
                     }
                   }}
-                  className="inline-flex items-center gap-2 px-4 py-2 text-white text-sm font-medium rounded-lg transition-colors"
-                  style={{ backgroundColor: 'var(--color-primary)' }}
-                  onMouseEnter={(e) => e.currentTarget.style.filter = 'brightness(0.9)'}
-                  onMouseLeave={(e) => e.currentTarget.style.filter = ''}
                 >
-                  {action.icon && <Icon name={action.icon} className="h-4 w-4" />}
                   {action.label}
-                </button>
+                </Button>
               ))}
             </>
           ) : undefined
@@ -149,8 +196,8 @@ export function EntityList({
         </div>
       )}
 
-      {/* Toolbar: search + inline filters (skip search here when sidebar layout has it) */}
-      {((!hasSidebarFilters && searchConfig) || hasToolbarFilters) && (
+      {/* Toolbar: search + inline filters */}
+      {((!hasSidebarFilters && searchConfig && !isMobile) || (hasToolbarFilters && !isMobile)) && (
         <div className="px-6 pt-4 flex items-start gap-4">
           {searchConfig && !hasSidebarFilters && (
             <div className="flex-1 max-w-md">
@@ -163,15 +210,19 @@ export function EntityList({
               fields={filterFields}
               filters={filters}
               onFilterChange={handleFilterChange}
+              layout="toolbar"
             />
           )}
         </div>
       )}
 
       <div className="flex-1 flex min-h-0">
-        {/* Sidebar filters */}
-        {hasSidebarFilters && (
-          <div className="w-64 flex-shrink-0 border-r border-gray-200 p-4 overflow-y-auto">
+        {/* Sidebar filters — desktop only */}
+        {hasSidebarFilters && !isMobile && (
+          <div
+            className="w-64 flex-shrink-0 border-r p-4 overflow-y-auto"
+            style={{ borderColor: 'var(--color-border-light, var(--color-border))' }}
+          >
             {searchConfig && (
               <div className="mb-4">
                 <SearchBar config={searchConfig} value={search} onChange={handleSearchChange} />
@@ -182,6 +233,7 @@ export function EntityList({
               fields={filterFields}
               filters={filters}
               onFilterChange={handleFilterChange}
+              layout="sidebar"
             />
           </div>
         )}
@@ -189,21 +241,25 @@ export function EntityList({
         {/* Main content area */}
         <div className="flex-1 p-6 overflow-auto">
           {isLoading ? (
-            <div className="flex justify-center py-12">
-              <div className="animate-spin h-6 w-6 border-2 border-t-transparent rounded-full" style={{ borderColor: 'var(--color-primary)', borderTopColor: 'transparent' }} />
+            <div role="status" aria-live="polite">
+              <span className="sr-only">Loading...</span>
+              <TableSkeleton rows={5} cols={columns?.length || 4} />
             </div>
           ) : isError ? (
-            <div className="text-center py-12 text-gray-400">
+            <div className="text-center py-12" style={{ color: 'var(--color-text-muted)' }}>
               <p>Unable to load data. Check your API connection.</p>
             </div>
           ) : records.length === 0 ? (
             emptyConfig ? (
               <EmptyState config={emptyConfig} />
             ) : (
-              <div className="text-center py-12 text-gray-500">No records found</div>
+              <div className="text-center py-12" style={{ color: 'var(--color-text-muted)' }}>No records found</div>
             )
           ) : (
-            <>
+            <div className="animate-fadeIn">
+              <div role="status" aria-live="polite" className="sr-only">
+                Showing {records.length} of {total} results
+              </div>
               <DataTable
                 columns={columns}
                 fields={fields}
@@ -212,35 +268,54 @@ export function EntityList({
               />
               {/* Pagination */}
               {totalPages > 1 && (
-                <div className="flex items-center justify-between mt-4 text-sm text-gray-600">
+                <div className="flex items-center justify-between mt-4 text-sm" style={{ color: 'var(--color-text-muted)' }}>
                   <span>
                     Showing {(page - 1) * pageSize + 1}–{Math.min(page * pageSize, total)} of {total}
                   </span>
                   <div className="flex items-center gap-2">
-                    <button
+                    <Button
+                      variant="outlined"
+                      color="neutral"
+                      size="sm"
                       onClick={() => setPage((p) => Math.max(1, p - 1))}
                       disabled={page <= 1}
-                      className="px-3 py-1 border border-gray-300 rounded text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
                     >
                       Previous
-                    </button>
+                    </Button>
                     <span>
                       Page {page} of {totalPages}
                     </span>
-                    <button
+                    <Button
+                      variant="outlined"
+                      color="neutral"
+                      size="sm"
                       onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                       disabled={page >= totalPages}
-                      className="px-3 py-1 border border-gray-300 rounded text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
                     >
                       Next
-                    </button>
+                    </Button>
                   </div>
                 </div>
               )}
-            </>
+            </div>
           )}
         </div>
       </div>
+
+      {/* Mobile filter bottom sheet */}
+      {isMobile && (
+        <FilterSheet
+          open={filterSheetOpen}
+          onClose={() => setFilterSheetOpen(false)}
+          filterConfig={filterConfig}
+          filterFields={filterFields}
+          filters={filters}
+          onFilterChange={handleFilterChange}
+          searchConfig={searchConfig}
+          search={search}
+          onSearchChange={handleSearchChange}
+        />
+      )}
     </div>
   );
 }

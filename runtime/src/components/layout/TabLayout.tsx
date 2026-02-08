@@ -20,7 +20,7 @@ export function TabLayout({ children }: TabLayoutProps) {
 
   return (
     <div>
-      <div className="border-b border-gray-200">
+      <div className="border-b" style={{ borderColor: 'var(--color-border)' }}>
         <nav className="flex gap-0 px-6" role="tablist">
           {tabs.map((tab, i) => (
             <button
@@ -28,12 +28,11 @@ export function TabLayout({ children }: TabLayoutProps) {
               role="tab"
               aria-selected={i === activeTab}
               onClick={() => setActiveTab(i)}
-              className={cn(
-                'flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors',
-                i === activeTab
-                  ? 'border-blue-600 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              )}
+              className="flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors"
+              style={i === activeTab
+                ? { borderColor: 'var(--color-primary)', color: 'var(--color-primary)' }
+                : { borderColor: 'transparent', color: 'var(--color-text-muted)' }
+              }
             >
               {tab.props.icon && <Icon name={tab.props.icon} className="h-4 w-4" />}
               {tab.props.label}

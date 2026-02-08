@@ -1,0 +1,56 @@
+{
+  "/employees": [
+    { "id": "emp-001", "name": "Sarah Chen", "email": "sarah.chen@company.com", "title": "Senior Engineer", "department_id": "dept-001", "department_name": "Engineering", "status": "active", "start_date": "2022-03-15", "salary": 145000, "phone": "+1-555-0101", "avatar": null },
+    { "id": "emp-002", "name": "James Park", "email": "james.park@company.com", "title": "Product Manager", "department_id": "dept-002", "department_name": "Product", "status": "active", "start_date": "2021-08-01", "salary": 135000, "phone": "+1-555-0102", "avatar": null },
+    { "id": "emp-003", "name": "Maria Garcia", "email": "maria.garcia@company.com", "title": "HR Manager", "department_id": "dept-003", "department_name": "Human Resources", "status": "active", "start_date": "2020-01-15", "salary": 120000, "phone": "+1-555-0103", "avatar": null },
+    { "id": "emp-004", "name": "Alex Thompson", "email": "alex.t@company.com", "title": "Designer", "department_id": "dept-002", "department_name": "Product", "status": "on_leave", "start_date": "2023-06-01", "salary": 110000, "phone": "+1-555-0104", "avatar": null },
+    { "id": "emp-005", "name": "Lisa Wang", "email": "lisa.wang@company.com", "title": "Software Engineer", "department_id": "dept-001", "department_name": "Engineering", "status": "active", "start_date": "2024-02-01", "salary": 125000, "phone": "+1-555-0105", "avatar": null },
+    { "id": "emp-006", "name": "Tom Miller", "email": "tom.m@company.com", "title": "Sales Lead", "department_id": "dept-004", "department_name": "Sales", "status": "active", "start_date": "2019-11-01", "salary": 130000, "phone": "+1-555-0106", "avatar": null }
+  ],
+  "/departments": [
+    { "id": "dept-001", "name": "Engineering", "head": "Sarah Chen", "employee_count": 12, "budget": 2400000 },
+    { "id": "dept-002", "name": "Product", "head": "James Park", "employee_count": 6, "budget": 900000 },
+    { "id": "dept-003", "name": "Human Resources", "head": "Maria Garcia", "employee_count": 4, "budget": 500000 },
+    { "id": "dept-004", "name": "Sales", "head": "Tom Miller", "employee_count": 8, "budget": 1200000 }
+  ],
+  "/leave-requests": [
+    { "id": "lr-001", "employee_id": "emp-004", "employee_name": "Alex Thompson", "leave_type": "personal", "start_date": "2026-02-03", "end_date": "2026-02-14", "reason": "Family matter", "status": "approved", "created_at": "2026-01-28T10:00:00Z" },
+    { "id": "lr-002", "employee_id": "emp-001", "employee_name": "Sarah Chen", "leave_type": "vacation", "start_date": "2026-03-01", "end_date": "2026-03-07", "reason": "Spring break trip", "status": "pending", "created_at": "2026-02-05T14:00:00Z" },
+    { "id": "lr-003", "employee_id": "emp-005", "employee_name": "Lisa Wang", "leave_type": "sick", "start_date": "2026-02-06", "end_date": "2026-02-07", "reason": "", "status": "approved", "created_at": "2026-02-06T08:00:00Z" },
+    { "id": "lr-004", "employee_id": "emp-006", "employee_name": "Tom Miller", "leave_type": "vacation", "start_date": "2026-04-10", "end_date": "2026-04-18", "reason": "International travel", "status": "pending", "created_at": "2026-02-07T09:00:00Z" }
+  ],
+
+  "_widgets": {
+    "/dashboard/stats": {
+      "total_employees": 30,
+      "open_positions": 5,
+      "pending_leave": 2,
+      "departments": 4
+    },
+    "/dashboard/charts/employees-by-dept": {
+      "data": [
+        { "department": "Engineering", "count": 12 },
+        { "department": "Sales", "count": 8 },
+        { "department": "Product", "count": 6 },
+        { "department": "Human Resources", "count": 4 }
+      ]
+    },
+    "/dashboard/charts/leave-trend": {
+      "data": [
+        { "month": "2025-09", "type": "Vacation", "count": 3 },
+        { "month": "2025-09", "type": "Sick", "count": 1 },
+        { "month": "2025-10", "type": "Vacation", "count": 2 },
+        { "month": "2025-10", "type": "Personal", "count": 1 },
+        { "month": "2025-11", "type": "Vacation", "count": 4 },
+        { "month": "2025-11", "type": "Sick", "count": 2 },
+        { "month": "2025-12", "type": "Vacation", "count": 5 },
+        { "month": "2025-12", "type": "Parental", "count": 1 },
+        { "month": "2026-01", "type": "Vacation", "count": 2 },
+        { "month": "2026-01", "type": "Sick", "count": 1 },
+        { "month": "2026-01", "type": "Personal", "count": 1 },
+        { "month": "2026-02", "type": "Vacation", "count": 2 },
+        { "month": "2026-02", "type": "Sick", "count": 1 }
+      ]
+    }
+  }
+}

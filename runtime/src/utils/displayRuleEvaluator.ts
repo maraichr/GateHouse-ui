@@ -1,4 +1,6 @@
+import type { CSSProperties } from 'react';
 import { DisplayRule } from '../types';
+import { semanticBadgeStyle } from './semanticColor';
 
 export interface DisplayRuleResult {
   style: string;
@@ -6,16 +8,16 @@ export interface DisplayRuleResult {
   label?: string;
 }
 
-const STYLE_MAP: Record<string, string> = {
-  danger: 'text-red-700 bg-red-50 px-2 py-0.5 rounded',
-  warning: 'text-amber-700 bg-amber-50 px-2 py-0.5 rounded',
-  success: 'text-green-700 bg-green-50 px-2 py-0.5 rounded',
-  info: 'text-blue-700 bg-blue-50 px-2 py-0.5 rounded',
-  muted: 'text-gray-400',
+const STYLE_MAP: Record<string, CSSProperties> = {
+  danger: { ...semanticBadgeStyle('danger'), padding: '2px 8px', borderRadius: '4px' },
+  warning: { ...semanticBadgeStyle('warning'), padding: '2px 8px', borderRadius: '4px' },
+  success: { ...semanticBadgeStyle('success'), padding: '2px 8px', borderRadius: '4px' },
+  info: { ...semanticBadgeStyle('info'), padding: '2px 8px', borderRadius: '4px' },
+  muted: { color: 'var(--color-text-faint, #9ca3af)' },
 };
 
-export function styleForRule(style: string): string {
-  return STYLE_MAP[style] || '';
+export function styleForRule(style: string): CSSProperties {
+  return STYLE_MAP[style] || {};
 }
 
 /**

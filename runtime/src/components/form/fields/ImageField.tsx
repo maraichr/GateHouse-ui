@@ -2,6 +2,10 @@ import { useCallback, useState } from 'react';
 import { useDropzone, FileRejection } from 'react-dropzone';
 import { Upload, X, Image as ImageIcon } from 'lucide-react';
 import { Field } from '../../../types';
+import {
+  labelStyle, requiredMarkerStyle, mutedIconStyle, helpStyle, errorStyle,
+  dragActiveStyle, dragIdleStyle,
+} from '../../../utils/formTokens';
 
 interface ImageFieldProps {
   field: Field;
@@ -48,24 +52,21 @@ export function ImageField({ field, value = [], onChange, error }: ImageFieldPro
 
   return (
     <div>
-      <label className="block text-sm font-medium text-gray-700 mb-1">
+      <label className="block text-sm font-medium mb-1" style={labelStyle}>
         {field.display_name || field.name}
-        {field.required && <span className="text-red-500 ml-0.5">*</span>}
+        {field.required && <span className="ml-0.5" style={requiredMarkerStyle}>*</span>}
       </label>
       <div
         {...getRootProps()}
-        className={`border-2 border-dashed rounded-lg p-4 text-center cursor-pointer transition-colors ${
-          isDragActive
-            ? 'border-blue-400 bg-blue-50'
-            : 'border-gray-300 hover:border-gray-400'
-        }`}
+        className="border-2 border-dashed rounded-lg p-4 text-center cursor-pointer transition-colors"
+        style={isDragActive ? dragActiveStyle : dragIdleStyle}
       >
         <input {...getInputProps()} />
-        <ImageIcon className="h-6 w-6 text-gray-400 mx-auto mb-1" />
-        <p className="text-sm text-gray-500">
+        <ImageIcon className="h-6 w-6 mx-auto mb-1" style={mutedIconStyle} />
+        <p className="text-sm" style={{ color: 'var(--color-text-muted)' }}>
           {isDragActive ? 'Drop images here' : 'Drag & drop images, or click to browse'}
         </p>
-        <p className="text-xs text-gray-400 mt-1">PNG, JPG, GIF, WebP up to 5MB</p>
+        <p className="text-xs mt-1" style={mutedIconStyle}>PNG, JPG, GIF, WebP up to 5MB</p>
       </div>
 
       {previews.length > 0 && (
@@ -75,7 +76,8 @@ export function ImageField({ field, value = [], onChange, error }: ImageFieldPro
               <img
                 src={src}
                 alt={value[i]?.name || `Preview ${i}`}
-                className="h-24 w-full object-cover rounded-lg border border-gray-200"
+                className="h-24 w-full object-cover rounded-lg border"
+                style={{ borderColor: 'var(--color-border)' }}
               />
               <button
                 type="button"
@@ -90,9 +92,9 @@ export function ImageField({ field, value = [], onChange, error }: ImageFieldPro
       )}
 
       {field.help_text && !error && (
-        <p className="mt-1 text-xs text-gray-500">{field.help_text}</p>
+        <p className="mt-1 text-xs" style={helpStyle}>{field.help_text}</p>
       )}
-      {error && <p className="mt-1 text-xs text-red-600">{error}</p>}
+      {error && <p className="mt-1 text-xs" style={errorStyle}>{error}</p>}
     </div>
   );
 }

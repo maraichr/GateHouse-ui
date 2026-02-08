@@ -16,10 +16,8 @@ export function NavGroup({ label, icon, children }: NavGroupProps) {
     <div>
       <button
         onClick={() => setOpen(!open)}
-        className={cn(
-          'flex items-center gap-3 w-full px-3 py-2 rounded-md text-sm font-medium transition-colors',
-          'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
-        )}
+        className="flex items-center gap-3 w-full px-3 py-2 rounded-md text-sm font-medium transition-colors"
+        style={{ color: 'var(--color-text-secondary)' }}
       >
         {icon && <Icon name={icon} className="h-5 w-5 flex-shrink-0" />}
         <span className="truncate">{label}</span>

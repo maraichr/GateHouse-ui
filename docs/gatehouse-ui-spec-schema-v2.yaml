@@ -17,11 +17,8 @@ metadata:
 
 app:
   app_name: Contractor Portal
-  accessibility:
-    aria_labels: auto
-    keyboard_navigation: true
   theme:
-    mode: dark
+    mode: light
     primary_color: "#1E40AF"
     secondary_color: "#7C3AED"
   auth:
@@ -51,11 +48,6 @@ entities:
         max_length: 200
         searchable: true
         sortable: true
-        show_in:
-          list: true
-          detail: true
-          create: true
-          edit: true
       - name: tax_id
         type: string
         display_name: Tax ID (EIN)
@@ -65,11 +57,6 @@ entities:
         mask_pattern: "##-***####"
         pattern: "^\\d{2}-\\d{7}$"
         pattern_message: Must be in format XX-XXXXXXX
-        show_in:
-          list: false
-          detail: true
-          create: true
-          edit: false
       - name: status
         type: enum
         display_name: Status
@@ -94,30 +81,15 @@ entities:
             label: Terminated
             color: neutral
             icon: x-circle
-        show_in:
-          list: true
-          detail: true
-          create: false
-          edit: false
       - name: email
         type: email
         display_name: Contact Email
         required: true
-        show_in:
-          list: false
-          detail: true
-          create: true
-          edit: true
       - name: phone
         type: phone
         display_name: Contact Phone
         required: false
         format: national
-        show_in:
-          list: false
-          detail: true
-          create: true
-          edit: true
       - name: address
         type: address
         display_name: Business Address
@@ -129,11 +101,6 @@ entities:
           street1: { required: true }
           street2: { required: false }
           zip: { required: true, pattern: "^\\d{5}(-\\d{4})?$" }
-        show_in:
-          list: false
-          detail: true
-          create: true
-          edit: true
       - name: insurance_expiry_date
         type: date
         display_name: Insurance Expiry
@@ -159,11 +126,6 @@ entities:
               lhs: { ref: value }
               rhs: { date_math: "today + 90d" }
             style: success
-        show_in:
-          list: true
-          detail: true
-          create: true
-          edit: true
       - name: trade_codes
         type: array
         display_name: Trade Specialties
@@ -175,11 +137,6 @@ entities:
           entity: Trade
           label_field: name
         input_type: multi_select
-        show_in:
-          list: true
-          detail: true
-          create: true
-          edit: true
       - name: rating
         type: decimal
         display_name: Performance Rating
@@ -190,11 +147,6 @@ entities:
         precision: 2
         sortable: true
         display_as: star_rating
-        show_in:
-          list: true
-          detail: true
-          create: false
-          edit: false
       - name: annual_revenue
         type: currency
         display_name: Annual Revenue
@@ -203,22 +155,12 @@ entities:
         permissions:
           view_roles: [admin, compliance_officer]
           edit_roles: [admin]
-        show_in:
-          list: false
-          detail: true
-          create: false
-          edit: true
       - name: notes
         type: richtext
         display_name: Internal Notes
         required: false
         max_length: 5000
         toolbar: [bold, italic, bullet_list, ordered_list, link]
-        show_in:
-          list: false
-          detail: true
-          create: false
-          edit: true
       - name: logo
         type: image
         display_name: Company Logo
@@ -230,11 +172,6 @@ entities:
           min_width: 100
           max_width: 2000
           aspect_ratio: "1:1"
-        show_in:
-          list: false
-          detail: true
-          create: true
-          edit: true
       - name: attachments
         type: file_list
         display_name: Attachments
@@ -242,30 +179,15 @@ entities:
         accept: [application/pdf, image/*, .docx]
         max_size_mb: 25
         max_files: 20
-        show_in:
-          list: false
-          detail: true
-          create: false
-          edit: true
       - name: created_at
         type: datetime
         display_name: Created
         format: relative
         sortable: true
-        show_in:
-          list: true
-          detail: true
-          create: false
-          edit: false
       - name: updated_at
         type: datetime
         display_name: Last Updated
         sortable: true
-        show_in:
-          list: false
-          detail: true
-          create: false
-          edit: false
     relationships:
       - name: documents
         type: has_many

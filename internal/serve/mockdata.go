@@ -15,10 +15,11 @@ import (
 
 // MockStore holds mock data loaded from a JSON file and serves it via HTTP.
 type MockStore struct {
-	mu          sync.RWMutex
-	collections map[string][]map[string]any // keyed by resource path e.g. "/subcontractors"
-	widgets     map[string]any              // keyed by widget path
-	entityStats map[string]any              // keyed by pattern path
+	mu            sync.RWMutex
+	collections   map[string][]map[string]any // keyed by resource path e.g. "/subcontractors"
+	widgets       map[string]any              // keyed by widget path
+	entityStats   map[string]any              // keyed by pattern path
+	subResources  map[string][]map[string]any // keyed by "resource/id/sub" e.g. "/subcontractors/sub-001/activity"
 }
 
 // LoadMockData reads a data.json file and returns a MockStore.
@@ -34,9 +35,10 @@ func LoadMockData(path string) (*MockStore, error) {
 	}
 
 	ms := &MockStore{
-		collections: make(map[string][]map[string]any),
-		widgets:     make(map[string]any),
-		entityStats: make(map[string]any),
+		collections:  make(map[string][]map[string]any),
+		widgets:      make(map[string]any),
+		entityStats:  make(map[string]any),
+		subResources: make(map[string][]map[string]any),
 	}
 
 	for key, raw := range parsed {
@@ -53,6 +55,19 @@ func LoadMockData(path string) (*MockStore, error) {
 				return nil, fmt.Errorf("parsing _entity_stats: %w", err)
 			}
 			ms.entityStats = es
+		case key == "_sub_resources":
+			// Sub-resources keyed like "/subcontractors/sub-001/activity"
+			var sr map[string]json.RawMessage
+			if err := json.Unmarshal(raw, &sr); err != nil {
+				return nil, fmt.Errorf("parsing _sub_resources: %w", err)
+			}
+			for subKey, subRaw := range sr {
+				var items []map[string]any
+				if err := json.Unmarshal(subRaw, &items); err != nil {
+					return nil, fmt.Errorf("parsing sub_resource %s: %w", subKey, err)
+				}
+				ms.subResources[subKey] = items
+			}
 		default:
 			var records []map[string]any
 			if err := json.Unmarshal(raw, &records); err != nil {
@@ -118,10 +133,9 @@ func (ms *MockStore) handleGet(w http.ResponseWriter, r *http.Request, path stri
 		ms.handleDetail(w, resource, segments[1])
 		return
 	}
-	// /{resource}/{id}/transitions/{name}
-	if len(segments) == 4 && segments[2] == "transitions" {
-		// GET on transitions is not standard, but handle as stats fallback
-		writeJSON(w, http.StatusNotFound, map[string]string{"error": "not found"})
+	// /{resource}/{id}/{sub} — sub-resources like activity, transitions
+	if len(segments) == 3 {
+		ms.handleSubResource(w, resource, segments[1], segments[2])
 		return
 	}
 
@@ -209,6 +223,28 @@ func (ms *MockStore) handleDetail(w http.ResponseWriter, resource, id string) {
 		}
 	}
 	writeJSON(w, http.StatusNotFound, map[string]string{"error": "not found"})
+}
+
+func (ms *MockStore) handleSubResource(w http.ResponseWriter, resource, id, sub string) {
+	ms.mu.RLock()
+	defer ms.mu.RUnlock()
+
+	// Try exact match: "/subcontractors/sub-001/activity"
+	exactKey := resource + "/" + id + "/" + sub
+	if items, ok := ms.subResources[exactKey]; ok {
+		writeJSON(w, http.StatusOK, items)
+		return
+	}
+
+	// Try wildcard pattern: "/subcontractors/*/activity"
+	wildcardKey := resource + "/*/" + sub
+	if items, ok := ms.subResources[wildcardKey]; ok {
+		writeJSON(w, http.StatusOK, items)
+		return
+	}
+
+	// Fallback: return empty array (sub-resource just has no data)
+	writeJSON(w, http.StatusOK, []any{})
 }
 
 func (ms *MockStore) handleEntityStats(w http.ResponseWriter, r *http.Request, path string) {
@@ -397,6 +433,20 @@ func matchesFilter(rec map[string]any, field, op, value string) bool {
 	case "max":
 		return toFloat(rv) <= toFloat(value)
 	default:
+		// If the record value is an array, check if any element matches any filter value
+		if arr, ok := rv.([]any); ok {
+			filterVals := strings.Split(value, ",")
+			for _, elem := range arr {
+				elemStr := fmt.Sprintf("%v", elem)
+				for _, fv := range filterVals {
+					if elemStr == strings.TrimSpace(fv) {
+						return true
+					}
+				}
+			}
+			return false
+		}
+
 		// Exact match, with comma-separated multi-value support
 		recStr := fmt.Sprintf("%v", rv)
 		if strings.Contains(value, ",") {

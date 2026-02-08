@@ -1,0 +1,32 @@
+# Composed example: merges construction + saas-admin + hr-portal into one app.
+# Run with: go run cmd/serve/main.go --compose examples/composed/compose.yaml --watch
+
+host:
+  name: portal
+  spec_path: examples/composed/host.yaml
+  data_path: examples/construction/data.json
+
+services:
+  - name: construction
+    spec_path: examples/construction/spec.yaml
+    data_path: examples/construction/data.json
+    prefix: /construction
+    nav_group: Construction
+    nav_order: 10
+    watch: true
+
+  - name: saas-admin
+    spec_path: examples/saas-admin/spec.yaml
+    data_path: examples/saas-admin/data.json
+    prefix: /saas
+    nav_group: SaaS Admin
+    nav_order: 20
+    watch: true
+
+  - name: hr-portal
+    spec_path: examples/hr-portal/spec.yaml
+    data_path: examples/hr-portal/data.json
+    prefix: /hr
+    nav_group: HR Portal
+    nav_order: 30
+    watch: true
