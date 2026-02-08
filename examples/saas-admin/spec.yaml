@@ -1,0 +1,565 @@
+app:
+  name: "saas-admin"
+  display_name: "SaaS Admin Panel"
+  version: "1.0.0"
+  description: "Customer, subscription, and support management for SaaS products"
+
+  theme:
+    mode: dark
+    primary_color: "#818CF8"
+    secondary_color: "#A78BFA"
+    accent_color: "#FBBF24"
+    danger_color: "#EF4444"
+    success_color: "#10B981"
+    info_color: "#60A5FA"
+    warning_color: "#FBBF24"
+    border_radius: lg
+    density: compact
+    font_scale: md
+    motion_mode: full
+    font_family: "Inter, system-ui, sans-serif"
+    elevation: sm
+    surface_style: raised
+    header_style: accent-bar
+    chart_palette: [success, primary, info, accent, danger, secondary]
+
+  i18n:
+    default_locale: en-US
+    date_format: "MMM d, yyyy"
+    time_format: "h:mm a"
+    currency: USD
+    timezone: America/New_York
+
+auth:
+  provider: oidc
+  config:
+    issuer: "https://auth.example.com"
+    client_id: "saas-admin"
+  roles:
+    admin:
+      display_name: "Administrator"
+    support:
+      display_name: "Support Agent"
+    viewer:
+      display_name: "Viewer"
+
+api:
+  base_url: "${API_BASE_URL}"
+  version_prefix: "/api/v1"
+  timeout_ms: 30000
+
+shell:
+  sidebar:
+    position: left
+    collapsible: true
+    default_collapsed: false
+    width: 260
+    collapsed_width: 64
+    show_user_menu: true
+    show_search: false
+  header:
+    show_breadcrumbs: true
+    show_search: true
+    show_notifications: true
+
+navigation:
+  items:
+    - id: dashboard
+      label: "Dashboard"
+      icon: layout-dashboard
+      path: /dashboard
+      page: dashboard
+    - id: customers
+      label: "Customers"
+      icon: users
+      path: /customers
+      entity: Customer
+    - id: subscriptions
+      label: "Subscriptions"
+      icon: credit-card
+      path: /subscriptions
+      entity: Subscription
+      badge:
+        type: count
+        filter: { status: "past_due" }
+        color: danger
+    - id: invoices
+      label: "Invoices"
+      icon: file-text
+      path: /invoices
+      entity: Invoice
+    - id: tickets
+      label: "Support Tickets"
+      icon: message-square
+      path: /tickets
+      entity: Ticket
+      badge:
+        type: count
+        filter: { status: "open" }
+        color: warning
+
+pages:
+  - id: dashboard
+    path: /dashboard
+    title: "Dashboard"
+    layout: grid
+    widgets:
+      - type: stat_cards
+        columns: 4
+        cards:
+          - title: "Monthly Revenue"
+            value: { source: "api:GET /dashboard/stats", field: "monthly_revenue" }
+            icon: dollar-sign
+            color: success
+          - title: "Active Subscriptions"
+            value: { source: "api:GET /dashboard/stats", field: "active_subscriptions" }
+            icon: credit-card
+            color: primary
+          - title: "Open Tickets"
+            value: { source: "api:GET /dashboard/stats", field: "open_tickets" }
+            icon: message-square
+            color: warning
+          - title: "Churn Rate"
+            value: { source: "api:GET /dashboard/stats", field: "churn_rate" }
+            icon: trending-down
+            color: danger
+
+      - type: chart
+        title: "Revenue by Plan"
+        chart_type: donut
+        source: "api:GET /dashboard/charts/revenue-by-plan"
+        data_mapping:
+          label: plan
+          value: revenue
+          color_map:
+            free: neutral
+            starter: info
+            pro: primary
+            enterprise: success
+        height: 300
+
+      - type: chart
+        title: "MRR Trend"
+        chart_type: area
+        source: "api:GET /dashboard/charts/mrr-trend"
+        data_mapping:
+          x: month
+          y: mrr
+        height: 300
+
+      - type: entity_table
+        title: "Recent Support Tickets"
+        entity: Ticket
+        query:
+          sort: { field: created_at, order: desc }
+          limit: 5
+        columns: [subject, customer_name, priority, status]
+        link: /tickets
+
+      - type: entity_table
+        title: "Overdue Invoices"
+        entity: Invoice
+        query:
+          filter: { status: overdue }
+          sort: { field: due_date, order: asc }
+          limit: 5
+        columns: [invoice_number, customer_name, amount, due_date]
+        link: /invoices
+
+entities:
+  - name: Customer
+    display_name: "Customers"
+    api_resource: /customers
+    icon: users
+    label_field: name
+
+    fields:
+      - name: id
+        type: string
+        primary_key: true
+        generated: true
+      - name: name
+        type: string
+        display_name: "Name"
+        required: true
+      - name: email
+        type: email
+        display_name: "Email"
+        required: true
+      - name: company
+        type: string
+        display_name: "Company"
+      - name: plan
+        type: enum
+        display_name: "Plan"
+        values:
+          - { value: "free", label: "Free", color: "gray" }
+          - { value: "starter", label: "Starter", color: "blue" }
+          - { value: "pro", label: "Pro", color: "purple" }
+          - { value: "enterprise", label: "Enterprise", color: "amber" }
+      - name: mrr
+        type: currency
+        display_name: "MRR"
+        currency: USD
+      - name: status
+        type: enum
+        display_name: "Status"
+        values:
+          - { value: "active", label: "Active", color: "green" }
+          - { value: "churned", label: "Churned", color: "red" }
+          - { value: "trial", label: "Trial", color: "blue" }
+      - name: created_at
+        type: datetime
+        display_name: "Signed Up"
+        generated: true
+
+    views:
+      list:
+        default_sort: { field: created_at, order: desc }
+        columns:
+          - { field: name, link_to: detail }
+          - { field: email }
+          - { field: company }
+          - { field: plan }
+          - { field: mrr }
+          - { field: status }
+        search:
+          fields: [name, email, company]
+          placeholder: "Search customers..."
+        filters:
+          layout: toolbar
+          groups:
+            - fields:
+                - { field: plan, type: checkbox_group }
+                - { field: status, type: checkbox_group }
+        actions:
+          primary:
+            - label: "Add Customer"
+              icon: plus
+              action: { type: navigate, path: /customers/new }
+
+      detail:
+        header:
+          title: "{{name}}"
+          subtitle: "{{company}}"
+          status_badge: status
+        tabs:
+          - id: overview
+            label: "Overview"
+            icon: info
+            sections:
+              - title: "Customer Info"
+                layout: two_column
+                fields: [name, email, company, plan, mrr, status, created_at]
+          - id: subscriptions
+            label: "Subscriptions"
+            icon: credit-card
+            content:
+              type: relationship_table
+              relationship: subscriptions
+              columns: [plan_name, amount, status, current_period_end]
+
+      create:
+        steps:
+          - title: "Customer Details"
+            fields: [name, email, company, plan]
+
+    relationships:
+      - name: subscriptions
+        type: has_many
+        entity: Subscription
+        foreign_key: customer_id
+        display_name: "Subscriptions"
+
+  - name: Subscription
+    display_name: "Subscriptions"
+    api_resource: /subscriptions
+    icon: credit-card
+    label_field: plan_name
+
+    fields:
+      - name: id
+        type: string
+        primary_key: true
+        generated: true
+      - name: customer_id
+        type: reference
+        display_name: "Customer"
+        entity: Customer
+        required: true
+      - name: plan_name
+        type: string
+        display_name: "Plan"
+        required: true
+      - name: amount
+        type: currency
+        display_name: "Amount"
+        currency: USD
+      - name: interval
+        type: enum
+        display_name: "Billing Interval"
+        values:
+          - { value: "monthly", label: "Monthly" }
+          - { value: "yearly", label: "Yearly" }
+      - name: status
+        type: enum
+        display_name: "Status"
+        values:
+          - { value: "active", label: "Active", color: "green" }
+          - { value: "past_due", label: "Past Due", color: "red" }
+          - { value: "canceled", label: "Canceled", color: "gray" }
+          - { value: "trialing", label: "Trialing", color: "blue" }
+      - name: current_period_end
+        type: date
+        display_name: "Renews On"
+        display_rules:
+          - condition: "value < today + 7d"
+            style: warning
+            tooltip: "Renews soon"
+
+    views:
+      list:
+        default_sort: { field: current_period_end, order: asc }
+        columns:
+          - { field: plan_name, link_to: detail }
+          - { field: customer_id, display_field: customer_name }
+          - { field: amount }
+          - { field: interval }
+          - { field: status }
+          - { field: current_period_end }
+        search:
+          fields: [plan_name]
+          placeholder: "Search subscriptions..."
+        filters:
+          layout: toolbar
+          groups:
+            - fields:
+                - { field: status, type: checkbox_group }
+                - { field: interval, type: select }
+
+      detail:
+        header:
+          title: "{{plan_name}}"
+          subtitle: "{{interval}} subscription"
+          status_badge: status
+        tabs:
+          - id: overview
+            label: "Overview"
+            sections:
+              - title: "Subscription Details"
+                fields: [plan_name, customer_id, amount, interval, status, current_period_end]
+
+    state_machine:
+      field: status
+      initial: trialing
+      transitions:
+        - name: activate
+          label: "Activate"
+          from: [trialing]
+          to: active
+          color: green
+        - name: mark_past_due
+          label: "Mark Past Due"
+          from: [active]
+          to: past_due
+          color: red
+        - name: cancel
+          label: "Cancel"
+          from: [active, past_due, trialing]
+          to: canceled
+          color: gray
+          confirmation:
+            message: "Are you sure you want to cancel this subscription?"
+            type: simple
+
+  - name: Invoice
+    display_name: "Invoices"
+    api_resource: /invoices
+    icon: file-text
+    label_field: invoice_number
+
+    fields:
+      - name: id
+        type: string
+        primary_key: true
+        generated: true
+      - name: invoice_number
+        type: string
+        display_name: "Invoice #"
+      - name: customer_id
+        type: reference
+        display_name: "Customer"
+        entity: Customer
+      - name: amount
+        type: currency
+        display_name: "Amount"
+        currency: USD
+      - name: status
+        type: enum
+        display_name: "Status"
+        values:
+          - { value: "draft", label: "Draft", color: "gray" }
+          - { value: "sent", label: "Sent", color: "blue" }
+          - { value: "paid", label: "Paid", color: "green" }
+          - { value: "overdue", label: "Overdue", color: "red" }
+      - name: due_date
+        type: date
+        display_name: "Due Date"
+        display_rules:
+          - condition: "value < today"
+            style: danger
+            tooltip: "Overdue"
+      - name: created_at
+        type: datetime
+        display_name: "Created"
+        generated: true
+
+    views:
+      list:
+        default_sort: { field: due_date, order: asc }
+        columns:
+          - { field: invoice_number, link_to: detail }
+          - { field: customer_id, display_field: customer_name }
+          - { field: amount }
+          - { field: status }
+          - { field: due_date }
+        filters:
+          layout: toolbar
+          groups:
+            - fields:
+                - { field: status, type: checkbox_group }
+
+      detail:
+        header:
+          title: "{{invoice_number}}"
+          status_badge: status
+        tabs:
+          - id: overview
+            label: "Details"
+            sections:
+              - title: "Invoice Info"
+                fields: [invoice_number, customer_id, amount, status, due_date, created_at]
+
+  - name: Ticket
+    display_name: "Support Tickets"
+    api_resource: /tickets
+    icon: message-square
+    label_field: subject
+
+    fields:
+      - name: id
+        type: string
+        primary_key: true
+        generated: true
+      - name: subject
+        type: string
+        display_name: "Subject"
+        required: true
+      - name: customer_id
+        type: reference
+        display_name: "Customer"
+        entity: Customer
+        required: true
+      - name: priority
+        type: enum
+        display_name: "Priority"
+        values:
+          - { value: "low", label: "Low", color: "gray" }
+          - { value: "medium", label: "Medium", color: "blue" }
+          - { value: "high", label: "High", color: "amber" }
+          - { value: "urgent", label: "Urgent", color: "red" }
+      - name: status
+        type: enum
+        display_name: "Status"
+        values:
+          - { value: "open", label: "Open", color: "blue" }
+          - { value: "in_progress", label: "In Progress", color: "amber" }
+          - { value: "resolved", label: "Resolved", color: "green" }
+          - { value: "closed", label: "Closed", color: "gray" }
+      - name: assigned_to
+        type: string
+        display_name: "Assigned To"
+      - name: description
+        type: richtext
+        display_name: "Description"
+      - name: created_at
+        type: datetime
+        display_name: "Created"
+        generated: true
+
+    views:
+      list:
+        default_sort: { field: created_at, order: desc }
+        columns:
+          - { field: subject, link_to: detail }
+          - { field: customer_id, display_field: customer_name }
+          - { field: priority }
+          - { field: status }
+          - { field: assigned_to }
+          - { field: created_at }
+        search:
+          fields: [subject]
+          placeholder: "Search tickets..."
+        filters:
+          layout: sidebar
+          groups:
+            - label: "Status"
+              fields:
+                - { field: status, type: checkbox_group }
+            - label: "Priority"
+              fields:
+                - { field: priority, type: checkbox_group }
+        filter_presets:
+          - label: "Open"
+            filters: { status: "open" }
+          - label: "My Tickets"
+            filters: { assigned_to: "me" }
+          - label: "Urgent"
+            filters: { priority: "urgent" }
+        actions:
+          primary:
+            - label: "New Ticket"
+              icon: plus
+              action: { type: navigate, path: /tickets/new }
+
+      detail:
+        header:
+          title: "{{subject}}"
+          subtitle: "Opened {{created_at}}"
+          status_badge: status
+        tabs:
+          - id: overview
+            label: "Details"
+            sections:
+              - title: "Ticket Info"
+                fields: [subject, customer_id, priority, status, assigned_to, description]
+
+      create:
+        steps:
+          - title: "New Ticket"
+            fields: [subject, customer_id, priority, description]
+
+    state_machine:
+      field: status
+      initial: open
+      transitions:
+        - name: start_work
+          label: "Start Working"
+          from: [open]
+          to: in_progress
+          color: amber
+        - name: resolve
+          label: "Resolve"
+          from: [open, in_progress]
+          to: resolved
+          color: green
+        - name: close
+          label: "Close"
+          from: [resolved]
+          to: closed
+          color: gray
+        - name: reopen
+          label: "Reopen"
+          from: [resolved, closed]
+          to: open
+          color: blue

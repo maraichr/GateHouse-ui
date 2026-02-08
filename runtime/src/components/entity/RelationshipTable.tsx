@@ -1,20 +1,11 @@
 import { useEntityList } from '../../data/useEntityList';
 import { Relationship } from '../../types';
+import { entityToResource } from '../../utils/entityResource';
 
 interface RelationshipTableProps {
   relationship: Relationship;
   parentId: string;
   columns?: string[];
-}
-
-// Map entity names to API resource paths
-// This handles cases like "WorkOrder" -> "/work-orders"
-function entityToResource(entityName: string): string {
-  // Convert PascalCase to kebab-case and pluralize
-  const kebab = entityName
-    .replace(/([a-z])([A-Z])/g, '$1-$2')
-    .toLowerCase();
-  return `/${kebab}s`;
 }
 
 export function RelationshipTable({ relationship, parentId, columns }: RelationshipTableProps) {

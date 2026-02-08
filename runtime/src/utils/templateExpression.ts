@@ -17,9 +17,26 @@ export function evaluateTemplate(template: string, context: Record<string, any>)
     }
     if (filter === 'lowercase') return String(value).toLowerCase();
     if (filter === 'uppercase') return String(value).toUpperCase();
+    if (filter === 'date') return formatDate(value);
 
-    return String(value);
+    // Auto-format ISO datetime strings
+    const str = String(value);
+    if (/^\d{4}-\d{2}-\d{2}T/.test(str)) {
+      return formatDate(str);
+    }
+
+    return str;
   });
+}
+
+function formatDate(value: any): string {
+  try {
+    const d = new Date(value);
+    if (isNaN(d.getTime())) return String(value);
+    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  } catch {
+    return String(value);
+  }
 }
 
 function resolvePath(path: string, context: Record<string, any>): any {

@@ -19,12 +19,15 @@ type ResolvedMetadata struct {
 }
 
 type ResolvedApp struct {
-	AppName       string         `yaml:"app_name" json:"app_name"`
-	Accessibility A11yConfig     `yaml:"accessibility" json:"accessibility,omitempty"`
-	Theme         ThemeConfig    `yaml:"theme" json:"theme,omitempty"`
-	Auth          AuthConfig     `yaml:"auth" json:"auth,omitempty"`
-	API           APIConfig      `yaml:"api" json:"api,omitempty"`
-	Behaviors     BehaviorConfig `yaml:"behaviors" json:"behaviors,omitempty"`
+	AppName   string             `yaml:"app_name" json:"app_name"`
+	Theme     ThemeConfig        `yaml:"theme" json:"theme,omitempty"`
+	Auth      AuthConfig         `yaml:"auth" json:"auth,omitempty"`
+	API       APIConfig          `yaml:"api" json:"api,omitempty"`
+	Behaviors ResolvedBehaviors  `yaml:"behaviors" json:"behaviors,omitempty"`
+}
+
+type ResolvedBehaviors struct {
+	Notifications NotificationConfig `yaml:"notifications" json:"notifications,omitempty"`
 }
 
 type ResolvedEntity struct {

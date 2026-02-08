@@ -1,0 +1,69 @@
+version: '3'
+
+dotenv: ['.env']
+
+tasks:
+  # --- Docker Compose ---
+  up:
+    desc: Start all services (attached)
+    cmds:
+      - docker compose up --build
+
+  up:bg:
+    desc: Start all services (detached)
+    cmds:
+      - docker compose up --build -d
+
+  down:
+    desc: Stop all services
+    cmds:
+      - docker compose down
+
+  logs:
+    desc: Follow logs from all services
+    cmds:
+      - docker compose logs -f
+
+  logs:go:
+    desc: Follow Go server logs
+    cmds:
+      - docker compose logs -f go-server
+
+  logs:react:
+    desc: Follow React runtime logs
+    cmds:
+      - docker compose logs -f react-runtime
+
+  logs:flutter:
+    desc: Follow Flutter runtime logs
+    cmds:
+      - docker compose logs -f flutter-runtime
+
+  clean:
+    desc: Stop services and remove volumes/images
+    cmds:
+      - docker compose down -v --rmi local
+
+  # --- Local dev (no Docker) ---
+  dev:go:
+    desc: Run Go server locally with air
+    cmds:
+      - air -c .air.toml
+
+  dev:react:
+    desc: Run React runtime locally
+    dir: runtime
+    cmds:
+      - pnpm dev
+
+  dev:flutter:
+    desc: Run Flutter runtime locally
+    dir: flutter_runtime
+    cmds:
+      - flutter run -d web-server --web-port=6175
+
+  dev:flutter:hot:
+    desc: Run Flutter with automated hot reload locally
+    dir: flutter_runtime
+    cmds:
+      - bash scripts/flutter-hot-reload.sh

@@ -10,7 +10,8 @@ import { SpecRouter } from './router/specRouter';
 import { RenderNodeWrapper } from './renderer';
 import { ComponentNode, ThemeConfig } from './types';
 import { useHotReload } from './api/useHotReload';
-import { themeToVars } from './utils/themeColors';
+import { themeToVars, isDarkMode } from './utils/themeColors';
+import { useFocusManagement } from './utils/useFocusManagement';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -40,13 +41,14 @@ export default function App() {
 function AppContent() {
   const { tree, isLoading, error } = useSpec();
   useHotReload();
+  useFocusManagement();
 
   if (isLoading) {
     return (
-      <div className="flex h-screen items-center justify-center bg-gray-50">
+      <div className="flex h-screen items-center justify-center" style={{ backgroundColor: 'var(--color-bg, #f9fafb)' }}>
         <div className="text-center">
-          <div className="animate-spin h-8 w-8 border-4 border-[color:var(--color-primary,#1E40AF)] border-t-transparent rounded-full mx-auto" />
-          <p className="mt-4 text-gray-600">Loading spec...</p>
+          <div className="animate-spin h-8 w-8 border-4 border-t-transparent rounded-full mx-auto" style={{ borderColor: 'var(--color-primary, #2563eb)', borderTopColor: 'transparent' }} />
+          <p className="mt-4" style={{ color: 'var(--color-text-muted, #6b7280)' }}>Loading spec...</p>
         </div>
       </div>
     );
@@ -54,11 +56,11 @@ function AppContent() {
 
   if (error || !tree) {
     return (
-      <div className="flex h-screen items-center justify-center bg-gray-50">
+      <div className="flex h-screen items-center justify-center" style={{ backgroundColor: 'var(--color-bg, #f9fafb)' }}>
         <div className="text-center max-w-md">
-          <h2 className="text-xl font-semibold text-red-600">Failed to load spec</h2>
-          <p className="mt-2 text-gray-600">{error?.message || 'Unknown error'}</p>
-          <p className="mt-4 text-sm text-gray-500">
+          <h2 className="text-xl font-semibold" style={{ color: 'var(--color-danger, #dc2626)' }}>Failed to load spec</h2>
+          <p className="mt-2" style={{ color: 'var(--color-text-muted, #6b7280)' }}>{error?.message || 'Unknown error'}</p>
+          <p className="mt-4 text-sm" style={{ color: 'var(--color-text-faint, #9ca3af)' }}>
             Make sure the Go server is running on port 3000
           </p>
         </div>
@@ -73,7 +75,7 @@ function AppContent() {
   const themeStyle = themeToVars(theme);
 
   return (
-    <div style={themeStyle}>
+    <div style={themeStyle} data-theme={isDarkMode(theme) ? 'dark' : 'light'}>
       <Toaster position="top-right" richColors />
       <AppShell
         shell={root.props?.shell as any}

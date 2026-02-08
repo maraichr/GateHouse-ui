@@ -16,13 +16,25 @@ func (s *Server) Routes() http.Handler {
 		r.Get("/spec", s.handleGetSpec)
 		r.Get("/health", s.handleHealth)
 		r.Get("/events", s.sseHub.ServeHTTP)
+		r.Get("/examples", s.handleListExamples)
+		r.Post("/switch", s.handleSwitchExample)
 	})
 
-	if s.mockStore != nil {
-		r.Route("/api/v1", func(r chi.Router) {
-			r.HandleFunc("/*", s.mockStore.ServeHTTP)
+	// Mock data — use GetMockStore() for thread-safe access after example switching
+	r.Route("/api/v1", func(r chi.Router) {
+		r.HandleFunc("/*", func(w http.ResponseWriter, req *http.Request) {
+			store := s.GetMockStore()
+			if store != nil {
+				store.ServeHTTP(w, req)
+				return
+			}
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusNotFound)
+			w.Write([]byte(`{"error":"no mock data loaded"}`))
 		})
-	} else if s.apiBaseURL != "" {
+	})
+
+	if s.apiBaseURL != "" {
 		r.Handle("/api/*", s.apiProxy())
 	}
 

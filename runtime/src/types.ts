@@ -84,6 +84,14 @@ export interface ThemeConfig {
   border_radius: string;
   density: string;
   font_family: string;
+  font_scale?: string;
+  motion_mode?: string;
+  info_color?: string;
+  warning_color?: string;
+  elevation?: string;
+  surface_style?: string;
+  header_style?: string;
+  chart_palette?: string[];
 }
 
 export interface SidebarConfig {
@@ -155,6 +163,7 @@ export interface ShowIn {
 
 export interface DisplayRule {
   condition: string;
+  when?: { op: string; lhs: any; rhs: any };
   style: string;
   tooltip?: string;
   label?: string;
@@ -164,13 +173,13 @@ export interface ListColumn {
   field: string;
   width?: number | string;
   fixed?: string;
-  link_to?: string;
+  link_to?: string | { type: string; path_tpl?: string };
   max_display?: number;
   display_field?: string;
 }
 
 export interface FilterConfig {
-  layout: string;
+  layout: string | { web?: string; flutter?: string };
   persistent?: boolean;
   groups: FilterGroup[];
 }
@@ -189,6 +198,7 @@ export interface FilterField {
   max?: any;
   step?: number;
   presets?: { label: string; range: any[] }[];
+  options?: (string | { value: string; label: string })[];
 }
 
 export interface SearchConfig {
@@ -288,6 +298,24 @@ export interface ActionTarget {
   type: string;
   path?: string;
   url?: string;
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export type FilterValue = any;
+
+// Action types used in EntityList
+export interface EntityAction {
+  label: string;
+  icon?: string;
+  action?: { type: string; path?: string };
+  permissions?: string[];
+}
+
+// Form section config
+export interface FormSectionConfig {
+  title?: string;
+  fields?: string[];
+  permissions?: string[];
 }
 
 export interface Relationship {

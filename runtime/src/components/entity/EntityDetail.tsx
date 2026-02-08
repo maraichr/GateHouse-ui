@@ -6,9 +6,12 @@ import { useBreadcrumbs } from '../../context/BreadcrumbContext';
 import { DetailHeader } from './DetailHeader';
 import { Section } from '../layout/Section';
 import { RelationshipTable } from './RelationshipTable';
+import { ActivityFeed } from './ActivityFeed';
+import { StateMachineTimeline } from './StateMachineTimeline';
 import { Icon } from '../../utils/icons';
 import { cn } from '../../utils/cn';
 import { ArrowLeft } from 'lucide-react';
+import { DetailSkeleton } from '../shared/Skeleton';
 import {
   ComponentNode,
   Field,
@@ -34,6 +37,7 @@ export function EntityDetail({
   entity,
   api_resource,
   display_name,
+  label_field,
   fields,
   state_machine,
   relationships,
@@ -48,7 +52,7 @@ export function EntityDetail({
   // Set breadcrumb override with record's display name
   useEffect(() => {
     if (record && id) {
-      const displayName = record.name || record.company_name || record.title || record.display_name || id;
+      const displayName = (label_field && record[label_field]) || record.name || record.company_name || record.title || record.display_name || id;
       setOverride(id, String(displayName));
     }
   }, [record, id, setOverride]);
@@ -72,25 +76,28 @@ export function EntityDetail({
 
   if (isLoading) {
     return (
-      <div className="flex justify-center py-12">
-        <div className="animate-spin h-6 w-6 border-2 border-t-transparent rounded-full" style={{ borderColor: 'var(--color-primary)', borderTopColor: 'transparent' }} />
+      <div role="status" aria-live="polite">
+        <span className="sr-only">Loading record...</span>
+        <DetailSkeleton />
       </div>
     );
   }
 
   return (
     <div className="flex flex-col h-full">
-      <div className="bg-white border-b border-gray-200 px-6 py-3">
+      <div className="px-6 py-3" style={{ backgroundColor: 'var(--color-surface)', borderBottom: '1px solid var(--color-border)' }}>
         <button
           onClick={() => navigate(-1)}
-          className="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700"
+          className="flex items-center gap-1 text-sm"
+          style={{ color: 'var(--color-text-muted)' }}
+          aria-label={`Back to ${display_name || entity || 'list'}`}
         >
-          <ArrowLeft className="h-4 w-4" />
+          <ArrowLeft className="h-4 w-4" aria-hidden="true" />
           Back to {display_name || entity || 'list'}
         </button>
       </div>
       {record ? (
-        <>
+        <div className="animate-fadeIn">
           <DetailHeader
             config={headerConfig}
             record={record}
@@ -108,18 +115,18 @@ export function EntityDetail({
               hasPermission={hasPermission}
             />
           ) : (
-            <div className="flex-1 p-6 text-gray-500">No detail layout configured</div>
+            <div className="flex-1 p-6" style={{ color: 'var(--color-text-muted, #6b7280)' }}>No detail layout configured</div>
           )}
-        </>
+        </div>
       ) : isError ? (
         <div className="flex flex-col items-center justify-center py-12">
-          <p className="text-gray-500">
+          <p style={{ color: 'var(--color-text-muted, #6b7280)' }}>
             Unable to load data. Check your API connection.
           </p>
         </div>
       ) : (
         <div className="flex-1 p-6">
-          <p className="text-gray-500">No record found</p>
+          <p style={{ color: 'var(--color-text-muted, #6b7280)' }}>No record found</p>
         </div>
       )}
     </div>
@@ -154,8 +161,8 @@ function DetailTabLayout({ tabs, record, fields, relationships, parentId, hasPer
 
   return (
     <div className="flex-1 flex flex-col min-h-0">
-      <div className="border-b border-gray-200">
-        <nav className="flex gap-0 px-6" role="tablist">
+      <div className="overflow-x-auto scrollbar-hide" style={{ borderBottom: '1px solid var(--color-border, #e5e7eb)' }}>
+        <nav className="flex gap-0 px-6 min-w-max" role="tablist">
           {visibleTabs.map((tab, i) => (
             <button
               key={tab.props?.id || i}
@@ -163,12 +170,12 @@ function DetailTabLayout({ tabs, record, fields, relationships, parentId, hasPer
               aria-selected={i === activeTab}
               onClick={() => setActiveTab(i)}
               className={cn(
-                'flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors',
-                i !== activeTab && 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                'flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap',
+                i !== activeTab && 'border-transparent'
               )}
-              style={i === activeTab ? { borderBottomColor: 'var(--color-primary)', color: 'var(--color-primary)' } : undefined}
+              style={i === activeTab ? { borderBottomColor: 'var(--color-primary)', color: 'var(--color-primary)' } : { color: 'var(--color-text-muted, #6b7280)' }}
             >
-              {tab.props?.icon && <Icon name={tab.props.icon} className="h-4 w-4" />}
+              {tab.props?.icon && <Icon name={tab.props.icon} className="h-4 w-4 flex-shrink-0" />}
               {tab.props?.label}
             </button>
           ))}
@@ -214,12 +221,33 @@ function TabContent({ tab, record, fields, relationships, parentId, hasPermissio
           />
         );
       }
-      return <div className="text-gray-400 text-sm">Relationship "{content.relationship}" not found</div>;
+      return <div className="text-sm" style={{ color: 'var(--color-text-faint, #9ca3af)' }}>Relationship "{content.relationship}" not found</div>;
     }
-    // Other content types (activity_feed, state_machine_timeline, etc.)
+
+    if (content.type === 'activity_feed') {
+      return (
+        <ActivityFeed
+          source={content.source || ''}
+          parentId={parentId}
+          item_template={content.item_template}
+        />
+      );
+    }
+
+    if (content.type === 'state_machine_timeline') {
+      return (
+        <StateMachineTimeline
+          source={content.source || ''}
+          parentId={parentId}
+          show_current_state={content.show_current_state}
+          currentState={record?.status}
+        />
+      );
+    }
+
     return (
-      <div className="text-center py-8 text-gray-400 text-sm">
-        Content type "{content.type}" — coming soon
+      <div className="text-center py-8 text-sm" style={{ color: 'var(--color-text-faint, #9ca3af)' }}>
+        Content type "{content.type}" is not supported yet.
       </div>
     );
   }
@@ -227,7 +255,7 @@ function TabContent({ tab, record, fields, relationships, parentId, hasPermissio
   // Render section children with record + fields injected
   const sections = tab.children || [];
   if (sections.length === 0) {
-    return <div className="text-gray-400 text-sm">No content configured for this tab</div>;
+    return <div className="text-sm" style={{ color: 'var(--color-text-faint, #9ca3af)' }}>No content configured for this tab</div>;
   }
 
   return (

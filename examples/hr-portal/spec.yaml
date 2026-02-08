@@ -1,0 +1,454 @@
+app:
+  name: "hr-portal"
+  display_name: "HR Portal"
+  version: "1.0.0"
+  description: "Employee management, leave requests, and department operations"
+
+  theme:
+    mode: light
+    primary_color: "#059669"
+    secondary_color: "#0D9488"
+    accent_color: "#F97316"
+    danger_color: "#DC2626"
+    success_color: "#16A34A"
+    info_color: "#0EA5E9"
+    warning_color: "#EAB308"
+    border_radius: full
+    density: spacious
+    font_scale: md
+    motion_mode: full
+    font_family: "DM Sans, system-ui, sans-serif"
+    elevation: lg
+    surface_style: raised
+    header_style: gradient
+    chart_palette: [primary, warning, info, danger, accent, success]
+
+  i18n:
+    default_locale: en-US
+    date_format: "MMM d, yyyy"
+    time_format: "h:mm a"
+    currency: USD
+    timezone: America/New_York
+
+auth:
+  provider: oidc
+  config:
+    issuer: "https://auth.example.com"
+    client_id: "hr-portal"
+  roles:
+    admin:
+      display_name: "HR Admin"
+    manager:
+      display_name: "Manager"
+    employee:
+      display_name: "Employee"
+
+api:
+  base_url: "${API_BASE_URL}"
+  version_prefix: "/api/v1"
+  timeout_ms: 30000
+
+shell:
+  sidebar:
+    position: left
+    collapsible: true
+    default_collapsed: false
+    width: 260
+    collapsed_width: 64
+    show_user_menu: true
+    show_search: false
+  header:
+    show_breadcrumbs: true
+    show_search: true
+    show_notifications: true
+
+navigation:
+  items:
+    - id: dashboard
+      label: "Dashboard"
+      icon: layout-dashboard
+      path: /dashboard
+      page: dashboard
+    - id: employees
+      label: "Employees"
+      icon: users
+      path: /employees
+      entity: Employee
+    - id: departments
+      label: "Departments"
+      icon: building-2
+      path: /departments
+      entity: Department
+    - id: leave-requests
+      label: "Leave Requests"
+      icon: calendar-days
+      path: /leave-requests
+      entity: LeaveRequest
+      badge:
+        type: count
+        filter: { status: "pending" }
+        color: warning
+
+pages:
+  - id: dashboard
+    path: /dashboard
+    title: "HR Dashboard"
+    layout: grid
+    widgets:
+      - type: stat_cards
+        columns: 4
+        cards:
+          - title: "Total Employees"
+            value: { source: "api:GET /dashboard/stats", field: "total_employees" }
+            icon: users
+            color: primary
+          - title: "Open Positions"
+            value: { source: "api:GET /dashboard/stats", field: "open_positions" }
+            icon: briefcase
+            color: amber
+          - title: "Pending Leave"
+            value: { source: "api:GET /dashboard/stats", field: "pending_leave" }
+            icon: calendar-days
+            color: warning
+          - title: "Departments"
+            value: { source: "api:GET /dashboard/stats", field: "departments" }
+            icon: building-2
+            color: success
+
+      - type: chart
+        title: "Employees by Department"
+        chart_type: donut
+        source: "api:GET /dashboard/charts/employees-by-dept"
+        data_mapping:
+          label: department
+          value: count
+          color_map:
+            Engineering: primary
+            Product: info
+            Human Resources: warning
+            Sales: success
+        height: 300
+
+      - type: chart
+        title: "Leave Requests (Last 6 Months)"
+        chart_type: bar
+        source: "api:GET /dashboard/charts/leave-trend"
+        data_mapping:
+          x: month
+          y: count
+          series: type
+        height: 300
+
+      - type: entity_table
+        title: "Pending Leave Requests"
+        entity: LeaveRequest
+        query:
+          filter: { status: pending }
+          sort: { field: created_at, order: desc }
+          limit: 5
+        columns: [employee_id, leave_type, start_date, end_date]
+        link: /leave-requests
+
+      - type: entity_table
+        title: "Recent Hires"
+        entity: Employee
+        query:
+          sort: { field: start_date, order: desc }
+          limit: 5
+        columns: [name, title, department_id, start_date]
+        link: /employees
+
+entities:
+  - name: Employee
+    display_name: "Employees"
+    api_resource: /employees
+    icon: users
+    label_field: name
+
+    fields:
+      - name: id
+        type: string
+        primary_key: true
+        generated: true
+      - name: name
+        type: string
+        display_name: "Full Name"
+        required: true
+      - name: email
+        type: email
+        display_name: "Email"
+        required: true
+      - name: title
+        type: string
+        display_name: "Job Title"
+      - name: department_id
+        type: reference
+        display_name: "Department"
+        entity: Department
+      - name: status
+        type: enum
+        display_name: "Status"
+        values:
+          - { value: "active", label: "Active", color: "green" }
+          - { value: "on_leave", label: "On Leave", color: "amber" }
+          - { value: "terminated", label: "Terminated", color: "red" }
+      - name: start_date
+        type: date
+        display_name: "Start Date"
+      - name: salary
+        type: currency
+        display_name: "Annual Salary"
+        currency: USD
+        sensitive: true
+        mask_pattern: "***,***"
+        permissions:
+          view: [admin]
+          edit: [admin]
+      - name: phone
+        type: phone
+        display_name: "Phone"
+        input_type: phone
+      - name: address
+        type: address
+        display_name: "Address"
+        components:
+          street: { required: true }
+          city: { required: true }
+          state: { required: true }
+          zip: { required: true }
+
+    views:
+      list:
+        default_sort: { field: name, order: asc }
+        columns:
+          - { field: name, link_to: detail }
+          - { field: email }
+          - { field: title }
+          - { field: department_id, display_field: department_name }
+          - { field: status }
+          - { field: start_date }
+        search:
+          fields: [name, email, title]
+          placeholder: "Search employees..."
+        filters:
+          layout: toolbar
+          groups:
+            - fields:
+                - { field: status, type: checkbox_group }
+                - { field: department_id, type: select }
+        actions:
+          primary:
+            - label: "Add Employee"
+              icon: plus
+              action: { type: navigate, path: /employees/new }
+
+      detail:
+        header:
+          title: "{{name}}"
+          subtitle: "{{title}}"
+          avatar: avatar
+          status_badge: status
+        tabs:
+          - id: overview
+            label: "Overview"
+            icon: info
+            sections:
+              - title: "Personal Information"
+                layout: two_column
+                fields: [name, email, phone, address]
+              - title: "Employment Details"
+                layout: two_column
+                fields: [title, department_id, start_date, salary, status]
+          - id: leave
+            label: "Leave History"
+            icon: calendar-days
+            content:
+              type: relationship_table
+              relationship: leave_requests
+              columns: [leave_type, start_date, end_date, status]
+
+      create:
+        steps:
+          - title: "Personal Info"
+            fields: [name, email, phone]
+          - title: "Employment"
+            fields: [title, department_id, start_date, salary]
+
+      edit:
+        fields: [name, email, phone, title, department_id, salary, status]
+
+    relationships:
+      - name: leave_requests
+        type: has_many
+        entity: LeaveRequest
+        foreign_key: employee_id
+        display_name: "Leave Requests"
+
+  - name: Department
+    display_name: "Departments"
+    api_resource: /departments
+    icon: building-2
+    label_field: name
+
+    fields:
+      - name: id
+        type: string
+        primary_key: true
+        generated: true
+      - name: name
+        type: string
+        display_name: "Department Name"
+        required: true
+      - name: head
+        type: string
+        display_name: "Department Head"
+      - name: employee_count
+        type: integer
+        display_name: "Employees"
+      - name: budget
+        type: currency
+        display_name: "Annual Budget"
+        currency: USD
+
+    views:
+      list:
+        default_sort: { field: name, order: asc }
+        columns:
+          - { field: name, link_to: detail }
+          - { field: head }
+          - { field: employee_count }
+          - { field: budget }
+
+      detail:
+        header:
+          title: "{{name}}"
+          subtitle: "Head: {{head}}"
+          stats:
+            - { label: "Employees", value: "{{employee_count}}", icon: users }
+            - { label: "Budget", value: "{{budget}}", icon: dollar-sign, display_as: currency }
+        tabs:
+          - id: overview
+            label: "Overview"
+            sections:
+              - title: "Department Info"
+                fields: [name, head, employee_count, budget]
+          - id: members
+            label: "Members"
+            icon: users
+            content:
+              type: relationship_table
+              relationship: employees
+              columns: [name, title, status]
+
+    relationships:
+      - name: employees
+        type: has_many
+        entity: Employee
+        foreign_key: department_id
+        display_name: "Employees"
+
+  - name: LeaveRequest
+    display_name: "Leave Requests"
+    api_resource: /leave-requests
+    icon: calendar-days
+    label_field: leave_type
+
+    fields:
+      - name: id
+        type: string
+        primary_key: true
+        generated: true
+      - name: employee_id
+        type: reference
+        display_name: "Employee"
+        entity: Employee
+        required: true
+      - name: leave_type
+        type: enum
+        display_name: "Type"
+        required: true
+        values:
+          - { value: "vacation", label: "Vacation", color: "blue" }
+          - { value: "sick", label: "Sick Leave", color: "amber" }
+          - { value: "personal", label: "Personal", color: "purple" }
+          - { value: "parental", label: "Parental", color: "green" }
+      - name: start_date
+        type: date
+        display_name: "Start Date"
+        required: true
+      - name: end_date
+        type: date
+        display_name: "End Date"
+        required: true
+      - name: reason
+        type: string
+        display_name: "Reason"
+      - name: status
+        type: enum
+        display_name: "Status"
+        values:
+          - { value: "pending", label: "Pending", color: "amber" }
+          - { value: "approved", label: "Approved", color: "green" }
+          - { value: "rejected", label: "Rejected", color: "red" }
+      - name: created_at
+        type: datetime
+        display_name: "Submitted"
+        generated: true
+
+    views:
+      list:
+        default_sort: { field: created_at, order: desc }
+        columns:
+          - { field: employee_id, display_field: employee_name, link_to: detail }
+          - { field: leave_type }
+          - { field: start_date }
+          - { field: end_date }
+          - { field: status }
+        filters:
+          layout: toolbar
+          groups:
+            - fields:
+                - { field: status, type: checkbox_group }
+                - { field: leave_type, type: checkbox_group }
+        filter_presets:
+          - label: "Pending"
+            filters: { status: "pending" }
+          - label: "Approved"
+            filters: { status: "approved" }
+
+      detail:
+        header:
+          title: "{{leave_type}} Leave"
+          subtitle: "{{start_date}} — {{end_date}}"
+          status_badge: status
+        tabs:
+          - id: overview
+            label: "Details"
+            sections:
+              - title: "Leave Request"
+                fields: [employee_id, leave_type, start_date, end_date, reason, status]
+
+      create:
+        steps:
+          - title: "Leave Request"
+            fields: [employee_id, leave_type, start_date, end_date, reason]
+
+    state_machine:
+      field: status
+      initial: pending
+      transitions:
+        - name: approve
+          label: "Approve"
+          from: [pending]
+          to: approved
+          color: green
+          permissions: [admin, manager]
+        - name: reject
+          label: "Reject"
+          from: [pending]
+          to: rejected
+          color: red
+          permissions: [admin, manager]
+          confirmation:
+            message: "Provide a reason for rejection:"
+            type: comment_required

@@ -17,11 +17,15 @@ import { ImageField } from './fields/ImageField';
 import { useEntityCreate, useEntityUpdate } from '../../data/useEntityMutation';
 import { useEntityDetail } from '../../data/useEntityDetail';
 import { usePermissions } from '../../auth/usePermissions';
-import { Field, ComponentNode } from '../../types';
+import { Field, ComponentNode, FormSectionConfig } from '../../types';
+import type { UseFormRegister, FieldErrors, UseFormSetValue, UseFormWatch } from 'react-hook-form';
 
 const LazyRichTextField = React.lazy(() =>
   import('./fields/RichTextField').then(m => ({ default: m.RichTextField }))
 );
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type FormValues = Record<string, any>;
 
 interface DynamicFormProps {
   entity?: string;
@@ -31,9 +35,8 @@ interface DynamicFormProps {
   cancel_path?: string;
   fields?: Field[];
   overrides?: Record<string, Partial<Field>>;
-  sections?: any[];
+  sections?: FormSectionConfig[];
   childNodes?: ComponentNode[];
-  children?: any;
 }
 
 export function DynamicForm({
@@ -93,7 +96,7 @@ export function DynamicForm({
   // Build default values from record for edit mode
   const defaultValues = useMemo(() => {
     if (!isEdit || !record) return {};
-    const vals: Record<string, any> = {};
+    const vals: FormValues = {};
     for (const f of formFields) {
       if (record[f.name] !== undefined) {
         vals[f.name] = record[f.name];
@@ -117,7 +120,7 @@ export function DynamicForm({
   // Fix 1: Reset form when record loads in edit mode
   useEffect(() => {
     if (isEdit && record) {
-      const vals: Record<string, any> = {};
+      const vals: FormValues = {};
       for (const f of formFields) {
         if (record[f.name] !== undefined) {
           vals[f.name] = record[f.name];
@@ -127,7 +130,7 @@ export function DynamicForm({
     }
   }, [isEdit, record, formFields, reset]);
 
-  const onSubmit = async (data: any) => {
+  const onSubmit = async (data: FormValues) => {
     try {
       if (isEdit) {
         await updateMutation.mutateAsync(data);
@@ -136,7 +139,7 @@ export function DynamicForm({
       } else {
         const result = await createMutation.mutateAsync(data);
         toast.success('Created successfully');
-        const newId = (result as any)?.id;
+        const newId = (result as Record<string, unknown>)?.id;
         if (newId) {
           navigate(`${api_resource}/${newId}`);
         } else if (cancel_path) {
@@ -184,8 +187,8 @@ export function DynamicForm({
           <div className="space-y-4">
             {[1, 2, 3].map((i) => (
               <div key={i} className="animate-pulse">
-                <div className="h-4 bg-gray-200 rounded w-1/4 mb-2" />
-                <div className="h-10 bg-gray-100 rounded" />
+                <div className="h-4 rounded w-1/4 mb-2" style={{ backgroundColor: 'var(--color-bg-alt, #e5e7eb)' }} />
+                <div className="h-10 rounded" style={{ backgroundColor: 'var(--color-bg, #f3f4f6)' }} />
               </div>
             ))}
           </div>
@@ -217,14 +220,12 @@ export function DynamicForm({
             );
           })}
 
-          <div className="flex items-center gap-3 pt-4 border-t border-gray-200">
+          <div className="flex items-center gap-3 pt-4" style={{ borderTop: '1px solid var(--color-border, #e5e7eb)' }}>
             <button
               type="submit"
               disabled={isSubmitting}
-              className="px-6 py-2 text-white text-sm font-medium rounded-lg disabled:opacity-50 transition-colors"
+              className="px-6 py-2 text-white text-sm font-medium rounded-lg disabled:opacity-50 interactive-hover"
               style={{ backgroundColor: 'var(--color-primary)' }}
-              onMouseEnter={(e) => { if (!e.currentTarget.disabled) e.currentTarget.style.filter = 'brightness(0.9)'; }}
-              onMouseLeave={(e) => e.currentTarget.style.filter = ''}
             >
               {isSubmitting ? 'Saving...' : submit_label || 'Save'}
             </button>
@@ -232,7 +233,8 @@ export function DynamicForm({
               <button
                 type="button"
                 onClick={() => navigate(cancel_path)}
-                className="px-6 py-2 text-gray-700 text-sm font-medium rounded-lg border border-gray-300 hover:bg-gray-50"
+                className="px-6 py-2 text-sm font-medium rounded-lg interactive-hover"
+                style={{ color: 'var(--color-text-secondary, #374151)', border: '1px solid var(--color-border, #d1d5db)' }}
               >
                 Cancel
               </button>
@@ -252,10 +254,10 @@ function FieldRenderer({
   watch,
 }: {
   field: Field;
-  register: any;
-  errors: any;
-  setValue: any;
-  watch: any;
+  register: UseFormRegister<FormValues>;
+  errors: FieldErrors<FormValues>;
+  setValue: UseFormSetValue<FormValues>;
+  watch: UseFormWatch<FormValues>;
 }) {
   const error = errors[field.name]?.message as string | undefined;
 
@@ -278,7 +280,7 @@ function FieldRenderer({
       );
     case 'richtext':
       return (
-        <React.Suspense fallback={<div className="animate-pulse bg-gray-100 rounded h-32" />}>
+        <React.Suspense fallback={<div className="animate-pulse rounded h-32" style={{ backgroundColor: 'var(--color-bg, #f3f4f6)' }} />}>
           <LazyRichTextField
             field={field}
             value={watch(field.name)}

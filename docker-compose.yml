@@ -1,0 +1,73 @@
+services:
+  go-server:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.go
+    ports:
+      - "${GO_SERVER_PORT:-3000}:${GO_SERVER_PORT:-3000}"
+    environment:
+      - PORT=${GO_SERVER_PORT:-3000}
+      - EXAMPLES_DIR=${EXAMPLES_DIR:-examples}
+    volumes:
+      - ./cmd:/app/cmd
+      - ./internal:/app/internal
+      - ./pkg:/app/pkg
+      - ./docs:/app/docs
+      - ./examples:/app/examples
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:${GO_SERVER_PORT:-3000}/_renderer/spec"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 15s
+    networks:
+      - gatehouse-net
+
+  react-runtime:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.react
+    ports:
+      - "${REACT_PORT:-5174}:5174"
+    environment:
+      - VITE_PORT=5174
+      - VITE_HOST=0.0.0.0
+      - VITE_GO_SERVER_URL=http://go-server:${GO_SERVER_PORT:-3000}
+    volumes:
+      - ./runtime/src:/app/src
+      - ./runtime/vite.config.ts:/app/vite.config.ts
+      - ./runtime/tailwind.config.ts:/app/tailwind.config.ts
+      - ./runtime/postcss.config.js:/app/postcss.config.js
+      - ./runtime/index.html:/app/index.html
+    depends_on:
+      go-server:
+        condition: service_healthy
+    networks:
+      - gatehouse-net
+
+  flutter-runtime:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.flutter
+    ports:
+      - "${FLUTTER_PORT:-6175}:6175"
+    environment:
+      - FLUTTER_PORT=6175
+      - FLUTTER_HOST=0.0.0.0
+      # Browser-facing URLs — must use localhost, not Docker-internal hostname
+      - GO_SERVER_URL=http://localhost:${GO_SERVER_PORT:-3000}
+      - API_BASE_URL=http://localhost:${GO_SERVER_PORT:-3000}/api/v1
+    volumes:
+      - ./flutter_runtime/lib:/app/lib
+      - ./flutter_runtime/scripts:/app/scripts
+    depends_on:
+      go-server:
+        condition: service_healthy
+    stdin_open: true
+    tty: true
+    networks:
+      - gatehouse-net
+
+networks:
+  gatehouse-net:
+    driver: bridge

@@ -1,0 +1,25 @@
+FROM ghcr.io/cirruslabs/flutter:stable
+
+# Install inotify-tools for file watching
+RUN apt-get update && apt-get install -y --no-install-recommends inotify-tools \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+# Cache pub dependencies
+COPY flutter_runtime/pubspec.yaml flutter_runtime/pubspec.lock ./
+RUN flutter pub get
+
+# Copy source and scripts
+COPY flutter_runtime/lib/ lib/
+COPY flutter_runtime/web/ web/
+COPY flutter_runtime/analysis_options.yaml ./
+COPY flutter_runtime/scripts/ scripts/
+RUN chmod +x scripts/flutter-hot-reload.sh
+
+# Pre-warm flutter web cache
+RUN flutter build web --release 2>/dev/null || true
+
+EXPOSE 6175
+
+CMD ["bash", "scripts/flutter-hot-reload.sh"]

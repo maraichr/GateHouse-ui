@@ -1,0 +1,37 @@
+# Dependencies (installed inside containers)
+runtime/node_modules/
+runtime/dist/
+flutter_runtime/.dart_tool/
+flutter_runtime/build/
+flutter_runtime/.packages
+
+# Version control
+.git/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Go build artifacts
+tmp/
+*.exe
+*.dll
+*.so
+*.dylib
+
+# Environment (host-specific)
+.env
+.env.local
+.env.*.local
+
+# Claude Code
+.claude/
+
+# Playwright MCP
+.playwright-mcp/

@@ -1,0 +1,2234 @@
+# ============================================================================
+# GateHouse UI — Property Management Portal
+# ============================================================================
+# 8 entities, 80+ fields, 20 transitions, 5 chart types, complex workflows.
+# The most comprehensive example in the GateHouse suite.
+# ============================================================================
+
+# --------------------------------------------------------------------------
+# 1. APPLICATION METADATA
+# --------------------------------------------------------------------------
+app:
+  name: "property-mgmt"
+  display_name: "Property Management Portal"
+  version: "1.0.0"
+  description: "Real estate portfolio management: properties, units, tenants, leases, payments, maintenance, vendors, and inspections"
+
+  theme:
+    mode: light
+    primary_color: "#0D9488"
+    secondary_color: "#6366F1"
+    accent_color: "#F59E0B"
+    danger_color: "#DC2626"
+    success_color: "#16A34A"
+    info_color: "#0EA5E9"
+    warning_color: "#EAB308"
+    border_radius: md
+    density: comfortable
+    font_scale: md
+    motion_mode: full
+    font_family: "Inter, system-ui, sans-serif"
+    elevation: md
+    surface_style: bordered
+    header_style: accent-bar
+    chart_palette: [primary, success, warning, danger, info, secondary]
+    logo:
+      light: "/assets/logo-light.svg"
+      dark: "/assets/logo-dark.svg"
+      favicon: "/assets/favicon.svg"
+
+  i18n:
+    default_locale: en-US
+    date_format: "MMM d, yyyy"
+    time_format: "h:mm a"
+    currency: USD
+    timezone: America/New_York
+
+# --------------------------------------------------------------------------
+# 2. AUTHENTICATION & AUTHORIZATION
+# --------------------------------------------------------------------------
+auth:
+  provider: oidc
+  config:
+    issuer: "https://auth.propmgmt.com"
+    client_id: "property-portal"
+  roles:
+    admin:
+      display_name: "Administrator"
+      description: "Full system access"
+    property_manager:
+      display_name: "Property Manager"
+      description: "Manages properties, leases, and maintenance"
+    leasing_agent:
+      display_name: "Leasing Agent"
+      description: "Handles tenant applications and lease processing"
+    maintenance_staff:
+      display_name: "Maintenance Staff"
+      description: "Handles maintenance requests and vendor coordination"
+    viewer:
+      display_name: "Read-Only Viewer"
+      description: "Can view but not modify data"
+
+# --------------------------------------------------------------------------
+# 3. API CONNECTION
+# --------------------------------------------------------------------------
+api:
+  base_url: "${API_BASE_URL}"
+  version_prefix: "/api/v1"
+  timeout_ms: 30000
+
+# --------------------------------------------------------------------------
+# 4. NAVIGATION & LAYOUT
+# --------------------------------------------------------------------------
+shell:
+  layout: sidebar
+  sidebar:
+    position: left
+    collapsible: true
+    default_collapsed: false
+    width: 260
+    collapsed_width: 64
+    show_user_menu: true
+    show_search: true
+  header:
+    show_breadcrumbs: true
+    show_global_search: true
+    show_notifications: true
+
+navigation:
+  items:
+    - id: dashboard
+      label: "Dashboard"
+      icon: layout-dashboard
+      path: /dashboard
+      page: dashboard
+      badge:
+        type: count
+        source: "api:/dashboard/stats"
+        field: open_maintenance
+        color: warning
+
+    - id: properties
+      label: "Properties"
+      icon: building
+      path: /properties
+      entity: Property
+
+    - id: units
+      label: "Units"
+      icon: door-open
+      path: /units
+      entity: Unit
+
+    - id: tenants
+      label: "Tenants"
+      icon: users
+      path: /tenants
+      entity: Tenant
+
+    - id: contracts
+      label: "Contracts"
+      icon: file-signature
+      children:
+        - id: leases
+          label: "Leases"
+          icon: file-text
+          path: /leases
+          entity: Lease
+          badge:
+            type: count
+            filter: { status: active, end_date: { "$lte": "today + 30d" } }
+            color: warning
+        - id: payments
+          label: "Payments"
+          icon: credit-card
+          path: /payments
+          entity: Payment
+          badge:
+            type: count
+            filter: { status: pending, due_date: { "$lte": "today" } }
+            color: danger
+
+    - id: operations
+      label: "Operations"
+      icon: wrench
+      children:
+        - id: maintenance
+          label: "Maintenance"
+          icon: tool
+          path: /maintenance
+          entity: MaintenanceRequest
+          badge:
+            type: count
+            filter: { status: open }
+            color: warning
+        - id: inspections
+          label: "Inspections"
+          icon: clipboard-check
+          path: /inspections
+          entity: Inspection
+        - id: vendors
+          label: "Vendors"
+          icon: truck
+          path: /vendors
+          entity: Vendor
+
+    - id: financial_reports
+      label: "Financial Reports"
+      icon: bar-chart-2
+      path: /financial-reports
+      page: financial_reports
+      position: bottom
+      permissions: [admin, property_manager]
+
+    - id: occupancy_overview
+      label: "Occupancy"
+      icon: pie-chart
+      path: /occupancy
+      page: occupancy_overview
+      position: bottom
+
+    - id: settings
+      label: "Settings"
+      icon: settings
+      path: /settings
+      page: settings
+      position: bottom
+      permissions: [admin]
+
+# --------------------------------------------------------------------------
+# 5. ENTITIES
+# --------------------------------------------------------------------------
+entities:
+
+  # ========================================================================
+  # VENDOR — referenced by MaintenanceRequest, define first
+  # ========================================================================
+  - name: Vendor
+    api_resource: /vendors
+    display_name: "Vendor"
+    display_name_plural: "Vendors"
+    icon: truck
+    label_field: company_name
+    status_field: status
+
+    fields:
+      - name: id
+        type: string
+        primary_key: true
+        generated: true
+      - name: company_name
+        type: string
+        display_name: "Company Name"
+        required: true
+        searchable: true
+        sortable: true
+      - name: contact_name
+        type: string
+        display_name: "Contact Person"
+        required: true
+      - name: email
+        type: email
+        display_name: "Email"
+        required: true
+      - name: phone
+        type: phone
+        display_name: "Phone"
+        required: true
+      - name: address
+        type: address
+        display_name: "Address"
+        components:
+          street1: { required: true }
+          street2: { required: false }
+          city: { required: true }
+          state: { required: true }
+          zip: { required: true }
+      - name: specialties
+        type: array
+        display_name: "Specialties"
+        input_type: tag_input
+        filterable: true
+      - name: rating
+        type: decimal
+        display_name: "Rating"
+        precision: 1
+        min: 0
+        max: 5
+        display_as: star_rating
+        sortable: true
+      - name: hourly_rate
+        type: currency
+        display_name: "Hourly Rate"
+        currency: USD
+      - name: insurance_expiry
+        type: date
+        display_name: "Insurance Expiry"
+        display_rules:
+          - condition: "value < today + 30d"
+            style: warning
+            tooltip: "Insurance expiring within 30 days"
+          - condition: "value < today"
+            style: danger
+            tooltip: "Insurance expired"
+      - name: status
+        type: enum
+        display_name: "Status"
+        filterable: true
+        sortable: true
+        values:
+          - { value: active, label: "Active", color: success, icon: check-circle }
+          - { value: inactive, label: "Inactive", color: neutral, icon: minus-circle }
+          - { value: suspended, label: "Suspended", color: danger, icon: alert-triangle }
+      - name: license_number
+        type: string
+        display_name: "License Number"
+        sensitive: true
+        mask_pattern: "***-####"
+      - name: notes
+        type: richtext
+        display_name: "Notes"
+
+    state_machine:
+      field: status
+      initial: active
+      transitions:
+        - name: suspend
+          label: "Suspend"
+          from: [active]
+          to: suspended
+          icon: alert-triangle
+          color: danger
+          confirmation:
+            title: "Suspend {{record.company_name}}?"
+            message: "This vendor will not be available for new maintenance assignments."
+            style: danger
+            require_comment: true
+            comment_label: "Reason for suspension"
+          permissions: [admin, property_manager]
+        - name: reactivate
+          label: "Reactivate"
+          from: [suspended, inactive]
+          to: active
+          icon: refresh-cw
+          color: success
+          permissions: [admin, property_manager]
+        - name: deactivate
+          label: "Deactivate"
+          from: [active, suspended]
+          to: inactive
+          icon: minus-circle
+          color: neutral
+          permissions: [admin]
+
+    views:
+      list:
+        title: "Vendors"
+        default_sort: { field: company_name, order: asc }
+        columns:
+          - { field: company_name, link_to: detail }
+          - { field: contact_name }
+          - { field: specialties, max_display: 2 }
+          - { field: rating }
+          - { field: hourly_rate }
+          - { field: insurance_expiry }
+          - { field: status }
+        search:
+          fields: [company_name, contact_name, email]
+          placeholder: "Search vendors..."
+        filters:
+          layout: sidebar
+          groups:
+            - label: "Status"
+              fields:
+                - { field: status, type: checkbox_group }
+            - label: "Specialties"
+              fields:
+                - { field: specialties, type: multi_select, searchable: true }
+            - label: "Rating"
+              fields:
+                - { field: rating, type: numeric_range, min: 0, max: 5, step: 0.5 }
+        actions:
+          primary:
+            - label: "Add Vendor"
+              icon: plus
+              action: { type: navigate, path: /vendors/new }
+              permissions: [admin, property_manager]
+        empty:
+          icon: truck
+          title: "No vendors yet"
+          message: "Add your first vendor to start managing maintenance partners."
+
+      detail:
+        layout: tabbed
+        header:
+          title: "{{record.company_name}}"
+          subtitle: "{{record.contact_name}}"
+          status_badge: "{{record.status}}"
+          stats:
+            - label: "Rating"
+              value: "{{record.rating}}"
+              display_as: star_rating
+            - label: "Hourly Rate"
+              value: "{{record.hourly_rate}}"
+              format: currency
+          actions: auto_from_state_machine
+        tabs:
+          - id: overview
+            label: "Overview"
+            icon: info
+            sections:
+              - title: "Contact Information"
+                layout: two_column
+                fields: [company_name, contact_name, email, phone, address]
+              - title: "Business Details"
+                layout: two_column
+                fields: [specialties, rating, hourly_rate, insurance_expiry, license_number]
+              - title: "Notes"
+                fields: [notes]
+          - id: maintenance_history
+            label: "Maintenance History"
+            icon: tool
+            content:
+              type: relationship_table
+              relationship: maintenance_requests
+              columns: [ticket_number, title, status, actual_cost]
+
+      create:
+        title: "Add Vendor"
+        steps:
+          - title: "Company Info"
+            fields: [company_name, contact_name, email, phone]
+          - title: "Business Details"
+            fields: [address, specialties, hourly_rate, insurance_expiry, license_number]
+
+      edit:
+        title: "Edit {{record.company_name}}"
+        sections:
+          - title: "Contact"
+            fields: [company_name, contact_name, email, phone, address]
+          - title: "Business"
+            fields: [specialties, hourly_rate, insurance_expiry, license_number, notes]
+
+    relationships:
+      - name: maintenance_requests
+        type: has_many
+        entity: MaintenanceRequest
+        foreign_key: assigned_vendor_id
+        display_name: "Maintenance Requests"
+
+  # ========================================================================
+  # PROPERTY
+  # ========================================================================
+  - name: Property
+    api_resource: /properties
+    display_name: "Property"
+    display_name_plural: "Properties"
+    icon: building
+    label_field: name
+    status_field: status
+
+    fields:
+      - name: id
+        type: string
+        primary_key: true
+        generated: true
+      - name: name
+        type: string
+        display_name: "Property Name"
+        required: true
+        searchable: true
+        sortable: true
+      - name: type
+        type: enum
+        display_name: "Property Type"
+        required: true
+        filterable: true
+        values:
+          - { value: residential, label: "Residential", color: primary, icon: home }
+          - { value: commercial, label: "Commercial", color: info, icon: briefcase }
+          - { value: mixed_use, label: "Mixed Use", color: accent, icon: building }
+      - name: address
+        type: address
+        display_name: "Address"
+        required: true
+        components:
+          street1: { required: true }
+          street2: { required: false }
+          city: { required: true }
+          state: { required: true }
+          zip: { required: true }
+      - name: status
+        type: enum
+        display_name: "Status"
+        filterable: true
+        sortable: true
+        values:
+          - { value: active, label: "Active", color: success, icon: check-circle }
+          - { value: inactive, label: "Inactive", color: neutral, icon: minus-circle }
+          - { value: under_renovation, label: "Under Renovation", color: warning, icon: hard-hat }
+      - name: total_units
+        type: integer
+        display_name: "Total Units"
+        sortable: true
+      - name: occupied_units
+        type: integer
+        display_name: "Occupied Units"
+        computed: true
+      - name: occupancy_rate
+        type: decimal
+        display_name: "Occupancy Rate"
+        computed: true
+        display_rules:
+          - condition: "value < 50"
+            style: danger
+            tooltip: "Critical: Below 50% occupancy"
+          - condition: "value < 70"
+            style: warning
+            tooltip: "Below target occupancy"
+          - condition: "value >= 70"
+            style: success
+      - name: manager
+        type: string
+        display_name: "Property Manager"
+      - name: acquisition_date
+        type: date
+        display_name: "Acquisition Date"
+        sortable: true
+      - name: purchase_price
+        type: currency
+        display_name: "Purchase Price"
+        currency: USD
+        permissions:
+          view: [admin, property_manager]
+      - name: current_value
+        type: currency
+        display_name: "Current Value"
+        currency: USD
+        permissions:
+          view: [admin, property_manager]
+      - name: image
+        type: image
+        display_name: "Property Image"
+        display_as: avatar
+      - name: notes
+        type: richtext
+        display_name: "Notes"
+      - name: created_at
+        type: datetime
+        display_name: "Created"
+        sortable: true
+        generated: true
+
+    relationships:
+      - name: units
+        type: has_many
+        entity: Unit
+        foreign_key: property_id
+        display_name: "Units"
+      - name: maintenance_requests
+        type: has_many
+        entity: MaintenanceRequest
+        foreign_key: property_id
+        display_name: "Maintenance Requests"
+      - name: inspections
+        type: has_many
+        entity: Inspection
+        foreign_key: property_id
+        display_name: "Inspections"
+
+    views:
+      list:
+        title: "Properties"
+        default_sort: { field: name, order: asc }
+        columns:
+          - { field: image, width: 48, fixed: left }
+          - { field: name, link_to: detail, width: flex }
+          - { field: type, width: 140 }
+          - { field: status, width: 160 }
+          - { field: total_units, width: 100 }
+          - { field: occupancy_rate, width: 130 }
+          - { field: current_value, width: 150 }
+        search:
+          fields: [name, manager]
+          placeholder: "Search properties..."
+        filters:
+          layout: toolbar
+          groups:
+            - fields:
+                - { field: type, type: checkbox_group }
+                - { field: status, type: checkbox_group }
+        actions:
+          primary:
+            - label: "Add Property"
+              icon: plus
+              action: { type: navigate, path: /properties/new }
+              permissions: [admin, property_manager]
+        empty:
+          icon: building
+          title: "No properties yet"
+          message: "Add your first property to start managing your portfolio."
+
+      detail:
+        layout: tabbed
+        header:
+          title: "{{record.name}}"
+          subtitle: "{{record.address | template}}"
+          avatar: "{{record.image}}"
+          status_badge: "{{record.status}}"
+          stats:
+            - label: "Total Units"
+              value: "{{record.total_units}}"
+              icon: door-open
+            - label: "Occupancy"
+              value: "{{record.occupancy_rate}}"
+              format: percentage
+            - label: "Current Value"
+              value: "{{record.current_value}}"
+              format: currency
+              permissions: [admin, property_manager]
+        tabs:
+          - id: overview
+            label: "Overview"
+            icon: info
+            sections:
+              - title: "Property Details"
+                layout: two_column
+                fields: [name, type, status, address, manager, acquisition_date]
+              - title: "Financial"
+                layout: two_column
+                fields: [purchase_price, current_value]
+                permissions: [admin, property_manager]
+              - title: "Notes"
+                fields: [notes]
+          - id: units
+            label: "Units"
+            icon: door-open
+            content:
+              type: relationship_table
+              relationship: units
+              columns: [unit_number, type, status, monthly_rent, square_footage]
+          - id: maintenance
+            label: "Maintenance"
+            icon: tool
+            content:
+              type: relationship_table
+              relationship: maintenance_requests
+              columns: [ticket_number, title, priority, status, created_at]
+          - id: inspections
+            label: "Inspections"
+            icon: clipboard-check
+            content:
+              type: relationship_table
+              relationship: inspections
+              columns: [inspection_number, type, status, scheduled_date, overall_rating]
+
+      create:
+        title: "Add Property"
+        steps:
+          - title: "Basic Info"
+            fields: [name, type, status]
+          - title: "Location"
+            fields: [address]
+          - title: "Details"
+            fields: [total_units, manager, acquisition_date, purchase_price, current_value, image]
+
+      edit:
+        title: "Edit {{record.name}}"
+        sections:
+          - title: "Property Info"
+            fields: [name, type, status, address, manager]
+          - title: "Financial"
+            fields: [purchase_price, current_value]
+            permissions: [admin, property_manager]
+          - title: "Notes"
+            fields: [notes]
+
+  # ========================================================================
+  # UNIT
+  # ========================================================================
+  - name: Unit
+    api_resource: /units
+    display_name: "Unit"
+    display_name_plural: "Units"
+    icon: door-open
+    label_field: unit_number
+    status_field: status
+
+    fields:
+      - name: id
+        type: string
+        primary_key: true
+        generated: true
+      - name: unit_number
+        type: string
+        display_name: "Unit Number"
+        required: true
+        searchable: true
+        sortable: true
+      - name: property_id
+        type: reference
+        display_name: "Property"
+        entity: Property
+        required: true
+      - name: type
+        type: enum
+        display_name: "Unit Type"
+        required: true
+        filterable: true
+        values:
+          - { value: studio, label: "Studio", color: neutral }
+          - { value: 1br, label: "1 Bedroom", color: info }
+          - { value: 2br, label: "2 Bedroom", color: primary }
+          - { value: 3br, label: "3 Bedroom", color: success }
+          - { value: commercial, label: "Commercial", color: accent }
+      - name: square_footage
+        type: integer
+        display_name: "Sq Ft"
+        sortable: true
+      - name: bedrooms
+        type: integer
+        display_name: "Bedrooms"
+      - name: bathrooms
+        type: decimal
+        display_name: "Bathrooms"
+        precision: 1
+      - name: floor
+        type: integer
+        display_name: "Floor"
+      - name: monthly_rent
+        type: currency
+        display_name: "Monthly Rent"
+        currency: USD
+        sortable: true
+        filterable: true
+      - name: status
+        type: enum
+        display_name: "Status"
+        filterable: true
+        sortable: true
+        values:
+          - { value: available, label: "Available", color: success, icon: check-circle }
+          - { value: occupied, label: "Occupied", color: primary, icon: user }
+          - { value: maintenance, label: "Under Maintenance", color: warning, icon: tool }
+          - { value: reserved, label: "Reserved", color: info, icon: clock }
+      - name: amenities
+        type: array
+        display_name: "Amenities"
+        input_type: chips
+      - name: description
+        type: string
+        display_name: "Description"
+
+    relationships:
+      - name: leases
+        type: has_many
+        entity: Lease
+        foreign_key: unit_id
+        display_name: "Leases"
+
+    views:
+      list:
+        title: "Units"
+        default_sort: { field: unit_number, order: asc }
+        columns:
+          - { field: unit_number, link_to: detail }
+          - { field: property_id, display_field: property_name }
+          - { field: type }
+          - { field: square_footage }
+          - { field: monthly_rent }
+          - { field: status }
+          - { field: amenities, max_display: 2 }
+        search:
+          fields: [unit_number]
+          placeholder: "Search by unit number..."
+        filters:
+          layout: sidebar
+          groups:
+            - label: "Type"
+              fields:
+                - { field: type, type: checkbox_group }
+            - label: "Status"
+              fields:
+                - { field: status, type: checkbox_group }
+            - label: "Rent Range"
+              fields:
+                - { field: monthly_rent, type: numeric_range, min: 0, max: 10000, step: 100 }
+        actions:
+          primary:
+            - label: "Add Unit"
+              icon: plus
+              action: { type: navigate, path: /units/new }
+              permissions: [admin, property_manager]
+
+      detail:
+        layout: tabbed
+        header:
+          title: "Unit {{record.unit_number}}"
+          subtitle: "{{record.property_name}}"
+          status_badge: "{{record.status}}"
+          stats:
+            - label: "Monthly Rent"
+              value: "{{record.monthly_rent}}"
+              format: currency
+            - label: "Sq Ft"
+              value: "{{record.square_footage}}"
+        tabs:
+          - id: overview
+            label: "Overview"
+            icon: info
+            sections:
+              - title: "Unit Details"
+                layout: two_column
+                fields: [unit_number, property_id, type, square_footage, bedrooms, bathrooms, floor, monthly_rent, status]
+              - title: "Amenities & Description"
+                fields: [amenities, description]
+          - id: lease_history
+            label: "Lease History"
+            icon: file-text
+            content:
+              type: relationship_table
+              relationship: leases
+              columns: [lease_number, tenant_id, start_date, end_date, status]
+
+      create:
+        title: "Add Unit"
+        steps:
+          - title: "Unit Info"
+            fields: [property_id, unit_number, type, floor]
+          - title: "Size & Features"
+            fields: [square_footage, bedrooms, bathrooms, monthly_rent, amenities, description]
+
+  # ========================================================================
+  # TENANT
+  # ========================================================================
+  - name: Tenant
+    api_resource: /tenants
+    display_name: "Tenant"
+    display_name_plural: "Tenants"
+    icon: users
+    label_field: name
+    status_field: status
+
+    fields:
+      - name: id
+        type: string
+        primary_key: true
+        generated: true
+      - name: name
+        type: string
+        display_name: "Full Name"
+        required: true
+        searchable: true
+        sortable: true
+      - name: email
+        type: email
+        display_name: "Email"
+        required: true
+        searchable: true
+      - name: phone
+        type: phone
+        display_name: "Phone"
+        required: true
+      - name: type
+        type: enum
+        display_name: "Tenant Type"
+        filterable: true
+        values:
+          - { value: individual, label: "Individual", color: primary }
+          - { value: company, label: "Company", color: info }
+      - name: company_name
+        type: string
+        display_name: "Company Name"
+      - name: emergency_contact_name
+        type: string
+        display_name: "Emergency Contact"
+      - name: emergency_contact_phone
+        type: phone
+        display_name: "Emergency Phone"
+      - name: credit_score
+        type: integer
+        display_name: "Credit Score"
+        sensitive: true
+        mask_pattern: "***"
+        permissions:
+          view: [admin, property_manager, leasing_agent]
+      - name: status
+        type: enum
+        display_name: "Status"
+        filterable: true
+        sortable: true
+        values:
+          - { value: active, label: "Active", color: success, icon: check-circle }
+          - { value: prospect, label: "Prospect", color: info, icon: user-plus }
+          - { value: former, label: "Former", color: neutral, icon: user-minus }
+          - { value: eviction, label: "Eviction", color: danger, icon: alert-triangle }
+      - name: avatar
+        type: image
+        display_name: "Photo"
+        display_as: avatar
+      - name: notes
+        type: richtext
+        display_name: "Notes"
+      - name: move_in_date
+        type: date
+        display_name: "Move-in Date"
+        sortable: true
+
+    relationships:
+      - name: leases
+        type: has_many
+        entity: Lease
+        foreign_key: tenant_id
+        display_name: "Leases"
+      - name: payments
+        type: has_many
+        entity: Payment
+        foreign_key: tenant_id
+        display_name: "Payments"
+
+    views:
+      list:
+        title: "Tenants"
+        default_sort: { field: name, order: asc }
+        columns:
+          - { field: avatar, width: 48, fixed: left }
+          - { field: name, link_to: detail, width: flex }
+          - { field: email }
+          - { field: phone }
+          - { field: type }
+          - { field: status }
+          - { field: move_in_date }
+        search:
+          fields: [name, email, phone]
+          placeholder: "Search tenants..."
+        filters:
+          layout: toolbar
+          groups:
+            - fields:
+                - { field: status, type: checkbox_group }
+                - { field: type, type: select }
+        actions:
+          primary:
+            - label: "Add Tenant"
+              icon: plus
+              action: { type: navigate, path: /tenants/new }
+              permissions: [admin, property_manager, leasing_agent]
+
+      detail:
+        layout: tabbed
+        header:
+          title: "{{record.name}}"
+          subtitle: "{{record.email}}"
+          avatar: "{{record.avatar}}"
+          status_badge: "{{record.status}}"
+        tabs:
+          - id: overview
+            label: "Overview"
+            icon: info
+            sections:
+              - title: "Contact Information"
+                layout: two_column
+                fields: [name, email, phone, type, company_name]
+              - title: "Emergency Contact"
+                layout: two_column
+                fields: [emergency_contact_name, emergency_contact_phone]
+              - title: "Details"
+                layout: two_column
+                fields: [credit_score, move_in_date, status]
+              - title: "Notes"
+                fields: [notes]
+          - id: leases
+            label: "Leases"
+            icon: file-text
+            content:
+              type: relationship_table
+              relationship: leases
+              columns: [lease_number, unit_id, start_date, end_date, monthly_rent, status]
+          - id: payment_history
+            label: "Payment History"
+            icon: credit-card
+            content:
+              type: relationship_table
+              relationship: payments
+              columns: [payment_number, amount, type, status, paid_date]
+
+      create:
+        title: "Add Tenant"
+        steps:
+          - title: "Personal Info"
+            fields: [name, email, phone, type, company_name, avatar]
+          - title: "Emergency Contact"
+            fields: [emergency_contact_name, emergency_contact_phone]
+          - title: "Details"
+            fields: [credit_score, move_in_date, notes]
+
+      edit:
+        title: "Edit {{record.name}}"
+        sections:
+          - title: "Contact"
+            fields: [name, email, phone, type, company_name]
+          - title: "Emergency"
+            fields: [emergency_contact_name, emergency_contact_phone]
+          - title: "Details"
+            fields: [credit_score, notes]
+
+  # ========================================================================
+  # LEASE — most complex entity
+  # ========================================================================
+  - name: Lease
+    api_resource: /leases
+    display_name: "Lease"
+    display_name_plural: "Leases"
+    icon: file-text
+    label_field: lease_number
+    subtitle_field: tenant_name
+    status_field: status
+
+    fields:
+      - name: id
+        type: string
+        primary_key: true
+        generated: true
+      - name: lease_number
+        type: string
+        display_name: "Lease #"
+        generated: true
+        searchable: true
+        sortable: true
+      - name: tenant_id
+        type: reference
+        display_name: "Tenant"
+        entity: Tenant
+        required: true
+      - name: unit_id
+        type: reference
+        display_name: "Unit"
+        entity: Unit
+        required: true
+      - name: property_id
+        type: reference
+        display_name: "Property"
+        entity: Property
+        required: true
+      - name: type
+        type: enum
+        display_name: "Lease Type"
+        required: true
+        filterable: true
+        values:
+          - { value: fixed_term, label: "Fixed Term", color: primary }
+          - { value: month_to_month, label: "Month-to-Month", color: info }
+      - name: start_date
+        type: date
+        display_name: "Start Date"
+        required: true
+        sortable: true
+      - name: end_date
+        type: date
+        display_name: "End Date"
+        required: true
+        sortable: true
+        display_rules:
+          - condition: "value < today + 30d"
+            style: warning
+            tooltip: "Lease expiring within 30 days"
+          - condition: "value < today"
+            style: danger
+            tooltip: "Lease expired"
+      - name: monthly_rent
+        type: currency
+        display_name: "Monthly Rent"
+        currency: USD
+        required: true
+        sortable: true
+      - name: security_deposit
+        type: currency
+        display_name: "Security Deposit"
+        currency: USD
+      - name: status
+        type: enum
+        display_name: "Status"
+        filterable: true
+        sortable: true
+        values:
+          - { value: draft, label: "Draft", color: neutral, icon: file }
+          - { value: pending_review, label: "Pending Review", color: warning, icon: clock }
+          - { value: active, label: "Active", color: success, icon: check-circle }
+          - { value: expired, label: "Expired", color: danger, icon: x-circle }
+          - { value: terminated, label: "Terminated", color: danger, icon: slash }
+          - { value: renewed, label: "Renewed", color: info, icon: refresh-cw }
+      - name: terms
+        type: richtext
+        display_name: "Lease Terms"
+      - name: signed_document
+        type: file
+        display_name: "Signed Document"
+        accept: [application/pdf]
+        max_size_mb: 25
+      - name: payment_day
+        type: integer
+        display_name: "Payment Day"
+        min: 1
+        max: 28
+        help_text: "Day of month rent is due"
+
+    state_machine:
+      field: status
+      initial: draft
+      transitions:
+        - name: submit_for_review
+          label: "Submit for Review"
+          from: [draft]
+          to: pending_review
+          icon: send
+          color: warning
+          permissions: [admin, property_manager, leasing_agent]
+        - name: activate
+          label: "Activate Lease"
+          from: [pending_review]
+          to: active
+          icon: check-circle
+          color: success
+          guards:
+            - name: signed_document_required
+              message: "Signed lease document must be uploaded before activation"
+              field_check: "signed_document != null"
+          confirmation:
+            title: "Activate this lease?"
+            message: "This will set the lease as active for {{record.tenant_name}} on unit {{record.unit_number}}."
+            style: success
+          permissions: [admin, property_manager]
+        - name: renew
+          label: "Renew Lease"
+          from: [active]
+          to: renewed
+          icon: refresh-cw
+          color: info
+          permissions: [admin, property_manager]
+        - name: terminate
+          label: "Terminate Lease"
+          from: [active]
+          to: terminated
+          icon: x-circle
+          color: danger
+          confirmation:
+            title: "Terminate Lease"
+            message: "This will terminate lease {{record.lease_number}} for {{record.tenant_name}}. This action cannot be undone."
+            style: danger
+            require_comment: true
+            comment_label: "Reason for termination"
+            type_to_confirm: "TERMINATE"
+          permissions: [admin]
+        - name: expire
+          label: "Mark Expired"
+          from: [active]
+          to: expired
+          icon: calendar-x
+          color: danger
+          permissions: [admin, property_manager]
+
+    views:
+      list:
+        title: "Leases"
+        default_sort: { field: end_date, order: asc }
+        columns:
+          - { field: lease_number, link_to: detail }
+          - { field: tenant_id, display_field: tenant_name }
+          - { field: unit_id, display_field: unit_number }
+          - { field: property_id, display_field: property_name }
+          - { field: type }
+          - { field: start_date }
+          - { field: end_date }
+          - { field: monthly_rent }
+          - { field: status }
+        search:
+          fields: [lease_number]
+          placeholder: "Search by lease number..."
+        filters:
+          layout: sidebar
+          groups:
+            - label: "Status"
+              fields:
+                - { field: status, type: checkbox_group, show_counts: true }
+            - label: "Type"
+              fields:
+                - { field: type, type: select }
+            - label: "End Date"
+              fields:
+                - field: end_date
+                  type: date_range
+                  presets:
+                    - { label: "Expiring this month", range: [today, end_of_month] }
+                    - { label: "Expiring in 30 days", range: [today, "today + 30d"] }
+                    - { label: "Already expired", range: [null, today] }
+        filter_presets:
+          - label: "Expiring Soon"
+            filters: { status: active, end_date: { "$lte": "today + 30d" } }
+          - label: "Active"
+            filters: { status: active }
+          - label: "Drafts"
+            filters: { status: draft }
+        actions:
+          primary:
+            - label: "New Lease"
+              icon: plus
+              action: { type: navigate, path: /leases/new }
+              permissions: [admin, property_manager, leasing_agent]
+        empty:
+          icon: file-text
+          title: "No leases yet"
+          message: "Create a new lease to start managing tenant agreements."
+
+      detail:
+        layout: tabbed
+        header:
+          title: "Lease {{record.lease_number}}"
+          subtitle: "{{record.tenant_name}} — Unit {{record.unit_number}}"
+          status_badge: "{{record.status}}"
+          stats:
+            - label: "Monthly Rent"
+              value: "{{record.monthly_rent}}"
+              format: currency
+            - label: "Security Deposit"
+              value: "{{record.security_deposit}}"
+              format: currency
+            - label: "Term"
+              value: "{{record.start_date}} — {{record.end_date}}"
+          actions: auto_from_state_machine
+        tabs:
+          - id: overview
+            label: "Overview"
+            icon: info
+            sections:
+              - title: "Lease Details"
+                layout: two_column
+                fields: [lease_number, type, status, start_date, end_date, payment_day]
+              - title: "Parties"
+                layout: two_column
+                fields: [tenant_id, unit_id, property_id]
+              - title: "Financial"
+                layout: two_column
+                fields: [monthly_rent, security_deposit]
+              - title: "Documents"
+                fields: [signed_document, terms]
+          - id: payments
+            label: "Payments"
+            icon: credit-card
+            content:
+              type: relationship_table
+              relationship: payments
+              columns: [payment_number, amount, type, status, due_date, paid_date]
+
+      create:
+        title: "New Lease"
+        layout: stepped
+        steps:
+          - id: tenant_info
+            title: "Tenant"
+            description: "Select the tenant for this lease"
+            fields: [tenant_id]
+          - id: unit_selection
+            title: "Unit"
+            description: "Choose the unit and property"
+            fields: [property_id, unit_id]
+          - id: terms
+            title: "Lease Terms"
+            description: "Define the lease period and type"
+            fields: [type, start_date, end_date, payment_day]
+          - id: financial
+            title: "Financial"
+            description: "Set rent and deposit amounts"
+            fields: [monthly_rent, security_deposit]
+          - id: review
+            title: "Review"
+            type: summary
+
+    relationships:
+      - name: payments
+        type: has_many
+        entity: Payment
+        foreign_key: lease_id
+        display_name: "Payments"
+
+  # ========================================================================
+  # PAYMENT
+  # ========================================================================
+  - name: Payment
+    api_resource: /payments
+    display_name: "Payment"
+    display_name_plural: "Payments"
+    icon: credit-card
+    label_field: payment_number
+    status_field: status
+
+    fields:
+      - name: id
+        type: string
+        primary_key: true
+        generated: true
+      - name: payment_number
+        type: string
+        display_name: "Payment #"
+        generated: true
+        searchable: true
+        sortable: true
+      - name: tenant_id
+        type: reference
+        display_name: "Tenant"
+        entity: Tenant
+        required: true
+      - name: lease_id
+        type: reference
+        display_name: "Lease"
+        entity: Lease
+        required: true
+      - name: amount
+        type: currency
+        display_name: "Amount"
+        currency: USD
+        required: true
+        sortable: true
+        filterable: true
+      - name: type
+        type: enum
+        display_name: "Payment Type"
+        required: true
+        filterable: true
+        values:
+          - { value: rent, label: "Rent", color: primary }
+          - { value: security_deposit, label: "Security Deposit", color: info }
+          - { value: late_fee, label: "Late Fee", color: warning }
+          - { value: maintenance_charge, label: "Maintenance Charge", color: neutral }
+      - name: method
+        type: enum
+        display_name: "Payment Method"
+        values:
+          - { value: check, label: "Check", color: neutral }
+          - { value: ach, label: "ACH Transfer", color: info }
+          - { value: credit_card, label: "Credit Card", color: primary }
+          - { value: cash, label: "Cash", color: warning }
+      - name: status
+        type: enum
+        display_name: "Status"
+        filterable: true
+        sortable: true
+        values:
+          - { value: pending, label: "Pending", color: warning, icon: clock }
+          - { value: completed, label: "Completed", color: success, icon: check-circle }
+          - { value: failed, label: "Failed", color: danger, icon: x-circle }
+          - { value: refunded, label: "Refunded", color: neutral, icon: rotate-ccw }
+      - name: due_date
+        type: date
+        display_name: "Due Date"
+        required: true
+        sortable: true
+        filterable: true
+        display_rules:
+          - condition: "value < today"
+            style: danger
+            tooltip: "Overdue"
+      - name: paid_date
+        type: date
+        display_name: "Paid Date"
+        sortable: true
+      - name: late_fee
+        type: currency
+        display_name: "Late Fee"
+        currency: USD
+      - name: notes
+        type: string
+        display_name: "Notes"
+
+    state_machine:
+      field: status
+      initial: pending
+      transitions:
+        - name: mark_completed
+          label: "Mark Completed"
+          from: [pending]
+          to: completed
+          icon: check-circle
+          color: success
+          permissions: [admin, property_manager]
+        - name: mark_failed
+          label: "Mark Failed"
+          from: [pending]
+          to: failed
+          icon: x-circle
+          color: danger
+          permissions: [admin, property_manager]
+        - name: refund
+          label: "Refund"
+          from: [completed]
+          to: refunded
+          icon: rotate-ccw
+          color: neutral
+          confirmation:
+            title: "Refund Payment?"
+            message: "Refund {{record.payment_number}} for {{record.amount}}?"
+            style: warning
+            require_comment: true
+            comment_label: "Reason for refund"
+          permissions: [admin]
+        - name: retry
+          label: "Retry Payment"
+          from: [failed]
+          to: pending
+          icon: refresh-cw
+          color: info
+          permissions: [admin, property_manager]
+
+    views:
+      list:
+        title: "Payments"
+        default_sort: { field: due_date, order: desc }
+        columns:
+          - { field: payment_number, link_to: detail }
+          - { field: tenant_id, display_field: tenant_name }
+          - { field: lease_id, display_field: lease_number }
+          - { field: amount }
+          - { field: type }
+          - { field: method }
+          - { field: status }
+          - { field: due_date }
+          - { field: paid_date }
+        search:
+          fields: [payment_number]
+          placeholder: "Search by payment number..."
+        filters:
+          layout: sidebar
+          groups:
+            - label: "Status"
+              fields:
+                - { field: status, type: checkbox_group, show_counts: true }
+            - label: "Type"
+              fields:
+                - { field: type, type: multi_select }
+            - label: "Due Date"
+              fields:
+                - { field: due_date, type: date_range }
+            - label: "Amount"
+              fields:
+                - { field: amount, type: numeric_range, min: 0, max: 10000, step: 100 }
+        filter_presets:
+          - label: "Overdue"
+            filters: { status: pending, due_date: { "$lte": "today" } }
+          - label: "This Month"
+            filters: { due_date: { "$gte": "start_of_month", "$lte": "end_of_month" } }
+          - label: "Refunded"
+            filters: { status: refunded }
+        bulk_actions:
+          - label: "Mark Completed"
+            icon: check-circle
+            action: { type: bulk_transition, transition: mark_completed }
+            permissions: [admin, property_manager]
+            confirmation:
+              title: "Mark {{count}} payments as completed?"
+              style: success
+        actions:
+          primary:
+            - label: "Record Payment"
+              icon: plus
+              action: { type: navigate, path: /payments/new }
+              permissions: [admin, property_manager]
+        empty:
+          icon: credit-card
+          title: "No payments recorded"
+          message: "Payments will appear here once leases are active."
+
+      detail:
+        layout: tabbed
+        header:
+          title: "Payment {{record.payment_number}}"
+          subtitle: "{{record.tenant_name}} — Lease {{record.lease_number}}"
+          status_badge: "{{record.status}}"
+          stats:
+            - label: "Amount"
+              value: "{{record.amount}}"
+              format: currency
+            - label: "Due Date"
+              value: "{{record.due_date}}"
+          actions: auto_from_state_machine
+        tabs:
+          - id: overview
+            label: "Details"
+            icon: info
+            sections:
+              - title: "Payment Info"
+                layout: two_column
+                fields: [payment_number, tenant_id, lease_id, amount, type, method, status]
+              - title: "Dates"
+                layout: two_column
+                fields: [due_date, paid_date, late_fee]
+              - title: "Notes"
+                fields: [notes]
+
+      create:
+        title: "Record Payment"
+        steps:
+          - title: "Payment Info"
+            fields: [tenant_id, lease_id, type, method, amount]
+          - title: "Schedule"
+            fields: [due_date, paid_date, notes]
+
+  # ========================================================================
+  # MAINTENANCE REQUEST
+  # ========================================================================
+  - name: MaintenanceRequest
+    api_resource: /maintenance
+    display_name: "Maintenance Request"
+    display_name_plural: "Maintenance Requests"
+    icon: tool
+    label_field: title
+    subtitle_field: ticket_number
+    status_field: status
+
+    fields:
+      - name: id
+        type: string
+        primary_key: true
+        generated: true
+      - name: ticket_number
+        type: string
+        display_name: "Ticket #"
+        generated: true
+        searchable: true
+        sortable: true
+      - name: property_id
+        type: reference
+        display_name: "Property"
+        entity: Property
+        required: true
+      - name: unit_id
+        type: reference
+        display_name: "Unit"
+        entity: Unit
+        required: true
+      - name: tenant_id
+        type: reference
+        display_name: "Tenant"
+        entity: Tenant
+        required: true
+      - name: title
+        type: string
+        display_name: "Title"
+        required: true
+        searchable: true
+      - name: description
+        type: richtext
+        display_name: "Description"
+      - name: priority
+        type: enum
+        display_name: "Priority"
+        required: true
+        filterable: true
+        sortable: true
+        values:
+          - { value: low, label: "Low", color: neutral, icon: arrow-down }
+          - { value: medium, label: "Medium", color: info, icon: minus }
+          - { value: high, label: "High", color: warning, icon: arrow-up }
+          - { value: emergency, label: "Emergency", color: danger, icon: alert-triangle }
+        display_rules:
+          - condition: "value == 'emergency'"
+            style: danger
+          - condition: "value == 'high'"
+            style: warning
+      - name: category
+        type: enum
+        display_name: "Category"
+        required: true
+        filterable: true
+        values:
+          - { value: plumbing, label: "Plumbing", icon: droplets }
+          - { value: electrical, label: "Electrical", icon: zap }
+          - { value: hvac, label: "HVAC", icon: thermometer }
+          - { value: appliance, label: "Appliance", icon: microwave }
+          - { value: structural, label: "Structural", icon: hammer }
+          - { value: pest_control, label: "Pest Control", icon: bug }
+          - { value: other, label: "Other", icon: more-horizontal }
+      - name: status
+        type: enum
+        display_name: "Status"
+        filterable: true
+        sortable: true
+        values:
+          - { value: open, label: "Open", color: warning, icon: circle }
+          - { value: assigned, label: "Assigned", color: info, icon: user-check }
+          - { value: in_progress, label: "In Progress", color: primary, icon: loader }
+          - { value: completed, label: "Completed", color: success, icon: check-circle }
+          - { value: closed, label: "Closed", color: neutral, icon: archive }
+          - { value: cancelled, label: "Cancelled", color: danger, icon: x-circle }
+      - name: assigned_vendor_id
+        type: reference
+        display_name: "Assigned Vendor"
+        entity: Vendor
+      - name: estimated_cost
+        type: currency
+        display_name: "Estimated Cost"
+        currency: USD
+      - name: actual_cost
+        type: currency
+        display_name: "Actual Cost"
+        currency: USD
+      - name: photos
+        type: file_list
+        display_name: "Photos"
+        accept: [image/png, image/jpeg]
+        max_files: 10
+        max_size_mb: 10
+      - name: created_at
+        type: datetime
+        display_name: "Created"
+        sortable: true
+        generated: true
+      - name: resolved_at
+        type: datetime
+        display_name: "Resolved"
+
+    state_machine:
+      field: status
+      initial: open
+      transitions:
+        - name: assign
+          label: "Assign Vendor"
+          from: [open]
+          to: assigned
+          icon: user-check
+          color: info
+          form:
+            fields:
+              - name: assigned_vendor_id
+                type: reference
+                display_name: "Vendor"
+                entity: Vendor
+                required: true
+          permissions: [admin, property_manager, maintenance_staff]
+        - name: start_work
+          label: "Start Work"
+          from: [assigned]
+          to: in_progress
+          icon: play
+          color: primary
+          guards:
+            - name: vendor_assigned
+              message: "A vendor must be assigned before starting work"
+              field_check: "assigned_vendor_id != null"
+          permissions: [admin, property_manager, maintenance_staff]
+        - name: complete
+          label: "Mark Completed"
+          from: [in_progress]
+          to: completed
+          icon: check-circle
+          color: success
+          form:
+            fields:
+              - name: actual_cost
+                type: currency
+                display_name: "Actual Cost"
+                required: true
+              - name: resolved_at
+                type: datetime
+                display_name: "Resolved At"
+                required: true
+          permissions: [admin, property_manager, maintenance_staff]
+        - name: close
+          label: "Close"
+          from: [completed]
+          to: closed
+          icon: archive
+          color: neutral
+          permissions: [admin, property_manager]
+        - name: reopen
+          label: "Reopen"
+          from: [closed]
+          to: open
+          icon: rotate-ccw
+          color: warning
+          confirmation:
+            title: "Reopen this request?"
+            message: "This will set the request back to open status."
+            style: warning
+          permissions: [admin, property_manager]
+
+    views:
+      list:
+        title: "Maintenance Requests"
+        default_sort: { field: created_at, order: desc }
+        columns:
+          - { field: ticket_number, link_to: detail }
+          - { field: title }
+          - { field: property_id, display_field: property_name }
+          - { field: unit_id, display_field: unit_number }
+          - { field: priority }
+          - { field: category }
+          - { field: status }
+          - { field: assigned_vendor_id, display_field: vendor_name }
+          - { field: created_at }
+        search:
+          fields: [ticket_number, title]
+          placeholder: "Search maintenance requests..."
+        filters:
+          layout: sidebar
+          groups:
+            - label: "Priority"
+              fields:
+                - { field: priority, type: checkbox_group }
+            - label: "Status"
+              fields:
+                - { field: status, type: checkbox_group, show_counts: true }
+            - label: "Category"
+              fields:
+                - { field: category, type: multi_select }
+            - label: "Date"
+              fields:
+                - { field: created_at, type: date_range }
+        filter_presets:
+          - label: "Emergency"
+            filters: { priority: emergency }
+          - label: "Open Tickets"
+            filters: { status: open }
+          - label: "Unassigned"
+            filters: { status: open, assigned_vendor_id: null }
+        actions:
+          primary:
+            - label: "New Request"
+              icon: plus
+              action: { type: navigate, path: /maintenance/new }
+        empty:
+          icon: tool
+          title: "No maintenance requests"
+          message: "When tenants report issues, they'll appear here."
+
+      detail:
+        layout: tabbed
+        header:
+          title: "{{record.title}}"
+          subtitle: "{{record.ticket_number}} — {{record.property_name}} Unit {{record.unit_number}}"
+          status_badge: "{{record.status}}"
+          stats:
+            - label: "Priority"
+              value: "{{record.priority}}"
+            - label: "Est. Cost"
+              value: "{{record.estimated_cost}}"
+              format: currency
+            - label: "Actual Cost"
+              value: "{{record.actual_cost}}"
+              format: currency
+          actions: auto_from_state_machine
+        tabs:
+          - id: overview
+            label: "Details"
+            icon: info
+            sections:
+              - title: "Request Info"
+                layout: two_column
+                fields: [ticket_number, title, priority, category, status, created_at, resolved_at]
+              - title: "Location"
+                layout: two_column
+                fields: [property_id, unit_id, tenant_id]
+              - title: "Assignment"
+                layout: two_column
+                fields: [assigned_vendor_id, estimated_cost, actual_cost]
+              - title: "Description & Photos"
+                fields: [description, photos]
+
+      create:
+        title: "New Maintenance Request"
+        steps:
+          - title: "Location"
+            fields: [property_id, unit_id, tenant_id]
+          - title: "Issue Details"
+            fields: [title, description, priority, category, photos]
+          - title: "Cost Estimate"
+            fields: [estimated_cost]
+
+  # ========================================================================
+  # INSPECTION
+  # ========================================================================
+  - name: Inspection
+    api_resource: /inspections
+    display_name: "Inspection"
+    display_name_plural: "Inspections"
+    icon: clipboard-check
+    label_field: inspection_number
+    status_field: status
+
+    fields:
+      - name: id
+        type: string
+        primary_key: true
+        generated: true
+      - name: inspection_number
+        type: string
+        display_name: "Inspection #"
+        generated: true
+        searchable: true
+        sortable: true
+      - name: property_id
+        type: reference
+        display_name: "Property"
+        entity: Property
+        required: true
+      - name: unit_id
+        type: reference
+        display_name: "Unit"
+        entity: Unit
+      - name: type
+        type: enum
+        display_name: "Inspection Type"
+        required: true
+        filterable: true
+        values:
+          - { value: move_in, label: "Move-In", color: success, icon: log-in }
+          - { value: move_out, label: "Move-Out", color: warning, icon: log-out }
+          - { value: annual, label: "Annual", color: primary, icon: calendar }
+          - { value: complaint, label: "Complaint", color: danger, icon: alert-circle }
+          - { value: pre_listing, label: "Pre-Listing", color: info, icon: search }
+      - name: inspector
+        type: string
+        display_name: "Inspector"
+        required: true
+      - name: scheduled_date
+        type: date
+        display_name: "Scheduled Date"
+        required: true
+        sortable: true
+        display_rules:
+          - condition: "value < today"
+            style: danger
+            tooltip: "Overdue — past scheduled date"
+      - name: completed_date
+        type: date
+        display_name: "Completed Date"
+      - name: status
+        type: enum
+        display_name: "Status"
+        filterable: true
+        sortable: true
+        values:
+          - { value: scheduled, label: "Scheduled", color: info, icon: calendar }
+          - { value: in_progress, label: "In Progress", color: warning, icon: loader }
+          - { value: completed, label: "Completed", color: success, icon: check-circle }
+          - { value: cancelled, label: "Cancelled", color: neutral, icon: x-circle }
+      - name: overall_rating
+        type: decimal
+        display_name: "Overall Rating"
+        precision: 1
+        min: 0
+        max: 5
+        display_as: star_rating
+      - name: findings
+        type: richtext
+        display_name: "Findings"
+      - name: photos
+        type: file_list
+        display_name: "Photos"
+        accept: [image/png, image/jpeg]
+        max_files: 20
+        max_size_mb: 10
+      - name: follow_up_required
+        type: enum
+        display_name: "Follow-up Required"
+        values:
+          - { value: "yes", label: "Yes", color: warning }
+          - { value: "no", label: "No", color: success }
+      - name: created_at
+        type: datetime
+        display_name: "Created"
+        sortable: true
+        generated: true
+
+    state_machine:
+      field: status
+      initial: scheduled
+      transitions:
+        - name: start
+          label: "Start Inspection"
+          from: [scheduled]
+          to: in_progress
+          icon: play
+          color: warning
+          permissions: [admin, property_manager, maintenance_staff]
+        - name: complete
+          label: "Complete Inspection"
+          from: [in_progress]
+          to: completed
+          icon: check-circle
+          color: success
+          form:
+            fields:
+              - name: overall_rating
+                type: decimal
+                display_name: "Overall Rating (0-5)"
+                required: true
+              - name: findings
+                type: richtext
+                display_name: "Findings"
+                required: true
+              - name: follow_up_required
+                type: enum
+                display_name: "Follow-up Required?"
+                values:
+                  - { value: "yes", label: "Yes" }
+                  - { value: "no", label: "No" }
+                required: true
+          permissions: [admin, property_manager, maintenance_staff]
+        - name: cancel
+          label: "Cancel"
+          from: [scheduled]
+          to: cancelled
+          icon: x-circle
+          color: neutral
+          confirmation:
+            title: "Cancel Inspection?"
+            message: "Are you sure you want to cancel this inspection?"
+            style: warning
+            require_comment: true
+            comment_label: "Reason for cancellation"
+          permissions: [admin, property_manager]
+
+    views:
+      list:
+        title: "Inspections"
+        default_sort: { field: scheduled_date, order: asc }
+        columns:
+          - { field: inspection_number, link_to: detail }
+          - { field: property_id, display_field: property_name }
+          - { field: unit_id, display_field: unit_number }
+          - { field: type }
+          - { field: inspector }
+          - { field: scheduled_date }
+          - { field: status }
+          - { field: overall_rating }
+          - { field: follow_up_required }
+        search:
+          fields: [inspection_number, inspector]
+          placeholder: "Search inspections..."
+        filters:
+          layout: toolbar
+          groups:
+            - fields:
+                - { field: type, type: checkbox_group }
+                - { field: status, type: checkbox_group }
+        filter_presets:
+          - label: "Upcoming"
+            filters: { status: scheduled, scheduled_date: { "$gte": "today" } }
+          - label: "Needs Follow-up"
+            filters: { follow_up_required: "yes" }
+        actions:
+          primary:
+            - label: "Schedule Inspection"
+              icon: plus
+              action: { type: navigate, path: /inspections/new }
+              permissions: [admin, property_manager]
+
+      detail:
+        layout: tabbed
+        header:
+          title: "Inspection {{record.inspection_number}}"
+          subtitle: "{{record.property_name}} — {{record.type | capitalize}}"
+          status_badge: "{{record.status}}"
+          stats:
+            - label: "Rating"
+              value: "{{record.overall_rating}}"
+              display_as: star_rating
+            - label: "Scheduled"
+              value: "{{record.scheduled_date}}"
+          actions: auto_from_state_machine
+        tabs:
+          - id: overview
+            label: "Details"
+            icon: info
+            sections:
+              - title: "Inspection Info"
+                layout: two_column
+                fields: [inspection_number, type, status, inspector, scheduled_date, completed_date]
+              - title: "Location"
+                layout: two_column
+                fields: [property_id, unit_id]
+              - title: "Results"
+                fields: [overall_rating, follow_up_required, findings, photos]
+
+      create:
+        title: "Schedule Inspection"
+        steps:
+          - title: "Location"
+            fields: [property_id, unit_id]
+          - title: "Details"
+            fields: [type, inspector, scheduled_date]
+
+# --------------------------------------------------------------------------
+# 6. CUSTOM PAGES
+# --------------------------------------------------------------------------
+pages:
+
+  # ---- DASHBOARD ----
+  - id: dashboard
+    path: /dashboard
+    title: "Dashboard"
+    layout: grid
+    widgets:
+      - type: stat_cards
+        columns: 6
+        cards:
+          - title: "Properties"
+            value: { source: "api:GET /dashboard/stats", field: total_properties }
+            icon: building
+            color: primary
+            link: /properties
+          - title: "Total Units"
+            value: { source: "api:GET /dashboard/stats", field: total_units }
+            icon: door-open
+            color: info
+            link: /units
+          - title: "Occupancy Rate"
+            value: { source: "api:GET /dashboard/stats", field: occupancy_rate }
+            icon: pie-chart
+            color: success
+            trend: { value: "+2.3%", direction: up }
+          - title: "Monthly Revenue"
+            value: { source: "api:GET /dashboard/stats", field: monthly_revenue }
+            icon: dollar-sign
+            color: success
+            trend: { value: "+5.1%", direction: up }
+          - title: "Open Maintenance"
+            value: { source: "api:GET /dashboard/stats", field: open_maintenance }
+            icon: tool
+            color: warning
+            link: "/maintenance?status=open"
+          - title: "Upcoming Inspections"
+            value: { source: "api:GET /dashboard/stats", field: upcoming_inspections }
+            icon: clipboard-check
+            color: info
+            link: /inspections
+
+      - type: chart
+        title: "Occupancy Trend"
+        chart_type: area
+        source: "api:GET /dashboard/charts/occupancy-trend"
+        data_mapping:
+          x: month
+          y: rate
+        height: 300
+
+      - type: chart
+        title: "Revenue by Property"
+        chart_type: bar
+        source: "api:GET /dashboard/charts/revenue-by-property"
+        data_mapping:
+          x: property
+          y: revenue
+        height: 300
+
+      - type: chart
+        title: "Maintenance by Category"
+        chart_type: donut
+        source: "api:GET /dashboard/charts/maintenance-by-category"
+        data_mapping:
+          label: category
+          value: count
+          color_map:
+            plumbing: primary
+            electrical: warning
+            hvac: info
+            appliance: secondary
+            structural: danger
+            pest_control: success
+            other: neutral
+        height: 300
+
+      - type: chart
+        title: "Payment Status (Last 6 Months)"
+        chart_type: stacked_bar
+        source: "api:GET /dashboard/charts/payment-status"
+        data_mapping:
+          x: month
+          y: count
+          series: status
+        height: 300
+
+      - type: chart
+        title: "Inspection Ratings Trend"
+        chart_type: line
+        source: "api:GET /dashboard/charts/inspection-ratings"
+        data_mapping:
+          x: month
+          y: avg_rating
+        height: 300
+
+      - type: entity_table
+        title: "Overdue Payments"
+        entity: Payment
+        query:
+          filter: { status: pending, due_date: { "$lte": "today" } }
+          sort: { field: due_date, order: asc }
+          limit: 5
+        columns: [payment_number, tenant_id, amount, due_date]
+        link: /payments
+
+      - type: entity_table
+        title: "Open Maintenance Requests"
+        entity: MaintenanceRequest
+        query:
+          filter: { status: [open, assigned] }
+          sort: { field: created_at, order: desc }
+          limit: 5
+        columns: [ticket_number, title, priority, property_id]
+        link: /maintenance
+
+      - type: entity_table
+        title: "Expiring Leases"
+        entity: Lease
+        query:
+          filter: { status: active, end_date: { "$lte": "today + 60d" } }
+          sort: { field: end_date, order: asc }
+          limit: 5
+        columns: [lease_number, tenant_id, unit_id, end_date]
+        link: /leases
+
+  # ---- FINANCIAL REPORTS ----
+  - id: financial_reports
+    path: /financial-reports
+    title: "Financial Reports"
+    permissions: [admin, property_manager]
+    widgets:
+      - type: report_builder
+        title: "Generate Report"
+        reports:
+          - id: rent_roll
+            name: "Rent Roll"
+            description: "Current rent schedule across all properties and units"
+            endpoint: "GET /reports/rent-roll"
+            parameters:
+              - name: property_id
+                type: reference
+                entity: Property
+                required: false
+                display_name: "Property (optional)"
+              - name: as_of_date
+                type: date
+                required: true
+                display_name: "As of Date"
+            export_formats: [pdf, csv, xlsx]
+          - id: revenue_summary
+            name: "Revenue Summary"
+            description: "Total revenue collected by property and payment type"
+            endpoint: "GET /reports/revenue-summary"
+            parameters:
+              - name: date_range
+                type: date_range
+                required: true
+                display_name: "Date Range"
+            export_formats: [pdf, xlsx]
+          - id: outstanding_balances
+            name: "Outstanding Balances"
+            description: "All unpaid and overdue tenant balances"
+            endpoint: "GET /reports/outstanding-balances"
+            parameters:
+              - name: min_amount
+                type: number
+                required: false
+                display_name: "Minimum Balance"
+            export_formats: [pdf, csv]
+
+  # ---- OCCUPANCY OVERVIEW ----
+  - id: occupancy_overview
+    path: /occupancy
+    title: "Occupancy Overview"
+    widgets:
+      - type: stat_cards
+        columns: 3
+        cards:
+          - title: "Residential Occupancy"
+            value: { source: "api:GET /occupancy/stats", field: residential_rate }
+            icon: home
+            color: primary
+          - title: "Commercial Occupancy"
+            value: { source: "api:GET /occupancy/stats", field: commercial_rate }
+            icon: briefcase
+            color: info
+          - title: "Mixed-Use Occupancy"
+            value: { source: "api:GET /occupancy/stats", field: mixed_use_rate }
+            icon: building
+            color: accent
+
+      - type: chart
+        title: "Units by Status"
+        chart_type: bar
+        source: "api:GET /occupancy/charts/units-by-status"
+        data_mapping:
+          x: status
+          y: count
+          color_map:
+            available: success
+            occupied: primary
+            maintenance: warning
+            reserved: info
+        height: 300
+
+  # ---- SETTINGS ----
+  - id: settings
+    path: /settings
+    title: "Settings"
+    permissions: [admin]
+    widgets:
+      - type: settings_form
+        sections:
+          - title: "General"
+            fields:
+              - name: company_name
+                type: string
+                display_name: "Company Name"
+                source: "api:GET /settings"
+                save: "api:PATCH /settings"
+              - name: default_lease_term
+                type: number
+                display_name: "Default Lease Term (months)"
+                default: 12
+          - title: "Notifications"
+            fields:
+              - name: lease_expiry_reminder_days
+                type: number
+                display_name: "Lease expiry reminder (days before)"
+                min: 1
+                max: 90
+                default: 30
+              - name: maintenance_sla_hours
+                type: number
+                display_name: "Maintenance SLA (hours)"
+                min: 1
+                max: 72
+                default: 24
+              - name: email_notifications
+                type: toggle
+                display_name: "Send email notifications"
+                default: true
+          - title: "Late Fees"
+            fields:
+              - name: late_fee_enabled
+                type: toggle
+                display_name: "Enable automatic late fees"
+                default: true
+              - name: late_fee_amount
+                type: number
+                display_name: "Late fee amount ($)"
+                default: 50
+              - name: grace_period_days
+                type: number
+                display_name: "Grace period (days)"
+                min: 0
+                max: 15
+                default: 5
+
+# --------------------------------------------------------------------------
+# 7. GLOBAL BEHAVIORS
+# --------------------------------------------------------------------------
+behaviors:
+  notifications:
+    position: top-right
+    duration_ms: 5000
+    on_create: "{{entity.display_name}} created successfully"
+    on_update: "{{entity.display_name}} updated successfully"
+    on_transition: "{{entity.display_name}} {{transition.label | lowercase}} successfully"
+    on_error: "Something went wrong. Please try again."

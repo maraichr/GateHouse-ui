@@ -1,0 +1,1394 @@
+# ============================================================================
+# GateHouse Frontend UI Specification Schema v1.0
+# ============================================================================
+# This file defines the YAML format that an LLM generates from an OpenAPI
+# spec + BRD. A renderer (React/Svelte/Flutter) consumes this to produce
+# a working application.
+# ============================================================================
+
+# --------------------------------------------------------------------------
+# 1. APPLICATION METADATA
+# --------------------------------------------------------------------------
+app:
+  name: "acme-contractor-portal"
+  display_name: "Contractor Portal"
+  version: "1.0.0"
+  description: "Subcontractor management and compliance tracking"
+
+  # Branding / theming tokens consumed by the renderer
+  theme:
+    mode: light                       # light | dark | system
+    primary_color: "#1E40AF"
+    secondary_color: "#7C3AED"
+    accent_color: "#F59E0B"
+    danger_color: "#DC2626"
+    success_color: "#16A34A"
+    border_radius: md                 # none | sm | md | lg | full
+    density: comfortable              # compact | comfortable | spacious
+    font_family: "Inter, system-ui, sans-serif"
+    logo:
+      light: "/assets/logo-light.svg"
+      dark: "/assets/logo-dark.svg"
+      favicon: "/assets/favicon.svg"
+
+  # Localization
+  i18n:
+    default_locale: en-US
+    supported_locales: [en-US, es-MX, fr-FR]
+    date_format: "MMM d, yyyy"
+    time_format: "h:mm a"
+    currency: USD
+    timezone: America/New_York
+
+# --------------------------------------------------------------------------
+# 2. AUTHENTICATION & AUTHORIZATION
+# --------------------------------------------------------------------------
+auth:
+  provider: oidc                      # oidc | oauth2 | api_key | custom
+  config:
+    issuer: "https://auth.acme.com/realms/main"
+    client_id: "contractor-portal"
+    scopes: [openid, profile, email]
+    pkce: true
+
+  # Map JWT claims to app concepts
+  claims_mapping:
+    user_id: sub
+    tenant_id: "org_id"
+    display_name: name
+    email: email
+    avatar: picture
+    roles: "realm_access.roles"
+
+  # Role definitions drive permission checks throughout the UI
+  roles:
+    admin:
+      display_name: "Administrator"
+      description: "Full system access"
+    compliance_officer:
+      display_name: "Compliance Officer"
+      description: "Manages approvals and compliance workflows"
+    project_manager:
+      display_name: "Project Manager"
+      description: "Manages projects and work order assignments"
+    viewer:
+      display_name: "Read-Only Viewer"
+      description: "Can view but not modify data"
+
+  # Pages shown before/after auth
+  login:
+    redirect_path: /dashboard
+    show_branding: true
+  logout:
+    redirect_path: /login
+    clear_storage: true
+
+# --------------------------------------------------------------------------
+# 3. API CONNECTION
+# --------------------------------------------------------------------------
+api:
+  base_url: "${API_BASE_URL}"         # env var interpolation
+  version_prefix: "/api/v1"
+  timeout_ms: 30000
+  retry:
+    max_attempts: 3
+    backoff: exponential
+    retry_on: [502, 503, 504]
+
+  # Global headers injected into every request
+  headers:
+    X-Tenant-ID: "${auth.claims.tenant_id}"
+    X-Request-ID: "${auto.uuid}"
+
+  # How the renderer handles pagination styles from the API
+  pagination:
+    style: cursor                     # cursor | offset | page
+    default_page_size: 25
+    max_page_size: 100
+    cursor_param: cursor
+    page_size_param: page_size
+
+  # Error shape expected from the API
+  error_format:
+    code_field: code
+    message_field: message
+    details_field: details
+    validation_field: "details.field_errors"
+
+# --------------------------------------------------------------------------
+# 4. NAVIGATION & LAYOUT
+# --------------------------------------------------------------------------
+shell:
+  layout: sidebar                     # sidebar | topnav | stacked | minimal
+
+  sidebar:
+    position: left
+    collapsible: true
+    default_collapsed: false
+    width: 260
+    collapsed_width: 64
+    show_user_menu: true
+    show_search: true
+
+  header:
+    show_breadcrumbs: true
+    show_global_search: true
+    show_notifications: true
+    show_tenant_switcher: false       # for multi-tenant apps
+    actions:                          # persistent header actions
+      - label: "Help"
+        icon: help-circle
+        action:
+          type: external_link
+          url: "https://docs.acme.com"
+
+navigation:
+  # Items rendered in the sidebar / topnav
+  items:
+    - id: dashboard
+      label: "Dashboard"
+      icon: layout-dashboard
+      path: /dashboard
+      page: dashboard
+
+    - id: subcontractors
+      label: "Subcontractors"
+      icon: hard-hat
+      path: /subcontractors
+      entity: Subcontractor
+      badge:
+        type: count
+        filter: { status: pending }
+        color: warning
+
+    - id: work_orders
+      label: "Work Orders"
+      icon: clipboard-list
+      path: /work-orders
+      entity: WorkOrder
+
+    - id: documents
+      label: "Documents"
+      icon: file-text
+      path: /documents
+      entity: Document
+      permissions: [admin, compliance_officer]
+
+    - id: reports
+      label: "Reports"
+      icon: bar-chart-2
+      path: /reports
+      page: reports
+      permissions: [admin, project_manager]
+
+    - id: settings
+      label: "Settings"
+      icon: settings
+      path: /settings
+      page: settings
+      position: bottom                # pinned to bottom of sidebar
+      permissions: [admin]
+
+    # Nested / grouped navigation
+    - id: compliance
+      label: "Compliance"
+      icon: shield-check
+      permissions: [admin, compliance_officer]
+      children:
+        - id: pending_reviews
+          label: "Pending Reviews"
+          path: /compliance/reviews
+          page: pending_reviews
+          badge:
+            type: count
+            source: "api:/compliance/reviews/count"
+        - id: audit_log
+          label: "Audit Log"
+          path: /compliance/audit
+          entity: AuditEntry
+        - id: expiring_insurance
+          label: "Expiring Insurance"
+          path: /compliance/expiring
+          page: expiring_insurance
+
+# --------------------------------------------------------------------------
+# 5. ENTITIES — the heart of the specification
+# --------------------------------------------------------------------------
+entities:
+
+  # ========================================================================
+  # SUBCONTRACTOR ENTITY — full complexity example
+  # ========================================================================
+  - name: Subcontractor
+    api_resource: /subcontractors      # maps to OpenAPI path
+    display_name: "Subcontractor"
+    display_name_plural: "Subcontractors"
+    icon: hard-hat
+    description: "External contractors who perform work on behalf of the organization"
+
+    # The field that best identifies a record in dropdowns, links, breadcrumbs
+    label_field: company_name
+    # Secondary descriptor shown in search results, etc.
+    subtitle_field: tax_id
+    # What field controls the status badge
+    status_field: status
+
+    # ------------------------------------------------------------------
+    # 5.1 FIELD DEFINITIONS
+    # ------------------------------------------------------------------
+    fields:
+      - name: id
+        type: uuid
+        hidden: true                  # never shown in forms, but used internally
+        primary_key: true
+
+      - name: company_name
+        type: string
+        display_name: "Company Name"
+        required: true
+        min_length: 2
+        max_length: 200
+        placeholder: "Enter company legal name"
+        help_text: "Full legal entity name as registered"
+        searchable: true
+        sortable: true
+        # Where this field appears
+        show_in:
+          list: true
+          detail: true
+          create: true
+          edit: true
+
+      - name: tax_id
+        type: string
+        display_name: "Tax ID (EIN)"
+        required: true
+        pattern: "^\\d{2}-\\d{7}$"
+        pattern_message: "Must be in format XX-XXXXXXX"
+        sensitive: true               # masked in display: "12-***4567"
+        mask_pattern: "##-***####"
+        immutable: true               # cannot be changed after creation
+        show_in:
+          list: false
+          detail: true
+          create: true
+          edit: false                 # immutable
+
+      - name: status
+        type: enum
+        display_name: "Status"
+        required: true
+        default: pending
+        sortable: true
+        filterable: true
+        values:
+          - value: pending
+            label: "Pending Review"
+            color: warning            # maps to theme color
+            icon: clock
+          - value: approved
+            label: "Approved"
+            color: success
+            icon: check-circle
+          - value: suspended
+            label: "Suspended"
+            color: danger
+            icon: alert-triangle
+          - value: terminated
+            label: "Terminated"
+            color: neutral
+            icon: x-circle
+        show_in:
+          list: true
+          detail: true
+          create: false               # set by system
+          edit: false                 # controlled by state machine
+
+      - name: email
+        type: email
+        display_name: "Contact Email"
+        required: true
+        show_in: { list: false, detail: true, create: true, edit: true }
+
+      - name: phone
+        type: phone
+        display_name: "Contact Phone"
+        required: false
+        format: national              # national | international | e164
+        show_in: { list: false, detail: true, create: true, edit: true }
+
+      - name: address
+        type: address
+        display_name: "Business Address"
+        required: true
+        components:                   # structured address
+          street1: { required: true }
+          street2: { required: false }
+          city: { required: true }
+          state: { required: true, type: state_select }
+          zip: { required: true, pattern: "^\\d{5}(-\\d{4})?$" }
+          country: { required: true, default: "US" }
+        show_in: { list: false, detail: true, create: true, edit: true }
+
+      - name: insurance_expiry_date
+        type: date
+        display_name: "Insurance Expiry"
+        required: false
+        future_only: true
+        sortable: true
+        filterable: true
+        # Conditional formatting on the rendered value
+        display_rules:
+          - condition: "value < today + 30d"
+            style: danger
+            tooltip: "Insurance expiring within 30 days"
+          - condition: "value < today + 90d"
+            style: warning
+            tooltip: "Insurance expiring within 90 days"
+          - condition: "value >= today + 90d"
+            style: success
+        show_in: { list: true, detail: true, create: true, edit: true }
+
+      - name: trade_codes
+        type: array
+        display_name: "Trade Specialties"
+        required: true
+        min_items: 1
+        items:
+          type: reference
+          entity: Trade
+          label_field: name
+        input_type: multi_select       # multi_select | chips | tag_input
+        filterable: true
+        show_in: { list: true, detail: true, create: true, edit: true }
+
+      - name: rating
+        type: decimal
+        display_name: "Performance Rating"
+        precision: 2
+        min: 0
+        max: 5
+        computed: true                # read-only, calculated server-side
+        display_as: star_rating       # star_rating | number | progress_bar
+        sortable: true
+        show_in: { list: true, detail: true, create: false, edit: false }
+
+      - name: annual_revenue
+        type: currency
+        display_name: "Annual Revenue"
+        currency: USD
+        required: false
+        permissions:
+          view: [admin, compliance_officer]
+          edit: [admin]
+        show_in: { list: false, detail: true, create: false, edit: true }
+
+      - name: notes
+        type: richtext
+        display_name: "Internal Notes"
+        max_length: 5000
+        toolbar: [bold, italic, bullet_list, ordered_list, link]
+        show_in: { list: false, detail: true, create: false, edit: true }
+
+      - name: logo
+        type: image
+        display_name: "Company Logo"
+        accept: [image/png, image/jpeg, image/svg+xml]
+        max_size_mb: 5
+        dimensions:
+          min_width: 100
+          max_width: 2000
+          aspect_ratio: "1:1"         # enforce square, or null for any
+        show_in: { list: false, detail: true, create: true, edit: true }
+        display_as: avatar            # avatar | thumbnail | full
+
+      - name: attachments
+        type: file_list
+        display_name: "Attachments"
+        accept: [application/pdf, image/*, .docx]
+        max_files: 20
+        max_size_mb: 25
+        show_in: { list: false, detail: true, create: false, edit: true }
+
+      - name: created_at
+        type: datetime
+        display_name: "Created"
+        sortable: true
+        show_in: { list: true, detail: true, create: false, edit: false }
+        format: relative              # relative | absolute | auto
+
+      - name: updated_at
+        type: datetime
+        display_name: "Last Updated"
+        sortable: true
+        show_in: { list: false, detail: true, create: false, edit: false }
+
+    # ------------------------------------------------------------------
+    # 5.2 STATE MACHINE (drives action buttons + transition UI)
+    # ------------------------------------------------------------------
+    state_machine:
+      field: status
+      initial: pending
+
+      transitions:
+        - name: approve
+          label: "Approve Subcontractor"
+          from: [pending, suspended]
+          to: approved
+          icon: check-circle
+          color: success
+          # Confirmation dialog before executing
+          confirmation:
+            title: "Approve Subcontractor?"
+            message: "This will allow {{record.company_name}} to receive work orders."
+            style: success            # success | danger | warning | info
+            require_comment: false
+          # Guards — renderer shows why button is disabled
+          guards:
+            - name: insurance_not_expired
+              message: "Insurance must not be expired"
+              field_check: "insurance_expiry_date > today"
+            - name: has_required_documents
+              message: "W-9 and Insurance Certificate must be verified"
+              api_check: "GET /subcontractors/{{id}}/compliance-status"
+              expected: { w9_verified: true, insurance_verified: true }
+          permissions: [admin, compliance_officer]
+          # Optional form fields collected during the transition
+          form:
+            fields:
+              - name: approval_notes
+                type: text
+                display_name: "Approval Notes"
+                required: false
+
+        - name: suspend
+          label: "Suspend"
+          from: [approved]
+          to: suspended
+          icon: pause-circle
+          color: warning
+          confirmation:
+            title: "Suspend Subcontractor?"
+            message: "This will cancel all pending work orders for {{record.company_name}}."
+            style: danger
+            require_comment: true
+            comment_label: "Reason for suspension"
+          permissions: [admin, compliance_officer]
+
+        - name: reinstate
+          label: "Reinstate"
+          from: [suspended]
+          to: approved
+          icon: refresh-cw
+          color: success
+          guards:
+            - name: insurance_not_expired
+              message: "Insurance must be current before reinstatement"
+              field_check: "insurance_expiry_date > today"
+          confirmation:
+            title: "Reinstate Subcontractor?"
+            message: "Are you sure you want to reinstate {{record.company_name}}?"
+            style: info
+          permissions: [admin, compliance_officer]
+
+        - name: terminate
+          label: "Terminate"
+          from: [pending, approved, suspended]
+          to: terminated
+          icon: x-circle
+          color: danger
+          confirmation:
+            title: "Terminate Subcontractor"
+            message: "This action is permanent. {{record.company_name}} will be deactivated and all data archived."
+            style: danger
+            require_comment: true
+            comment_label: "Reason for termination"
+            type_to_confirm: "TERMINATE"   # user must type this string
+          permissions: [admin]
+
+    # ------------------------------------------------------------------
+    # 5.3 RELATIONSHIPS
+    # ------------------------------------------------------------------
+    relationships:
+      - name: documents
+        type: has_many
+        entity: Document
+        foreign_key: subcontractor_id
+        display_name: "Documents"
+        show_in_detail: true
+        inline_create: true           # allow creating related records from detail page
+        default_sort: { field: created_at, order: desc }
+
+      - name: work_orders
+        type: has_many
+        entity: WorkOrder
+        foreign_key: subcontractor_id
+        display_name: "Work Orders"
+        show_in_detail: true
+        inline_create: false
+
+      - name: trades
+        type: many_to_many
+        entity: Trade
+        through: subcontractor_trade_assignments
+        display_name: "Trade Specialties"
+        show_in_detail: true
+
+      - name: primary_contact
+        type: belongs_to
+        entity: Contact
+        foreign_key: primary_contact_id
+        display_name: "Primary Contact"
+        show_in_detail: true
+        inline_edit: true
+
+    # ------------------------------------------------------------------
+    # 5.4 VIEW CONFIGURATIONS
+    # ------------------------------------------------------------------
+    views:
+
+      # ---- LIST VIEW ----
+      list:
+        title: "Subcontractors"
+        default_sort: { field: company_name, order: asc }
+
+        # Column configuration
+        columns:
+          - field: logo
+            width: 48
+            fixed: left
+          - field: company_name
+            width: flex
+            link_to: detail            # clicking navigates to detail view
+          - field: status
+            width: 140
+          - field: trade_codes
+            width: 200
+            max_display: 2             # show 2 chips + "+N more"
+          - field: rating
+            width: 120
+          - field: insurance_expiry_date
+            width: 150
+          - field: created_at
+            width: 150
+
+        # Filter panel configuration
+        filters:
+          layout: sidebar              # sidebar | toolbar | drawer
+          persistent: true             # remember filter state across sessions
+          groups:
+            - label: "Status"
+              fields:
+                - field: status
+                  type: checkbox_group   # checkbox_group | select | radio
+                  show_counts: true
+            - label: "Trades"
+              fields:
+                - field: trade_codes
+                  type: multi_select
+                  searchable: true
+            - label: "Insurance"
+              fields:
+                - field: insurance_expiry_date
+                  type: date_range
+                  presets:
+                    - label: "Expiring this month"
+                      range: [today, end_of_month]
+                    - label: "Expiring in 30 days"
+                      range: [today, "today + 30d"]
+                    - label: "Expired"
+                      range: [null, today]
+            - label: "Performance"
+              fields:
+                - field: rating
+                  type: range_slider
+                  min: 0
+                  max: 5
+                  step: 0.5
+
+        # Search configuration
+        search:
+          placeholder: "Search by company name or tax ID..."
+          fields: [company_name, tax_id, email]
+          debounce_ms: 300
+          min_length: 2
+
+        # Toolbar actions
+        actions:
+          primary:
+            - label: "Add Subcontractor"
+              icon: plus
+              action: { type: navigate, path: "/subcontractors/new" }
+              permissions: [admin, compliance_officer]
+          secondary:
+            - label: "Export"
+              icon: download
+              action: { type: api_call, method: GET, path: "/subcontractors/export", download: true }
+              permissions: [admin]
+            - label: "Import"
+              icon: upload
+              action: { type: navigate, path: "/subcontractors/import" }
+              permissions: [admin]
+
+        # Bulk actions (when rows are selected)
+        bulk_actions:
+          - label: "Export Selected"
+            icon: download
+            action: { type: api_call, method: POST, path: "/subcontractors/export", body: { ids: "$selected" } }
+          - label: "Suspend Selected"
+            icon: pause-circle
+            action: { type: bulk_transition, transition: suspend }
+            permissions: [admin]
+            confirmation:
+              title: "Suspend {{count}} subcontractors?"
+              style: danger
+
+        # Empty state
+        empty:
+          icon: hard-hat
+          title: "No subcontractors yet"
+          message: "Add your first subcontractor to get started."
+          action:
+            label: "Add Subcontractor"
+            path: "/subcontractors/new"
+
+      # ---- DETAIL VIEW ----
+      detail:
+        layout: tabbed                 # tabbed | sectioned | single_column | two_column
+
+        # Header area above tabs
+        header:
+          title: "{{record.company_name}}"
+          subtitle: "Tax ID: {{record.tax_id | mask}}"
+          avatar: "{{record.logo}}"
+          status_badge: "{{record.status}}"
+          # Inline stats shown in header
+          stats:
+            - label: "Rating"
+              value: "{{record.rating}}"
+              display_as: star_rating
+            - label: "Active Work Orders"
+              value:
+                source: "api:GET /subcontractors/{{id}}/stats"
+                field: active_work_orders
+            - label: "Total Revenue"
+              value:
+                source: "api:GET /subcontractors/{{id}}/stats"
+                field: total_revenue
+              format: currency
+              permissions: [admin]
+          # Actions shown in header (state machine transitions + custom)
+          actions: auto_from_state_machine   # or explicit list
+
+        tabs:
+          - id: overview
+            label: "Overview"
+            icon: info
+            sections:
+              - title: "Company Information"
+                layout: two_column
+                fields: [company_name, email, phone, address]
+              - title: "Compliance"
+                layout: two_column
+                fields: [tax_id, insurance_expiry_date, trade_codes]
+              - title: "Internal"
+                layout: single_column
+                fields: [notes, attachments]
+                permissions: [admin, compliance_officer]
+
+          - id: documents
+            label: "Documents"
+            icon: file-text
+            content:
+              type: relationship_table
+              relationship: documents
+              inline_create: true
+
+          - id: work_orders
+            label: "Work Orders"
+            icon: clipboard-list
+            content:
+              type: relationship_table
+              relationship: work_orders
+              columns: [title, status, assigned_date, due_date, total_amount]
+
+          - id: activity
+            label: "Activity"
+            icon: activity
+            content:
+              type: activity_feed
+              source: "api:GET /subcontractors/{{id}}/activity"
+              item_template:
+                avatar: "{{item.user.avatar}}"
+                title: "{{item.user.name}} {{item.action}}"
+                subtitle: "{{item.details}}"
+                timestamp: "{{item.created_at}}"
+
+          - id: timeline
+            label: "Timeline"
+            icon: git-branch
+            content:
+              type: state_machine_timeline
+              source: "api:GET /subcontractors/{{id}}/transitions"
+              show_current_state: true
+
+      # ---- CREATE/EDIT FORMS ----
+      create:
+        title: "Add Subcontractor"
+        layout: stepped               # single_page | sectioned | stepped (wizard)
+        submit_label: "Create Subcontractor"
+        cancel_path: /subcontractors
+
+        steps:
+          - id: company_info
+            title: "Company Information"
+            description: "Basic company details"
+            fields: [company_name, tax_id, email, phone]
+          - id: address
+            title: "Business Address"
+            fields: [address]
+          - id: compliance
+            title: "Compliance & Trades"
+            description: "Trade specialties and insurance information"
+            fields: [trade_codes, insurance_expiry_date]
+          - id: review
+            title: "Review"
+            type: summary              # shows read-only summary of all fields
+
+        # Field-level overrides for create context
+        field_overrides:
+          tax_id:
+            help_text: "This cannot be changed after creation. Please verify before submitting."
+            highlight: true
+
+      edit:
+        title: "Edit {{record.company_name}}"
+        layout: sectioned
+        submit_label: "Save Changes"
+        sections:
+          - title: "Company Information"
+            fields: [company_name, email, phone, address]
+          - title: "Compliance"
+            fields: [insurance_expiry_date, trade_codes]
+          - title: "Internal Notes"
+            fields: [notes, attachments]
+            permissions: [admin, compliance_officer]
+
+    # ------------------------------------------------------------------
+    # 5.5 COMPUTED / VIRTUAL FIELDS (client-side)
+    # ------------------------------------------------------------------
+    computed_fields:
+      - name: is_compliant
+        display_name: "Compliant"
+        type: boolean
+        expression: "status == 'approved' && insurance_expiry_date > today"
+        display_as: badge
+        values:
+          true: { label: "Compliant", color: success, icon: shield-check }
+          false: { label: "Non-Compliant", color: danger, icon: shield-x }
+
+      - name: days_until_insurance_expiry
+        display_name: "Days to Expiry"
+        type: integer
+        expression: "dateDiff(insurance_expiry_date, today, 'days')"
+        display_rules:
+          - condition: "value <= 0"
+            style: danger
+            label: "Expired"
+          - condition: "value <= 30"
+            style: warning
+          - condition: "value > 30"
+            style: success
+
+  # ========================================================================
+  # DOCUMENT ENTITY — demonstrates file-centric entity
+  # ========================================================================
+  - name: Document
+    api_resource: /documents
+    display_name: "Document"
+    display_name_plural: "Documents"
+    icon: file-text
+    label_field: name
+    status_field: status
+
+    fields:
+      - name: id
+        type: uuid
+        hidden: true
+        primary_key: true
+
+      - name: name
+        type: string
+        display_name: "Document Name"
+        required: true
+        show_in: { list: true, detail: true, create: true, edit: true }
+
+      - name: type
+        type: enum
+        display_name: "Document Type"
+        required: true
+        filterable: true
+        values:
+          - value: w9
+            label: "W-9 Tax Form"
+            icon: file-text
+          - value: insurance_cert
+            label: "Insurance Certificate"
+            icon: shield
+          - value: license
+            label: "License/Certification"
+            icon: award
+          - value: contract
+            label: "Contract"
+            icon: file-signature
+          - value: other
+            label: "Other"
+            icon: file
+        show_in: { list: true, detail: true, create: true, edit: false }
+
+      - name: status
+        type: enum
+        display_name: "Verification Status"
+        values:
+          - value: uploaded
+            label: "Uploaded"
+            color: neutral
+          - value: under_review
+            label: "Under Review"
+            color: warning
+          - value: verified
+            label: "Verified"
+            color: success
+          - value: rejected
+            label: "Rejected"
+            color: danger
+        show_in: { list: true, detail: true, create: false, edit: false }
+
+      - name: file
+        type: file
+        display_name: "File"
+        required: true
+        accept: [application/pdf, image/png, image/jpeg]
+        max_size_mb: 25
+        show_in: { list: false, detail: true, create: true, edit: false }
+        preview: true                 # render inline preview for PDFs/images
+
+      - name: expiry_date
+        type: date
+        display_name: "Expiry Date"
+        required: false
+        show_in: { list: true, detail: true, create: true, edit: true }
+
+      - name: subcontractor_id
+        type: reference
+        display_name: "Subcontractor"
+        entity: Subcontractor
+        required: true
+        show_in: { list: true, detail: true, create: true, edit: false }
+
+    state_machine:
+      field: status
+      initial: uploaded
+      transitions:
+        - name: start_review
+          label: "Start Review"
+          from: [uploaded]
+          to: under_review
+          permissions: [admin, compliance_officer]
+        - name: verify
+          label: "Verify"
+          from: [under_review]
+          to: verified
+          icon: check
+          color: success
+          permissions: [compliance_officer]
+        - name: reject
+          label: "Reject"
+          from: [under_review]
+          to: rejected
+          icon: x
+          color: danger
+          permissions: [compliance_officer]
+          confirmation:
+            require_comment: true
+            comment_label: "Reason for rejection"
+
+    views:
+      list:
+        columns:
+          - field: name
+            link_to: detail
+          - field: type
+          - field: status
+          - field: subcontractor_id
+            display_field: company_name
+          - field: expiry_date
+          - field: created_at
+        filters:
+          layout: toolbar
+          groups:
+            - fields:
+                - field: type
+                  type: select
+                - field: status
+                  type: checkbox_group
+
+      detail:
+        layout: two_column
+        left:
+          - component: file_preview
+            field: file
+        right:
+          sections:
+            - fields: [name, type, status, subcontractor_id, expiry_date]
+            - title: "Review Actions"
+              actions: auto_from_state_machine
+
+  # ========================================================================
+  # WORK ORDER ENTITY — demonstrates dependent entity
+  # ========================================================================
+  - name: WorkOrder
+    api_resource: /work-orders
+    display_name: "Work Order"
+    display_name_plural: "Work Orders"
+    icon: clipboard-list
+    label_field: title
+    subtitle_field: "wo_number"
+    status_field: status
+
+    fields:
+      - name: id
+        type: uuid
+        hidden: true
+        primary_key: true
+      - name: wo_number
+        type: string
+        display_name: "WO Number"
+        generated: true
+        show_in: { list: true, detail: true, create: false, edit: false }
+      - name: title
+        type: string
+        display_name: "Title"
+        required: true
+        show_in: { list: true, detail: true, create: true, edit: true }
+      - name: description
+        type: richtext
+        display_name: "Description"
+        show_in: { list: false, detail: true, create: true, edit: true }
+      - name: status
+        type: enum
+        values:
+          - value: draft
+            label: "Draft"
+            color: neutral
+          - value: assigned
+            label: "Assigned"
+            color: info
+          - value: in_progress
+            label: "In Progress"
+            color: warning
+          - value: completed
+            label: "Completed"
+            color: success
+          - value: cancelled
+            label: "Cancelled"
+            color: danger
+        filterable: true
+        sortable: true
+        show_in: { list: true, detail: true, create: false, edit: false }
+      - name: subcontractor_id
+        type: reference
+        entity: Subcontractor
+        display_name: "Subcontractor"
+        required: true
+        # Dynamic filtering: only show approved subcontractors
+        filter: { status: approved }
+        show_in: { list: true, detail: true, create: true, edit: true }
+      - name: scheduled_date
+        type: date
+        display_name: "Scheduled Date"
+        required: true
+        sortable: true
+        show_in: { list: true, detail: true, create: true, edit: true }
+      - name: total_amount
+        type: currency
+        display_name: "Total Amount"
+        currency: USD
+        required: false
+        sortable: true
+        show_in: { list: true, detail: true, create: true, edit: true }
+      - name: line_items
+        type: inline_table
+        display_name: "Line Items"
+        min_rows: 1
+        max_rows: 50
+        columns:
+          - name: description
+            type: string
+            required: true
+            width: flex
+          - name: quantity
+            type: decimal
+            required: true
+            width: 100
+          - name: unit_price
+            type: currency
+            required: true
+            width: 120
+          - name: total
+            type: currency
+            computed: "quantity * unit_price"
+            width: 120
+        footer:
+          - column: description
+            value: "Total"
+            style: bold
+          - column: total
+            aggregate: sum
+            style: bold
+        show_in: { list: false, detail: true, create: true, edit: true }
+
+    views:
+      list:
+        columns:
+          - field: wo_number
+            link_to: detail
+          - field: title
+          - field: status
+          - field: subcontractor_id
+            display_field: company_name
+          - field: scheduled_date
+          - field: total_amount
+        actions:
+          primary:
+            - label: "Create Work Order"
+              icon: plus
+              action: { type: navigate, path: "/work-orders/new" }
+        empty:
+          icon: clipboard-list
+          title: "No work orders"
+          message: "Create your first work order to assign work to subcontractors."
+
+  # ========================================================================
+  # TRADE ENTITY — demonstrates lookup/reference entity
+  # ========================================================================
+  - name: Trade
+    api_resource: /trades
+    display_name: "Trade"
+    display_name_plural: "Trades"
+    icon: wrench
+    label_field: name
+
+    fields:
+      - name: id
+        type: uuid
+        hidden: true
+        primary_key: true
+      - name: code
+        type: string
+        display_name: "Code"
+        required: true
+        show_in: { list: true, detail: true, create: true, edit: false }
+      - name: name
+        type: string
+        display_name: "Trade Name"
+        required: true
+        show_in: { list: true, detail: true, create: true, edit: true }
+      - name: category
+        type: enum
+        display_name: "Category"
+        values:
+          - value: electrical
+            label: "Electrical"
+          - value: plumbing
+            label: "Plumbing"
+          - value: hvac
+            label: "HVAC"
+          - value: general
+            label: "General Construction"
+          - value: specialty
+            label: "Specialty"
+        filterable: true
+        show_in: { list: true, detail: true, create: true, edit: true }
+
+    views:
+      list:
+        columns: [code, name, category]
+        default_sort: { field: name, order: asc }
+
+# --------------------------------------------------------------------------
+# 6. CUSTOM PAGES (non-entity pages)
+# --------------------------------------------------------------------------
+pages:
+
+  # ---- DASHBOARD ----
+  - id: dashboard
+    path: /dashboard
+    title: "Dashboard"
+
+    # KPI cards at top
+    widgets:
+      - type: stat_cards
+        layout: row                    # row | grid
+        cards:
+          - title: "Total Subcontractors"
+            value:
+              source: "api:GET /dashboard/stats"
+              field: total_subcontractors
+            icon: hard-hat
+            color: primary
+            link: /subcontractors
+          - title: "Pending Approval"
+            value:
+              source: "api:GET /dashboard/stats"
+              field: pending_approvals
+            icon: clock
+            color: warning
+            link: "/subcontractors?status=pending"
+          - title: "Expiring Insurance"
+            value:
+              source: "api:GET /dashboard/stats"
+              field: expiring_insurance_30d
+            icon: alert-triangle
+            color: danger
+            link: /compliance/expiring
+          - title: "Active Work Orders"
+            value:
+              source: "api:GET /dashboard/stats"
+              field: active_work_orders
+            icon: clipboard-list
+            color: info
+            link: "/work-orders?status=in_progress"
+
+      # Charts
+      - type: chart
+        title: "Subcontractors by Status"
+        chart_type: donut             # bar | line | donut | area | stacked_bar
+        source: "api:GET /dashboard/charts/status-breakdown"
+        data_mapping:
+          label: status
+          value: count
+          color_map:
+            pending: warning
+            approved: success
+            suspended: danger
+            terminated: neutral
+        height: 300
+
+      - type: chart
+        title: "Work Orders Over Time"
+        chart_type: area
+        source: "api:GET /dashboard/charts/work-orders-timeline"
+        data_mapping:
+          x: month
+          y: count
+          series: status
+        height: 300
+
+      # Recent activity table
+      - type: entity_table
+        title: "Recently Added Subcontractors"
+        entity: Subcontractor
+        query:
+          sort: { field: created_at, order: desc }
+          limit: 5
+        columns: [company_name, status, created_at]
+        link: /subcontractors
+
+      - type: entity_table
+        title: "Upcoming Work Orders"
+        entity: WorkOrder
+        query:
+          filter: { status: [assigned, in_progress] }
+          sort: { field: scheduled_date, order: asc }
+          limit: 5
+        columns: [wo_number, title, subcontractor_id, scheduled_date]
+        link: /work-orders
+
+  # ---- EXPIRING INSURANCE PAGE ----
+  - id: expiring_insurance
+    path: /compliance/expiring
+    title: "Expiring Insurance"
+    widgets:
+      - type: entity_table
+        entity: Subcontractor
+        query:
+          filter:
+            status: approved
+            insurance_expiry_date:
+              $lte: "today + 30d"
+              $gte: today
+          sort: { field: insurance_expiry_date, order: asc }
+        columns: [company_name, insurance_expiry_date, trade_codes]
+        actions:
+          row:
+            - label: "Send Reminder"
+              icon: mail
+              action:
+                type: api_call
+                method: POST
+                path: "/subcontractors/{{id}}/send-reminder"
+              confirmation:
+                title: "Send reminder to {{record.company_name}}?"
+                style: info
+
+  # ---- REPORTS PAGE ----
+  - id: reports
+    path: /reports
+    title: "Reports"
+    widgets:
+      - type: report_builder
+        title: "Generate Report"
+        reports:
+          - id: subcontractor_summary
+            name: "Subcontractor Summary"
+            description: "Overview of all subcontractors with compliance status"
+            endpoint: "GET /reports/subcontractor-summary"
+            parameters:
+              - name: date_range
+                type: date_range
+                required: true
+              - name: status
+                type: multi_select
+                entity: Subcontractor
+                field: status
+            export_formats: [pdf, csv, xlsx]
+          - id: work_order_financial
+            name: "Work Order Financial Summary"
+            endpoint: "GET /reports/work-order-financials"
+            parameters:
+              - name: date_range
+                type: date_range
+                required: true
+              - name: subcontractor_id
+                type: reference
+                entity: Subcontractor
+                required: false
+            export_formats: [pdf, xlsx]
+
+  # ---- SETTINGS PAGE ----
+  - id: settings
+    path: /settings
+    title: "Settings"
+    permissions: [admin]
+    widgets:
+      - type: settings_form
+        sections:
+          - title: "General"
+            fields:
+              - name: company_name
+                type: string
+                source: "api:GET /settings"
+                save: "api:PATCH /settings"
+              - name: default_currency
+                type: select
+                options: [USD, EUR, GBP, CAD]
+          - title: "Notifications"
+            fields:
+              - name: insurance_reminder_days
+                type: number
+                display_name: "Insurance reminder (days before expiry)"
+                min: 1
+                max: 90
+                default: 30
+              - name: email_notifications
+                type: toggle
+                display_name: "Send email notifications"
+                default: true
+
+# --------------------------------------------------------------------------
+# 7. GLOBAL BEHAVIORS
+# --------------------------------------------------------------------------
+behaviors:
+
+  # Toast / notification defaults
+  notifications:
+    position: top-right               # top-right | top-center | bottom-right
+    duration_ms: 5000
+    on_create: "{{entity.display_name}} created successfully"
+    on_update: "{{entity.display_name}} updated successfully"
+    on_delete: "{{entity.display_name}} deleted successfully"
+    on_transition: "{{entity.display_name}} {{transition.label | lowercase}} successfully"
+    on_error: "Something went wrong. Please try again."
+
+  # Unsaved changes protection
+  dirty_form:
+    enabled: true
+    message: "You have unsaved changes. Are you sure you want to leave?"
+
+  # Keyboard shortcuts
+  shortcuts:
+    global:
+      - key: "cmd+k"
+        action: open_global_search
+      - key: "cmd+n"
+        action: create_new
+        context: entity_list
+    entity_detail:
+      - key: "e"
+        action: edit
+      - key: "Escape"
+        action: back_to_list
+
+  # Real-time updates via WebSocket / SSE
+  realtime:
+    enabled: true
+    provider: websocket               # websocket | sse | polling
+    endpoint: "${API_BASE_URL}/ws"
+    subscriptions:
+      - event: "entity.updated"
+        action: refresh_current       # refresh_current | show_toast | both
+      - event: "entity.created"
+        action: show_toast
+      - event: "transition.completed"
+        action: both
+
+  # Optimistic updates
+  optimistic_updates:
+    enabled: true
+    rollback_on_error: true
+
+  # Offline support
+  offline:
+    enabled: false
+    cache_strategy: network_first     # network_first | cache_first | stale_while_revalidate
+
+# --------------------------------------------------------------------------
+# 8. RESPONSIVE / ADAPTIVE RULES
+# --------------------------------------------------------------------------
+responsive:
+  breakpoints:
+    mobile: 640
+    tablet: 1024
+    desktop: 1280
+    wide: 1536
+
+  rules:
+    # On mobile, list views become card views
+    - breakpoint: "< mobile"
+      entity_list:
+        layout: cards                 # override table with card layout
+        columns_visible: 3            # max fields shown per card
+      sidebar:
+        collapsed: true
+        overlay: true
+
+    # On tablet, reduce visible columns
+    - breakpoint: "< tablet"
+      entity_list:
+        hide_columns: [created_at, updated_at, rating]
+      detail:
+        layout: single_column         # override two_column
+
+# --------------------------------------------------------------------------
+# 9. ACCESSIBILITY
+# --------------------------------------------------------------------------
+accessibility:
+  aria_labels: auto                   # auto-generate from display_names
+  keyboard_navigation: true
+  focus_management: true
+  screen_reader:
+    announce_page_changes: true
+    announce_notifications: true
+  color_contrast: AA                  # AA | AAA
+  reduced_motion: respect_preference  # respect_preference | always_reduce | ignore

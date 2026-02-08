@@ -48,7 +48,7 @@ function formatPhone(value: string): string {
 }
 
 export function StringDisplay({ value, sensitive, mask_pattern, input_type }: StringDisplayProps) {
-  if (value == null) return <span className="text-gray-400">—</span>;
+  if (value == null) return <span style={{ color: 'var(--color-text-faint, #9ca3af)' }}>—</span>;
 
   let display = String(value);
 
@@ -65,5 +65,5 @@ export function StringDisplay({ value, sensitive, mask_pattern, input_type }: St
     display = formatPhone(display);
   }
 
-  return <span className="text-gray-900">{display}</span>;
+  return <span style={{ color: 'var(--color-text, #111827)' }}>{display}</span>;
 }

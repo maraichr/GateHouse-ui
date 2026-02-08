@@ -1,5 +1,6 @@
 # Go
 /serve
+tmp/
 *.exe
 *.exe~
 *.dll
@@ -11,6 +12,11 @@
 # Runtime / Node
 runtime/node_modules/
 runtime/dist/
+
+# Flutter
+flutter_runtime/.dart_tool/
+flutter_runtime/build/
+flutter_runtime/.packages
 
 # IDE
 .vscode/

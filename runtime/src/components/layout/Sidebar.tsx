@@ -9,15 +9,24 @@ interface SidebarProps {
 }
 
 export function Sidebar({ children, appName, theme }: SidebarProps) {
-  const logo = (theme as any)?.logo;
+  const rawLogo = (theme as any)?.logo;
+  const isDark = theme?.mode === 'dark';
+
+  // Resolve logo: can be a string or {light, dark} object
+  let logoUrl: string | undefined;
+  if (typeof rawLogo === 'string') {
+    logoUrl = rawLogo;
+  } else if (rawLogo && typeof rawLogo === 'object') {
+    logoUrl = isDark ? (rawLogo.dark || rawLogo.light) : (rawLogo.light || rawLogo.dark);
+  }
 
   return (
     <div className="flex flex-col h-full">
-      <div className="px-4 py-5 border-b border-gray-100">
-        {logo ? (
-          <img src={logo} alt={appName || 'Logo'} className="h-8 object-contain" />
+      <div className="px-4 py-5" style={{ borderBottom: '1px solid var(--color-border-light, #f3f4f6)' }}>
+        {logoUrl ? (
+          <img src={logoUrl} alt={appName || 'Logo'} className="h-8 object-contain" />
         ) : (
-          <h1 className="text-lg font-semibold text-gray-900 truncate">{appName || 'GateHouse'}</h1>
+          <h1 className="text-lg font-semibold truncate" style={{ color: 'var(--color-text, #111827)' }}>{appName || 'GateHouse'}</h1>
         )}
       </div>
       <nav className="flex-1 overflow-y-auto py-2">

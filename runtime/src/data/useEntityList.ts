@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { apiGet } from './apiClient';
+import type { FilterValue } from '../types';
 
 function resolveDate(val: string): string {
   const today = new Date();
@@ -17,7 +18,7 @@ function resolveDate(val: string): string {
 interface UseEntityListOptions {
   apiResource: string;
   search?: string;
-  filters?: Record<string, any>;
+  filters?: Record<string, FilterValue>;
   sort?: { field: string; order: string };
   page?: number;
   pageSize?: number;
@@ -65,7 +66,7 @@ export function useEntityList({ apiResource, search, filters, sort, page = 1, pa
           params[`filter[${k}]`] = String(v);
         });
       }
-      return apiGet<{ data: any[]; total: number; page: number }>(apiResource, params);
+      return apiGet<{ data: Record<string, any>[]; total: number; page: number }>(apiResource, params);
     },
     placeholderData: (prev) => prev,
   });
