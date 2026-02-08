@@ -74,7 +74,8 @@ export function ExampleSwitcher() {
       <button
         onClick={() => setOpen(!open)}
         disabled={switching}
-        className="flex items-center gap-1.5 px-2.5 py-1.5 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-50"
+        className="flex items-center gap-1.5 px-2.5 py-1.5 text-sm rounded-lg transition-colors disabled:opacity-50"
+        style={{ color: 'var(--color-text-secondary)' }}
         aria-label="Switch example"
         aria-expanded={open}
         aria-haspopup="listbox"
@@ -87,21 +88,20 @@ export function ExampleSwitcher() {
       {open && (
         <ul
           role="listbox"
-          className="absolute right-0 top-full mt-1 w-52 bg-white border border-gray-200 rounded-lg shadow-lg py-1 z-50"
+          className="absolute right-0 top-full mt-1 w-52 border rounded-lg shadow-lg py-1 z-50"
+          style={{ backgroundColor: 'var(--color-surface)', borderColor: 'var(--color-border)' }}
         >
           {examples.map((ex) => (
             <li key={ex.name} role="option" aria-selected={ex.name === current}>
               <button
                 onClick={() => switchExample(ex.name)}
-                className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-50 capitalize ${
-                  ex.name === current
-                    ? 'font-medium'
-                    : 'text-gray-700'
-                }`}
+                className="w-full text-left px-3 py-2 text-sm capitalize transition-colors"
+                onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'var(--color-surface-hover)'; }}
+                onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = ''; }}
                 style={
                   ex.name === current
-                    ? { color: 'var(--color-primary)' }
-                    : undefined
+                    ? { color: 'var(--color-primary)', fontWeight: 500 }
+                    : { color: 'var(--color-text-secondary)' }
                 }
               >
                 {ex.name.replace(/-/g, ' ')}

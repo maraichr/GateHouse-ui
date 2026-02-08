@@ -11,7 +11,6 @@ export function Breadcrumbs() {
 
   const crumbs = segments.map((seg, i) => {
     const path = '/' + segments.slice(0, i + 1).join('/');
-    // Use override if available, otherwise humanize the segment
     const label = overrides[seg] || seg
       .replace(/-/g, ' ')
       .replace(/\b\w/g, (c) => c.toUpperCase());
@@ -21,16 +20,16 @@ export function Breadcrumbs() {
 
   return (
     <nav className="flex items-center gap-1 text-sm">
-      <Link to="/" className="text-gray-400 hover:text-gray-600">
+      <Link to="/" style={{ color: 'var(--color-text-faint)' }}>
         <Home className="h-4 w-4" />
       </Link>
       {crumbs.map((crumb) => (
         <span key={crumb.path} className="flex items-center gap-1">
-          <ChevronRight className="h-3 w-3 text-gray-300" />
+          <ChevronRight className="h-3 w-3" style={{ color: 'var(--color-border)' }} />
           {crumb.isLast ? (
-            <span className="text-gray-700 font-medium">{crumb.label}</span>
+            <span className="font-medium" style={{ color: 'var(--color-text-secondary)' }}>{crumb.label}</span>
           ) : (
-            <Link to={crumb.path} className="text-gray-400 hover:text-gray-600">
+            <Link to={crumb.path} style={{ color: 'var(--color-text-faint)' }}>
               {crumb.label}
             </Link>
           )}

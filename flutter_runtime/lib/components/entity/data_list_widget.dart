@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../models/component_tree.dart';
 import '../../models/types.dart';
+import '../../utils/design_tokens.dart';
 import '../display/field_display.dart';
 
 /// Card-based list for Flutter (Flutter-specific presentation).
@@ -37,10 +38,12 @@ class DataListWidget extends StatelessWidget {
     final fieldMap = {for (final f in fieldList) f.name: f};
     final route = entityRoute ?? '';
 
+    final tokens = context.tokens;
+
     if (data.isEmpty) {
       return Center(
         child: Padding(
-          padding: const EdgeInsets.all(32),
+          padding: EdgeInsets.all(tokens.spaceXl),
           child: Text('No records', style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant)),
         ),
       );
@@ -48,7 +51,7 @@ class DataListWidget extends StatelessWidget {
 
     return ListView.builder(
       itemCount: data.length,
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: EdgeInsets.symmetric(horizontal: tokens.spaceMd, vertical: tokens.spaceXs),
       itemBuilder: (context, index) {
         final record = data[index];
         return _RecordCard(
@@ -77,6 +80,7 @@ class _RecordCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final tokens = context.tokens;
     // Find the link column (title) and other display columns
     ListColumn? titleCol;
     final displayCols = <ListColumn>[];
@@ -93,9 +97,9 @@ class _RecordCard extends StatelessWidget {
         : record.values.first?.toString() ?? '';
 
     return Card(
-      margin: const EdgeInsets.only(bottom: 8),
+      margin: EdgeInsets.only(bottom: tokens.spaceXs),
       child: InkWell(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(tokens.radiusLg),
         onTap: () {
           final id = record['id']?.toString();
           if (id != null && entityRoute.isNotEmpty) {
@@ -103,7 +107,7 @@ class _RecordCard extends StatelessWidget {
           }
         },
         child: Padding(
-          padding: const EdgeInsets.all(16),
+          padding: EdgeInsets.all(tokens.spaceMd),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -114,7 +118,7 @@ class _RecordCard extends StatelessWidget {
                   if (columns.isNotEmpty &&
                       fieldMap[columns.first.field]?.type == 'image') ...[
                     _buildAvatar(context, record[columns.first.field]),
-                    const SizedBox(width: 12),
+                    SizedBox(width: tokens.spaceSm),
                   ],
                   Expanded(
                     child: Text(
@@ -129,11 +133,11 @@ class _RecordCard extends StatelessWidget {
                 ],
               ),
               if (displayCols.isNotEmpty) ...[
-                const SizedBox(height: 12),
+                SizedBox(height: tokens.spaceSm),
                 // Secondary fields in a wrap
                 Wrap(
-                  spacing: 16,
-                  runSpacing: 8,
+                  spacing: tokens.spaceMd,
+                  runSpacing: tokens.spaceXs,
                   children: displayCols
                       .where((col) =>
                           fieldMap[col.field]?.type != 'enum' &&

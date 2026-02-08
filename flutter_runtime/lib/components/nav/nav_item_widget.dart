@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../models/component_tree.dart';
 import '../../providers/nav_badge_provider.dart';
+import '../../utils/design_tokens.dart';
 import '../../utils/icon_mapper.dart';
 import '../../utils/theme_colors.dart';
 
@@ -24,6 +25,7 @@ class NavItemWidget extends ConsumerWidget {
         (path.length > 1 && currentPath.startsWith(path));
 
     final colorScheme = Theme.of(context).colorScheme;
+    final tokens = context.tokens;
 
     // Resolve badge count via provider when badge is a Map config
     Widget? badgeWidget;
@@ -61,7 +63,7 @@ class NavItemWidget extends ConsumerWidget {
       title: Text(
         label,
         style: TextStyle(
-          fontSize: 14,
+          fontSize: tokens.fontBase,
           fontWeight: isActive ? FontWeight.w600 : FontWeight.w400,
           color: isActive ? colorScheme.primary : colorScheme.onSurface,
         ),
@@ -69,8 +71,8 @@ class NavItemWidget extends ConsumerWidget {
       trailing: badgeWidget,
       selected: isActive,
       selectedTileColor: colorScheme.primary.withValues(alpha: 0.08),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(tokens.radiusMd)),
+      contentPadding: EdgeInsets.symmetric(horizontal: tokens.spaceMd, vertical: 0),
       dense: true,
       onTap: () {
         if (path.isNotEmpty) {
@@ -96,23 +98,26 @@ class NavItemWidget extends ConsumerWidget {
 
     return ConstrainedBox(
       constraints: const BoxConstraints(maxWidth: 48),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-        decoration: BoxDecoration(
-          color: bgColor,
-          borderRadius: BorderRadius.circular(10),
-        ),
-        child: Text(
-          text,
-          style: TextStyle(
-            fontSize: 11,
-            fontWeight: FontWeight.w600,
-            color: fgColor,
+      child: Builder(builder: (context) {
+        final tokens = context.tokens;
+        return Container(
+          padding: EdgeInsets.symmetric(horizontal: tokens.spaceXs * 0.75, vertical: 2),
+          decoration: BoxDecoration(
+            color: bgColor,
+            borderRadius: BorderRadius.circular(tokens.radiusSm + 2),
           ),
-          textAlign: TextAlign.center,
-          overflow: TextOverflow.ellipsis,
-        ),
-      ),
+          child: Text(
+            text,
+            style: TextStyle(
+              fontSize: tokens.fontXs,
+              fontWeight: FontWeight.w600,
+              color: fgColor,
+            ),
+            textAlign: TextAlign.center,
+            overflow: TextOverflow.ellipsis,
+          ),
+        );
+      }),
     );
   }
 }

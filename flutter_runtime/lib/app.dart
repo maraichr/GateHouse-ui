@@ -7,12 +7,12 @@ import 'providers/auth_provider.dart';
 import 'renderer/renderer.dart';
 import 'utils/theme_colors.dart';
 import 'utils/config.dart';
+import 'utils/design_tokens.dart';
 import 'components/layout/global_search.dart';
 import 'components/layout/notification_bell.dart';
 import 'components/layout/breadcrumbs_widget.dart';
 
-/// Breakpoint at which the sidebar becomes persistent (matching React's always-visible sidebar).
-const double _kSidebarBreakpoint = 840;
+/// Sidebar width constant (not density-dependent).
 const double _kSidebarWidth = 260;
 
 class GateHouseApp extends ConsumerWidget {
@@ -32,8 +32,8 @@ class GateHouseApp extends ConsumerWidget {
               children: [
                 const CircularProgressIndicator(),
                 const SizedBox(height: 16),
-                Text('Loading spec...',
-                    style: TextStyle(color: Colors.grey.shade600)),
+                Builder(builder: (context) => Text('Loading spec...',
+                    style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant))),
               ],
             ),
           ),
@@ -45,12 +45,12 @@ class GateHouseApp extends ConsumerWidget {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(Icons.error_outline, size: 48, color: Colors.red.shade400),
+                Builder(builder: (context) => Icon(Icons.error_outline, size: 48, color: Theme.of(context).colorScheme.error)),
                 const SizedBox(height: 16),
                 const Text('Failed to load spec'),
                 const SizedBox(height: 8),
-                Text(error.toString(),
-                    style: TextStyle(color: Colors.grey.shade600)),
+                Builder(builder: (context) => Text(error.toString(),
+                    style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant))),
                 const SizedBox(height: 16),
                 ElevatedButton(
                   onPressed: () => ref.invalidate(specProvider),
@@ -203,7 +203,7 @@ class _ResponsiveShell extends ConsumerWidget {
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        final isWide = constraints.maxWidth >= _kSidebarBreakpoint;
+        final isWide = constraints.maxWidth >= GHTokens.breakpointMd;
 
         if (isWide) {
           // Desktop layout: persistent sidebar + header + content
@@ -280,10 +280,13 @@ class _ResponsiveShell extends ConsumerWidget {
 
     return AppBar(
       automaticallyImplyLeading: showMenuButton,
-      title: Text(
-        _pageTitle(),
-        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-      ),
+      title: Builder(builder: (ctx) {
+        final tokens = ctx.tokens;
+        return Text(
+          _pageTitle(),
+          style: TextStyle(fontSize: tokens.fontLg, fontWeight: FontWeight.w600),
+        );
+      }),
       actions: [
         if (showSearch)
           GlobalSearchButton(entities: entities),
@@ -351,13 +354,14 @@ class _HeaderBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final tokens = context.tokens;
     return Container(
       height: 40,
-      padding: const EdgeInsets.symmetric(horizontal: 16),
+      padding: EdgeInsets.symmetric(horizontal: tokens.spaceMd),
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surface,
         border: Border(
-          bottom: BorderSide(color: Colors.grey.shade200),
+          bottom: BorderSide(color: Theme.of(context).colorScheme.outlineVariant),
         ),
       ),
       child: const Row(
@@ -388,38 +392,40 @@ class _PersistentSidebar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final tokens = context.tokens;
+    final colorScheme = Theme.of(context).colorScheme;
     return Material(
-      color: Colors.white,
+      color: colorScheme.surface,
       child: Column(
         children: [
           // Branding header
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+            padding: EdgeInsets.symmetric(horizontal: tokens.spaceMd, vertical: tokens.spaceXl * 0.625),
             decoration: BoxDecoration(
               border: Border(
-                bottom: BorderSide(color: Colors.grey.shade100),
+                bottom: BorderSide(color: colorScheme.outlineVariant),
               ),
             ),
             child: Row(
               children: [
                 if (logoUrl != null && logoUrl!.isNotEmpty) ...[
                   ClipRRect(
-                    borderRadius: BorderRadius.circular(6),
+                    borderRadius: BorderRadius.circular(tokens.radiusMd),
                     child: Image.network(
                       logoUrl!,
                       height: 28,
                       errorBuilder: (_, __, ___) => const SizedBox.shrink(),
                     ),
                   ),
-                  const SizedBox(width: 10),
+                  SizedBox(width: tokens.spaceSm),
                 ],
                 Flexible(
                   child: Text(
                     appName,
                     style: TextStyle(
-                      fontSize: 17,
+                      fontSize: tokens.fontLg + 1,
                       fontWeight: FontWeight.w600,
-                      color: Colors.grey.shade900,
+                      color: colorScheme.onSurface,
                     ),
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -432,7 +438,7 @@ class _PersistentSidebar extends StatelessWidget {
             child: Container(
               decoration: BoxDecoration(
                 border: Border(
-                  right: BorderSide(color: Colors.grey.shade200),
+                  right: BorderSide(color: colorScheme.outlineVariant),
                 ),
               ),
               child: renderNode(sidebarNode, permissions),

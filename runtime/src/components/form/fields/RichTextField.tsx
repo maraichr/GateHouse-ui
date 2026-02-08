@@ -4,6 +4,10 @@ import Placeholder from '@tiptap/extension-placeholder';
 import { Bold, Italic, List, ListOrdered, Heading2, Undo, Redo } from 'lucide-react';
 import { Field } from '../../../types';
 import { cn } from '../../../utils/cn';
+import {
+  labelStyle, requiredMarkerStyle, helpStyle, errorStyle,
+  toolbarBgStyle, toolbarDividerStyle,
+} from '../../../utils/formTokens';
 
 interface RichTextFieldProps {
   field: Field;
@@ -28,12 +32,15 @@ export function RichTextField({ field, value, onChange, error }: RichTextFieldPr
 
   return (
     <div>
-      <label className="block text-sm font-medium text-gray-700 mb-1">
+      <label className="block text-sm font-medium mb-1" style={labelStyle}>
         {field.display_name || field.name}
-        {field.required && <span className="text-red-500 ml-0.5">*</span>}
+        {field.required && <span className="ml-0.5" style={requiredMarkerStyle}>*</span>}
       </label>
-      <div className="border border-gray-300 rounded-lg overflow-hidden focus-within:ring-2 focus-within:ring-blue-500">
-        <div className="flex items-center gap-0.5 px-2 py-1 border-b border-gray-200 bg-gray-50">
+      <div
+        className="border rounded-lg overflow-hidden focus-within:ring-2"
+        style={{ borderColor: 'var(--color-border)', '--tw-ring-color': 'var(--color-primary)' } as React.CSSProperties}
+      >
+        <div className="flex items-center gap-0.5 px-2 py-1 border-b" style={toolbarBgStyle}>
           <ToolbarButton
             active={editor.isActive('bold')}
             onClick={() => editor.chain().focus().toggleBold().run()}
@@ -52,7 +59,7 @@ export function RichTextField({ field, value, onChange, error }: RichTextFieldPr
           >
             <Heading2 className="h-4 w-4" />
           </ToolbarButton>
-          <div className="w-px h-4 bg-gray-300 mx-1" />
+          <div className="w-px h-4 mx-1" style={toolbarDividerStyle} />
           <ToolbarButton
             active={editor.isActive('bulletList')}
             onClick={() => editor.chain().focus().toggleBulletList().run()}
@@ -65,7 +72,7 @@ export function RichTextField({ field, value, onChange, error }: RichTextFieldPr
           >
             <ListOrdered className="h-4 w-4" />
           </ToolbarButton>
-          <div className="w-px h-4 bg-gray-300 mx-1" />
+          <div className="w-px h-4 mx-1" style={toolbarDividerStyle} />
           <ToolbarButton onClick={() => editor.chain().focus().undo().run()}>
             <Undo className="h-4 w-4" />
           </ToolbarButton>
@@ -79,9 +86,9 @@ export function RichTextField({ field, value, onChange, error }: RichTextFieldPr
         />
       </div>
       {field.help_text && !error && (
-        <p className="mt-1 text-xs text-gray-500">{field.help_text}</p>
+        <p className="mt-1 text-xs" style={helpStyle}>{field.help_text}</p>
       )}
-      {error && <p className="mt-1 text-xs text-red-600">{error}</p>}
+      {error && <p className="mt-1 text-xs" style={errorStyle}>{error}</p>}
     </div>
   );
 }
@@ -99,10 +106,23 @@ function ToolbarButton({
     <button
       type="button"
       onClick={onClick}
-      className={cn(
-        'p-1.5 rounded text-gray-500 hover:bg-gray-200 hover:text-gray-700',
-        active && 'bg-gray-200 text-gray-900',
-      )}
+      className={cn('p-1.5 rounded transition-colors')}
+      style={active
+        ? { backgroundColor: 'var(--color-surface-hover)', color: 'var(--color-text)' }
+        : { color: 'var(--color-text-muted)' }
+      }
+      onMouseEnter={(e) => {
+        if (!active) {
+          e.currentTarget.style.backgroundColor = 'var(--color-surface-hover)';
+          e.currentTarget.style.color = 'var(--color-text-secondary)';
+        }
+      }}
+      onMouseLeave={(e) => {
+        if (!active) {
+          e.currentTarget.style.backgroundColor = 'transparent';
+          e.currentTarget.style.color = 'var(--color-text-muted)';
+        }
+      }}
     >
       {children}
     </button>

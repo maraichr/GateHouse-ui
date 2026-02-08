@@ -5,6 +5,7 @@ import '../../api/api_client.dart';
 import '../../models/component_tree.dart';
 import '../../models/types.dart';
 import '../../utils/config.dart';
+import '../../utils/design_tokens.dart';
 import 'fields/form_field_builder.dart';
 
 class SteppedFormWidget extends StatefulWidget {
@@ -59,8 +60,9 @@ class _SteppedFormWidgetState extends State<SteppedFormWidget> {
     final cancelPath = widget.node.stringProp('cancel_path');
     final overrides = widget.node.mapProp('field_overrides') ?? {};
 
+    final tokens = context.tokens;
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(24),
+      padding: EdgeInsets.all(tokens.spaceLg),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -71,7 +73,7 @@ class _SteppedFormWidgetState extends State<SteppedFormWidget> {
                 .headlineSmall
                 ?.copyWith(fontWeight: FontWeight.w700),
           ),
-          const SizedBox(height: 24),
+          SizedBox(height: tokens.spaceLg),
           FormBuilder(
             key: _formKey,
             child: Stepper(
@@ -94,7 +96,7 @@ class _SteppedFormWidgetState extends State<SteppedFormWidget> {
               controlsBuilder: (context, details) {
                 final isLast = _currentStep == steps.length - 1;
                 return Padding(
-                  padding: const EdgeInsets.only(top: 16),
+                  padding: EdgeInsets.only(top: tokens.spaceMd),
                   child: Row(
                     children: [
                       FilledButton(
@@ -110,7 +112,7 @@ class _SteppedFormWidgetState extends State<SteppedFormWidget> {
                               )
                             : Text(isLast ? submitLabel : 'Continue'),
                       ),
-                      const SizedBox(width: 12),
+                      SizedBox(width: tokens.spaceSm),
                       if (_currentStep > 0)
                         OutlinedButton(
                           onPressed: details.onStepCancel,
@@ -138,25 +140,25 @@ class _SteppedFormWidgetState extends State<SteppedFormWidget> {
                       final fieldOverride =
                           overrides[field.name] as Map<String, dynamic>?;
                       return Padding(
-                        padding: const EdgeInsets.only(bottom: 16),
+                        padding: EdgeInsets.only(bottom: tokens.spaceMd),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             if (fieldOverride?['highlight'] == true)
                               Container(
-                                padding: const EdgeInsets.all(8),
-                                margin: const EdgeInsets.only(bottom: 8),
+                                padding: EdgeInsets.all(tokens.spaceXs),
+                                margin: EdgeInsets.only(bottom: tokens.spaceXs),
                                 decoration: BoxDecoration(
-                                  color: Colors.amber.shade50,
-                                  borderRadius: BorderRadius.circular(8),
+                                  color: tokens.warning[50]!,
+                                  borderRadius: BorderRadius.circular(tokens.radiusMd),
                                   border: Border.all(
-                                      color: Colors.amber.shade200),
+                                      color: tokens.warning[200]!),
                                 ),
                                 child: Text(
                                   fieldOverride!['help_text'] as String? ?? '',
                                   style: TextStyle(
-                                    fontSize: 12,
-                                    color: Colors.amber.shade800,
+                                    fontSize: tokens.fontSm,
+                                    color: tokens.warning[800]!,
                                   ),
                                 ),
                               ),
@@ -186,9 +188,9 @@ class _SteppedFormWidgetState extends State<SteppedFormWidget> {
       final result = await _api.create(resource, values);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Created successfully'),
-            backgroundColor: Colors.green,
+          SnackBar(
+            content: const Text('Created successfully'),
+            backgroundColor: context.tokens.success[600]!,
           ),
         );
         final newId = result['id']?.toString();
@@ -203,7 +205,7 @@ class _SteppedFormWidgetState extends State<SteppedFormWidget> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Error: $e'),
-            backgroundColor: Colors.red,
+            backgroundColor: context.tokens.danger[600]!,
           ),
         );
       }

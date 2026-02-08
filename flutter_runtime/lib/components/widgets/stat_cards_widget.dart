@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../models/component_tree.dart';
 import '../../providers/widget_data_provider.dart';
+import '../../utils/design_tokens.dart';
 import '../../utils/theme_colors.dart';
 import '../../utils/icon_mapper.dart';
 
@@ -31,11 +32,12 @@ class StatCardsWidget extends ConsumerWidget {
   Widget _buildCards(BuildContext context, List<dynamic> cards,
       Map<String, dynamic> fetchedData) {
     final colorScheme = Theme.of(context).colorScheme;
+    final tokens = context.tokens;
 
     return LayoutBuilder(
       builder: (context, constraints) {
         final cols = _responsiveCols(constraints.maxWidth, cards.length);
-        final spacing = 12.0;
+        final spacing = tokens.spaceSm;
         final cardWidth =
             (constraints.maxWidth - (cols - 1) * spacing) / cols;
 
@@ -62,11 +64,11 @@ class StatCardsWidget extends ConsumerWidget {
               child: Card(
                 elevation: 0,
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(tokens.radiusMd),
                   side: BorderSide(color: Theme.of(context).dividerColor),
                 ),
                 child: Padding(
-                  padding: const EdgeInsets.all(16),
+                  padding: EdgeInsets.all(tokens.spaceMd),
                   child: Row(
                     children: [
                       Expanded(
@@ -93,10 +95,10 @@ class StatCardsWidget extends ConsumerWidget {
                       ),
                       if (icon != null)
                         Container(
-                          padding: const EdgeInsets.all(8),
+                          padding: EdgeInsets.all(tokens.spaceXs),
                           decoration: BoxDecoration(
                             color: semantic.withAlpha(25),
-                            borderRadius: BorderRadius.circular(8),
+                            borderRadius: BorderRadius.circular(tokens.radiusMd),
                           ),
                           child: Icon(mapIcon(icon),
                               size: 20, color: semantic),
@@ -110,7 +112,7 @@ class StatCardsWidget extends ConsumerWidget {
             if (link != null) {
               return InkWell(
                 onTap: () => context.go(link),
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: BorderRadius.circular(tokens.radiusMd),
                 child: content,
               );
             }
@@ -122,22 +124,25 @@ class StatCardsWidget extends ConsumerWidget {
   }
 
   Widget _buildTrend(num? value, String? direction) {
-    final isUp = direction == 'up' || (value != null && value > 0);
-    final color = isUp ? const Color(0xFF16a34a) : const Color(0xFFdc2626);
-    final icon = isUp ? Icons.arrow_upward : Icons.arrow_downward;
-    final displayValue = value != null ? '${value.abs()}%' : '';
+    return Builder(builder: (context) {
+      final tokens = context.tokens;
+      final isUp = direction == 'up' || (value != null && value > 0);
+      final color = isUp ? tokens.success[600]! : tokens.danger[600]!;
+      final icon = isUp ? Icons.arrow_upward : Icons.arrow_downward;
+      final displayValue = value != null ? '${value.abs()}%' : '';
 
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(icon, size: 12, color: color),
-        const SizedBox(width: 2),
-        Text(
-          displayValue,
-          style: TextStyle(fontSize: 11, color: color, fontWeight: FontWeight.w500),
-        ),
-      ],
-    );
+      return Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 12, color: color),
+          const SizedBox(width: 2),
+          Text(
+            displayValue,
+            style: TextStyle(fontSize: tokens.fontXs, color: color, fontWeight: FontWeight.w500),
+          ),
+        ],
+      );
+    });
   }
 
   int _responsiveCols(double width, int count) {
@@ -172,10 +177,11 @@ class StatCardsWidget extends ConsumerWidget {
   }
 
   Widget _buildShimmer(BuildContext context, int count) {
+    final tokens = context.tokens;
     return LayoutBuilder(
       builder: (context, constraints) {
         final cols = _responsiveCols(constraints.maxWidth, count);
-        final spacing = 12.0;
+        final spacing = tokens.spaceSm;
         final cardWidth =
             (constraints.maxWidth - (cols - 1) * spacing) / cols;
 
@@ -190,7 +196,7 @@ class StatCardsWidget extends ConsumerWidget {
               child: Card(
                 elevation: 0,
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(tokens.radiusMd),
                   side: BorderSide(color: Theme.of(context).dividerColor),
                 ),
                 child: const Center(
@@ -209,16 +215,17 @@ class StatCardsWidget extends ConsumerWidget {
   }
 
   Widget _buildError(BuildContext context) {
+    final tokens = context.tokens;
     return Card(
       elevation: 0,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(tokens.radiusMd),
         side: BorderSide(color: Theme.of(context).colorScheme.error.withValues(alpha: 0.3)),
       ),
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: EdgeInsets.all(tokens.spaceMd),
         child: Text('Failed to load stats',
-            style: TextStyle(color: Theme.of(context).colorScheme.error, fontSize: 12)),
+            style: TextStyle(color: Theme.of(context).colorScheme.error, fontSize: tokens.fontSm)),
       ),
     );
   }

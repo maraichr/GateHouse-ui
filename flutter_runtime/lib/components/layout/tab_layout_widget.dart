@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../models/component_tree.dart';
 import '../../renderer/renderer.dart';
 import '../../providers/auth_provider.dart';
+import '../../utils/design_tokens.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 class TabLayoutWidget extends ConsumerWidget {
@@ -33,7 +34,7 @@ class TabLayoutWidget extends ConsumerWidget {
           TabBar(
             isScrollable: true,
             labelColor: Theme.of(context).colorScheme.primary,
-            unselectedLabelColor: Colors.grey.shade600,
+            unselectedLabelColor: Theme.of(context).colorScheme.onSurfaceVariant,
             indicatorColor: Theme.of(context).colorScheme.primary,
             tabs: tabs.map((tab) {
               final label = tab.props?['label'] as String? ??
@@ -53,8 +54,9 @@ class TabLayoutWidget extends ConsumerWidget {
                         style: TextStyle(color: Colors.grey)),
                   );
                 }
+                final tokens = context.tokens;
                 return SingleChildScrollView(
-                  padding: const EdgeInsets.all(16),
+                  padding: EdgeInsets.all(tokens.spaceMd),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: tabChildren

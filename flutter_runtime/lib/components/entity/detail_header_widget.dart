@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../models/component_tree.dart';
 import '../../models/types.dart';
 import '../../providers/auth_provider.dart';
+import '../../utils/design_tokens.dart';
 import '../../utils/template_expression.dart';
 import '../../utils/theme_colors.dart';
 import '../../utils/guard_evaluator.dart';
@@ -24,10 +25,11 @@ class DetailHeaderWidget extends ConsumerWidget {
     } catch (e, stack) {
       if (kDebugMode) debugPrint('[DetailHeader] Error: $e');
       if (kDebugMode) debugPrint('[DetailHeader] Stack: $stack');
+      final tokens = context.tokens;
       return Card(
-        margin: const EdgeInsets.all(16),
+        margin: EdgeInsets.all(tokens.spaceMd),
         child: Padding(
-          padding: const EdgeInsets.all(20),
+          padding: EdgeInsets.all(tokens.spaceXl * 0.625),
           child: Text('DetailHeader error: $e', style: TextStyle(color: Theme.of(context).colorScheme.error)),
         ),
       );
@@ -75,11 +77,12 @@ class DetailHeaderWidget extends ConsumerWidget {
     final transitions = (rawTransitions is List) ? rawTransitions : <dynamic>[];
 
     final colorScheme = Theme.of(context).colorScheme;
+    final tokens = context.tokens;
 
     return Card(
-      margin: const EdgeInsets.all(16),
+      margin: EdgeInsets.all(tokens.spaceMd),
       child: Padding(
-        padding: const EdgeInsets.all(20),
+        padding: EdgeInsets.all(tokens.spaceXl * 0.625),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -89,7 +92,7 @@ class DetailHeaderWidget extends ConsumerWidget {
               children: [
                 // Avatar
                 _buildAvatar(context, record, config),
-                const SizedBox(width: 16),
+                SizedBox(width: tokens.spaceMd),
                 // Title + subtitle
                 Expanded(
                   child: Column(
@@ -120,12 +123,12 @@ class DetailHeaderWidget extends ConsumerWidget {
 
             // Stats row
             if (config['stats'] != null) ...[
-              const SizedBox(height: 16),
+              SizedBox(height: tokens.spaceMd),
               const Divider(),
-              const SizedBox(height: 12),
+              SizedBox(height: tokens.spaceSm),
               Wrap(
-                spacing: 24,
-                runSpacing: 8,
+                spacing: tokens.spaceLg,
+                runSpacing: tokens.spaceXs,
                 children: (config['stats'] as List<dynamic>).map((stat) {
                   final s = stat as Map<String, dynamic>;
                   final statPerms = s['permissions'] as List<dynamic>?;
@@ -157,11 +160,11 @@ class DetailHeaderWidget extends ConsumerWidget {
 
             // Transition buttons
             if (transitions.isNotEmpty) ...[
-              const SizedBox(height: 16),
+              SizedBox(height: tokens.spaceMd),
               const Divider(),
-              const SizedBox(height: 12),
+              SizedBox(height: tokens.spaceSm),
               Wrap(
-                spacing: 8,
+                spacing: tokens.spaceXs,
                 children: transitions.map((t) {
                   final tr = Transition.fromJson(
                       Map<String, dynamic>.from(t as Map));
@@ -234,6 +237,7 @@ class DetailHeaderWidget extends ConsumerWidget {
     final name = record['name'] ?? record['company_name'] ??
         record['title'] ?? record['display_name'];
     if (name != null && name.toString().isNotEmpty) {
+      final tokens = context.tokens;
       final words = name.toString().trim().split(RegExp(r'\s+'));
       final initials = words.length >= 2
           ? '${words[0][0]}${words[1][0]}'.toUpperCase()
@@ -244,7 +248,7 @@ class DetailHeaderWidget extends ConsumerWidget {
         child: Text(
           initials,
           style: TextStyle(
-            fontSize: 18,
+            fontSize: tokens.fontXl,
             fontWeight: FontWeight.w600,
             color: Theme.of(context).colorScheme.onSurfaceVariant,
           ),
@@ -272,25 +276,26 @@ class DetailHeaderWidget extends ConsumerWidget {
       colorScheme: Theme.of(context).colorScheme,
     );
 
+    final tokens = context.tokens;
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      padding: EdgeInsets.symmetric(horizontal: tokens.spaceSm, vertical: tokens.spaceXs * 0.75),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(tokens.radiusXl),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           if (enumVal.icon != null) ...[
             Icon(mapIcon(enumVal.icon), size: 14, color: color),
-            const SizedBox(width: 4),
+            SizedBox(width: tokens.spaceXs / 2),
           ],
           Text(
             enumVal.label,
             style: TextStyle(
               color: color,
               fontWeight: FontWeight.w600,
-              fontSize: 13,
+              fontSize: tokens.fontSm,
             ),
           ),
         ],
@@ -356,7 +361,7 @@ class DetailHeaderWidget extends ConsumerWidget {
           children: [
             Text(message),
             if (requireComment) ...[
-              const SizedBox(height: 16),
+              SizedBox(height: context.tokens.spaceMd),
               TextField(
                 controller: commentController,
                 decoration: InputDecoration(
@@ -412,6 +417,7 @@ class _StatChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final tokens = context.tokens;
     Widget valueWidget;
     if (displayAs == 'star_rating') {
       final numVal = double.tryParse(value) ?? 0;
@@ -421,14 +427,14 @@ class _StatChip extends StatelessWidget {
           return Icon(
             i < numVal.round() ? Icons.star : Icons.star_border,
             size: 16,
-            color: semanticColor('warning', colorScheme: Theme.of(context).colorScheme),
+            color: tokens.warning[500]!,
           );
         }),
       );
     } else {
       valueWidget = Text(
         format == 'currency' ? '\$$value' : value,
-        style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
+        style: TextStyle(fontWeight: FontWeight.w600, fontSize: tokens.fontLg),
       );
     }
 
@@ -442,7 +448,7 @@ class _StatChip extends StatelessWidget {
                 color: Theme.of(context).colorScheme.onSurfaceVariant,
               ),
         ),
-        const SizedBox(height: 4),
+        SizedBox(height: tokens.spaceXs / 2),
         valueWidget,
       ],
     );

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Field } from '../../../types';
+import { labelStyle, requiredMarkerStyle, inputStyle, mutedIconStyle, helpStyle, errorStyle } from '../../../utils/formTokens';
 
 const CURRENCY_SYMBOLS: Record<string, string> = {
   USD: '$',
@@ -43,12 +44,12 @@ export function CurrencyField({ field, value, onChange, error }: CurrencyFieldPr
 
   return (
     <div>
-      <label htmlFor={field.name} className="block text-sm font-medium text-gray-700 mb-1">
+      <label htmlFor={field.name} className="block text-sm font-medium mb-1" style={labelStyle}>
         {field.display_name || field.name}
-        {field.required && <span className="text-red-500 ml-0.5">*</span>}
+        {field.required && <span className="ml-0.5" style={requiredMarkerStyle}>*</span>}
       </label>
       <div className="relative">
-        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm" aria-hidden="true">
+        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm" style={mutedIconStyle} aria-hidden="true">
           {symbol}
         </span>
         <input
@@ -61,16 +62,17 @@ export function CurrencyField({ field, value, onChange, error }: CurrencyFieldPr
           aria-required={field.required || undefined}
           aria-invalid={!!error || undefined}
           aria-describedby={error ? errorId : field.help_text ? helpId : undefined}
-          className="w-full pl-8 pr-12 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          className="w-full pl-8 pr-12 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:border-transparent"
+          style={{ ...inputStyle, '--tw-ring-color': 'var(--color-primary)' } as React.CSSProperties}
         />
-        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs" aria-hidden="true">
+        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs" style={mutedIconStyle} aria-hidden="true">
           {currency}
         </span>
       </div>
       {field.help_text && !error && (
-        <p id={helpId} className="mt-1 text-xs text-gray-500">{field.help_text}</p>
+        <p id={helpId} className="mt-1 text-xs" style={helpStyle}>{field.help_text}</p>
       )}
-      {error && <p id={errorId} role="alert" className="mt-1 text-xs text-red-600">{error}</p>}
+      {error && <p id={errorId} role="alert" className="mt-1 text-xs" style={errorStyle}>{error}</p>}
     </div>
   );
 }

@@ -6,7 +6,7 @@ interface StarRatingProps {
 }
 
 export function StarRating({ value, max = 5 }: StarRatingProps) {
-  if (value == null) return <span className="text-gray-400">—</span>;
+  if (value == null) return <span style={{ color: 'var(--color-text-faint)' }}>—</span>;
 
   const stars = [];
   for (let i = 1; i <= max; i++) {
@@ -14,7 +14,11 @@ export function StarRating({ value, max = 5 }: StarRatingProps) {
     stars.push(
       <Star
         key={i}
-        className={`h-4 w-4 ${filled ? 'text-amber-400 fill-amber-400' : 'text-gray-200'}`}
+        className="h-4 w-4"
+        style={filled
+          ? { color: 'var(--color-warning)', fill: 'var(--color-warning)' }
+          : { color: 'var(--color-border)' }
+        }
       />
     );
   }
@@ -22,7 +26,7 @@ export function StarRating({ value, max = 5 }: StarRatingProps) {
   return (
     <div className="flex items-center gap-0.5">
       {stars}
-      <span className="ml-1 text-xs text-gray-500">{value.toFixed(1)}</span>
+      <span className="ml-1 text-xs" style={{ color: 'var(--color-text-muted)' }}>{value.toFixed(1)}</span>
     </div>
   );
 }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../models/component_tree.dart';
+import '../../utils/design_tokens.dart';
 import '../../utils/icon_mapper.dart';
 
 class EmptyStateWidget extends StatelessWidget {
@@ -16,9 +17,10 @@ class EmptyStateWidget extends StatelessWidget {
     final message = config['message'] as String?;
     final action = config['action'] as Map<String, dynamic>?;
 
+    final tokens = context.tokens;
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(48),
+        padding: EdgeInsets.all(tokens.spaceXl * 1.5),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -27,7 +29,7 @@ class EmptyStateWidget extends StatelessWidget {
               size: 64,
               color: Theme.of(context).colorScheme.outlineVariant,
             ),
-            const SizedBox(height: 16),
+            SizedBox(height: tokens.spaceMd),
             Text(
               title,
               style: Theme.of(context).textTheme.titleLarge?.copyWith(
@@ -35,7 +37,7 @@ class EmptyStateWidget extends StatelessWidget {
                   ),
             ),
             if (message != null) ...[
-              const SizedBox(height: 8),
+              SizedBox(height: tokens.spaceXs),
               Text(
                 message,
                 style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
@@ -43,7 +45,7 @@ class EmptyStateWidget extends StatelessWidget {
               ),
             ],
             if (action != null) ...[
-              const SizedBox(height: 24),
+              SizedBox(height: tokens.spaceLg),
               FilledButton.icon(
                 onPressed: () {
                   final path = action['path'] as String?;

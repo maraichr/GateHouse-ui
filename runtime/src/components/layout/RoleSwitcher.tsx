@@ -28,13 +28,14 @@ export function RoleSwitcher() {
     <div ref={ref} className="relative">
       <button
         onClick={() => setOpen(!open)}
-        className="p-1.5 rounded-md hover:bg-gray-100 text-gray-500 hover:text-gray-700 transition-colors"
+        className="p-1.5 rounded-md transition-colors"
+        style={{ color: 'var(--color-text-muted)' }}
         title={`Role: ${currentRole}`}
       >
         <UserCircle size={20} />
       </button>
       {open && (
-        <div className="absolute right-0 top-full mt-1 w-52 bg-white border border-gray-200 rounded-lg shadow-lg z-50 py-1">
+        <div className="absolute right-0 top-full mt-1 w-52 border rounded-lg shadow-lg z-50 py-1" style={{ backgroundColor: 'var(--color-surface)', borderColor: 'var(--color-border)' }}>
           {ROLES.map((r) => (
             <button
               key={r.value}
@@ -42,7 +43,10 @@ export function RoleSwitcher() {
                 setRole(r.value);
                 setOpen(false);
               }}
-              className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+              className="w-full flex items-center gap-2 px-3 py-2 text-sm transition-colors"
+              style={{ color: 'var(--color-text-secondary)' }}
+              onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'var(--color-surface-hover)'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = ''; }}
             >
               <span className="w-4 flex-shrink-0">
                 {currentRole === r.value && <Check size={14} />}

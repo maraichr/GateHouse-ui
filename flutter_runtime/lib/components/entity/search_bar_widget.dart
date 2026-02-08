@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import '../../models/component_tree.dart';
+import '../../utils/design_tokens.dart';
 
 class SearchBarWidget extends StatefulWidget {
   final ComponentNode node;
@@ -37,6 +38,7 @@ class _SearchBarWidgetState extends State<SearchBarWidget> {
 
   @override
   Widget build(BuildContext context) {
+    final tokens = context.tokens;
     final config = widget.node.mapProp('config') ?? {};
     final placeholder =
         config['placeholder'] as String? ?? 'Search...';
@@ -58,7 +60,7 @@ class _SearchBarWidgetState extends State<SearchBarWidget> {
             : null,
         isDense: true,
         contentPadding:
-            const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            EdgeInsets.symmetric(horizontal: tokens.spaceSm, vertical: tokens.spaceSm),
       ),
       onChanged: (value) {
         _debounce?.cancel();

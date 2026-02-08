@@ -5,6 +5,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../api/api_client.dart';
 import '../../models/component_tree.dart';
 import '../../utils/config.dart';
+import '../../utils/design_tokens.dart';
 
 /// Provider that fetches entity list data for dashboard table widgets.
 final _entityTableProvider = FutureProvider.family<ListResponse, _EntityTableArgs>(
@@ -75,11 +76,13 @@ class EntityTableWidget extends ConsumerWidget {
 
     final asyncData = ref.watch(_entityTableProvider(args));
 
+    final tokens = context.tokens;
+    final colorScheme = Theme.of(context).colorScheme;
     return Card(
       elevation: 0,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(8),
-        side: BorderSide(color: Colors.grey.shade200),
+        borderRadius: BorderRadius.circular(tokens.radiusMd),
+        side: BorderSide(color: colorScheme.outlineVariant),
       ),
       clipBehavior: Clip.antiAlias,
       child: Column(
@@ -87,10 +90,10 @@ class EntityTableWidget extends ConsumerWidget {
         children: [
           // Header row
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            padding: EdgeInsets.symmetric(horizontal: tokens.spaceMd, vertical: tokens.spaceSm),
             decoration: BoxDecoration(
               border: Border(
-                bottom: BorderSide(color: Colors.grey.shade200),
+                bottom: BorderSide(color: colorScheme.outlineVariant),
               ),
             ),
             child: Row(
@@ -99,7 +102,7 @@ class EntityTableWidget extends ConsumerWidget {
                 Text(title ?? entity ?? 'Records',
                     style: Theme.of(context).textTheme.titleSmall?.copyWith(
                         fontWeight: FontWeight.w600,
-                        color: Colors.grey.shade700)),
+                        color: colorScheme.onSurfaceVariant)),
                 if (link != null)
                   InkWell(
                     onTap: () => context.go(link),
@@ -145,9 +148,9 @@ class EntityTableWidget extends ConsumerWidget {
         columnSpacing: 24,
         horizontalMargin: 16,
         headingTextStyle: TextStyle(
-          fontSize: 11,
+          fontSize: context.tokens.fontXs,
           fontWeight: FontWeight.w600,
-          color: Colors.grey.shade500,
+          color: Theme.of(context).colorScheme.onSurfaceVariant,
           letterSpacing: 0.5,
         ),
         columns: columns
@@ -161,8 +164,8 @@ class EntityTableWidget extends ConsumerWidget {
                       .map((col) => DataCell(
                             Text(_formatCellValue(row[col]),
                                 style: TextStyle(
-                                    fontSize: 13,
-                                    color: Colors.grey.shade700)),
+                                    fontSize: context.tokens.fontSm,
+                                    color: Theme.of(context).colorScheme.onSurface)),
                           ))
                       .toList(),
                 ))
@@ -172,42 +175,51 @@ class EntityTableWidget extends ConsumerWidget {
   }
 
   Widget _buildLoading() {
-    return Padding(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        children: List.generate(
-          3,
-          (_) => Container(
-            height: 32,
-            margin: const EdgeInsets.symmetric(vertical: 4),
-            decoration: BoxDecoration(
-              color: Colors.grey.shade100,
-              borderRadius: BorderRadius.circular(4),
+    return Builder(builder: (context) {
+      final tokens = context.tokens;
+      return Padding(
+        padding: EdgeInsets.all(tokens.spaceMd),
+        child: Column(
+          children: List.generate(
+            3,
+            (_) => Container(
+              height: 32,
+              margin: EdgeInsets.symmetric(vertical: tokens.spaceXs / 2),
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                borderRadius: BorderRadius.circular(tokens.radiusSm),
+              ),
             ),
           ),
         ),
-      ),
-    );
+      );
+    });
   }
 
   Widget _buildEmpty() {
-    return Padding(
-      padding: const EdgeInsets.all(16),
-      child: Center(
-        child: Text('No records',
-            style: TextStyle(fontSize: 13, color: Colors.grey.shade400)),
-      ),
-    );
+    return Builder(builder: (context) {
+      final tokens = context.tokens;
+      return Padding(
+        padding: EdgeInsets.all(tokens.spaceMd),
+        child: Center(
+          child: Text('No records',
+              style: TextStyle(fontSize: tokens.fontSm, color: Theme.of(context).colorScheme.outline)),
+        ),
+      );
+    });
   }
 
   Widget _buildError() {
-    return Padding(
-      padding: const EdgeInsets.all(16),
-      child: Center(
-        child: Text('Failed to load data',
-            style: TextStyle(fontSize: 13, color: Colors.red.shade600)),
-      ),
-    );
+    return Builder(builder: (context) {
+      final tokens = context.tokens;
+      return Padding(
+        padding: EdgeInsets.all(tokens.spaceMd),
+        child: Center(
+          child: Text('Failed to load data',
+              style: TextStyle(fontSize: tokens.fontSm, color: tokens.danger[600]!)),
+        ),
+      );
+    });
   }
 
   List<String> _normalizeColumns(List<dynamic>? columns) {

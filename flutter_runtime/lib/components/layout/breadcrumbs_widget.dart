@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
+import '../../utils/design_tokens.dart';
 import '../../utils/string_utils.dart';
 
 /// Clickable breadcrumbs matching React Breadcrumbs component.
@@ -10,6 +11,7 @@ class BreadcrumbsWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final tokens = context.tokens;
     final path = GoRouterState.of(context).uri.path;
     final segments = path.split('/').where((s) => s.isNotEmpty).toList();
 
@@ -22,7 +24,7 @@ class BreadcrumbsWidget extends StatelessWidget {
         children: [
           // Home icon
           InkWell(
-            borderRadius: BorderRadius.circular(4),
+            borderRadius: BorderRadius.circular(tokens.radiusSm),
             onTap: () => context.go('/dashboard'),
             child: Icon(LucideIcons.house,
                 size: 15, color: Theme.of(context).colorScheme.outline),
@@ -30,7 +32,7 @@ class BreadcrumbsWidget extends StatelessWidget {
           // Crumb segments
           for (var i = 0; i < segments.length; i++) ...[
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 4),
+              padding: EdgeInsets.symmetric(horizontal: tokens.spaceXs / 2),
               child: Icon(LucideIcons.chevronRight,
                   size: 12, color: Theme.of(context).colorScheme.outlineVariant),
             ),
@@ -39,7 +41,7 @@ class BreadcrumbsWidget extends StatelessWidget {
               Text(
                 humanize(segments[i]),
                 style: TextStyle(
-                  fontSize: 13,
+                  fontSize: tokens.fontSm,
                   fontWeight: FontWeight.w500,
                   color: Theme.of(context).colorScheme.onSurface,
                 ),
@@ -47,7 +49,7 @@ class BreadcrumbsWidget extends StatelessWidget {
             else
               // Intermediate crumbs: clickable
               InkWell(
-                borderRadius: BorderRadius.circular(4),
+                borderRadius: BorderRadius.circular(tokens.radiusSm),
                 onTap: () {
                   final targetPath =
                       '/${segments.sublist(0, i + 1).join('/')}';
@@ -56,7 +58,7 @@ class BreadcrumbsWidget extends StatelessWidget {
                 child: Text(
                   humanize(segments[i]),
                   style: TextStyle(
-                    fontSize: 13,
+                    fontSize: tokens.fontSm,
                     color: Theme.of(context).colorScheme.outline,
                   ),
                 ),

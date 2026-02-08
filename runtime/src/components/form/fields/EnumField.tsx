@@ -1,5 +1,6 @@
 import { UseFormRegister, FieldErrors } from 'react-hook-form';
 import { Field } from '../../../types';
+import { labelStyle, requiredMarkerStyle, inputStyle, errorStyle } from '../../../utils/formTokens';
 
 interface EnumFieldProps {
   field: Field;
@@ -15,9 +16,9 @@ export function EnumField({ field, register, errors }: EnumFieldProps) {
 
   return (
     <div>
-      <label htmlFor={useRadio ? undefined : field.name} className="block text-sm font-medium text-gray-700 mb-1">
+      <label htmlFor={useRadio ? undefined : field.name} className="block text-sm font-medium mb-1" style={labelStyle}>
         {field.display_name || field.name}
-        {field.required && <span className="text-red-500 ml-0.5">*</span>}
+        {field.required && <span className="ml-0.5" style={requiredMarkerStyle}>*</span>}
       </label>
       {useRadio ? (
         <div role="radiogroup" aria-label={field.display_name || field.name} className="space-y-2">
@@ -28,7 +29,7 @@ export function EnumField({ field, register, errors }: EnumFieldProps) {
                 value={v.value}
                 {...register(field.name)}
                 aria-required={field.required || undefined}
-                className="text-blue-600 focus:ring-blue-500"
+                style={{ accentColor: 'var(--color-primary)' }}
               />
               <span>{v.label}</span>
             </label>
@@ -41,7 +42,8 @@ export function EnumField({ field, register, errors }: EnumFieldProps) {
           aria-required={field.required || undefined}
           aria-invalid={!!error || undefined}
           aria-describedby={error ? errorId : undefined}
-          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2"
+          style={{ ...inputStyle, '--tw-ring-color': 'var(--color-primary)' } as React.CSSProperties}
         >
           <option value="">Select...</option>
           {values.map((v) => (
@@ -50,7 +52,7 @@ export function EnumField({ field, register, errors }: EnumFieldProps) {
         </select>
       )}
       {error && (
-        <p id={errorId} role="alert" className="mt-1 text-xs text-red-600">{error.message as string}</p>
+        <p id={errorId} role="alert" className="mt-1 text-xs" style={errorStyle}>{error.message as string}</p>
       )}
     </div>
   );

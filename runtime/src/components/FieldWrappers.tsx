@@ -7,7 +7,7 @@ import { ReactNode } from 'react';
 function FieldWrapper({ label, children }: { label?: string; children?: ReactNode }) {
   return (
     <div className="space-y-1">
-      {label && <label className="block text-sm font-medium text-gray-700">{label}</label>}
+      {label && <label className="block text-sm font-medium" style={{ color: 'var(--color-text-secondary)' }}>{label}</label>}
       {children}
     </div>
   );

@@ -33,9 +33,13 @@ export function Avatar({ src, name, size = 'md' }: AvatarProps) {
   return (
     <div
       className={cn(
-        'rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-medium',
+        'rounded-full flex items-center justify-center font-medium',
         sizeClasses[size]
       )}
+      style={{
+        backgroundColor: 'var(--color-primary-100)',
+        color: 'var(--color-primary-700)',
+      }}
     >
       {initials}
     </div>

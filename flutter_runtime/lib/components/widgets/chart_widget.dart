@@ -4,6 +4,7 @@ import 'package:fl_chart/fl_chart.dart';
 import '../../models/component_tree.dart';
 import '../../providers/widget_data_provider.dart';
 import '../../providers/spec_provider.dart';
+import '../../utils/design_tokens.dart';
 import '../../utils/theme_colors.dart';
 
 class ChartWidget extends ConsumerWidget {
@@ -82,26 +83,27 @@ class ChartWidget extends ConsumerWidget {
     } else if (chartType == 'area') {
       chart = _buildLineChart(data, xKey, yKey, true, palette);
     } else if (hasSeries) {
-      chart = _buildSeriesBarChart(data, xKey, yKey, seriesKey!, colorMap, palette, specTheme);
+      chart = _buildSeriesBarChart(data, xKey, yKey, seriesKey, colorMap, palette, specTheme);
     } else {
       chart = _buildBarChart(data, xKey, yKey, colorMap, palette, specTheme);
     }
 
+    final tokens = context.tokens;
     final borderColor = Theme.of(context).dividerColor;
     return Card(
       elevation: 0,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(tokens.radiusMd),
         side: BorderSide(color: borderColor),
       ),
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: EdgeInsets.all(tokens.spaceMd),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             if (title != null)
               Padding(
-                padding: const EdgeInsets.only(bottom: 12),
+                padding: EdgeInsets.only(bottom: tokens.spaceSm),
                 child: Text(title,
                     style: Theme.of(context).textTheme.titleSmall?.copyWith(
                         fontWeight: FontWeight.w600)),
@@ -429,8 +431,8 @@ class ChartWidget extends ConsumerWidget {
     );
   }
 
-  FlGridData _gridData(double maxY, {Color? gridColor}) {
-    final lineColor = gridColor ?? const Color(0xFFE5E7EB);
+  FlGridData _gridData(double maxY, {Color? gridColor, BuildContext? ctx}) {
+    final lineColor = gridColor ?? (ctx != null ? Theme.of(ctx).colorScheme.outlineVariant : const Color(0xFFE5E7EB));
     return FlGridData(
       show: true,
       drawVerticalLine: false,
@@ -447,14 +449,15 @@ class ChartWidget extends ConsumerWidget {
   }
 
   Widget _emptyChart(BuildContext context, String? title, double height) {
+    final tokens = context.tokens;
     return Card(
       elevation: 0,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(tokens.radiusMd),
         side: BorderSide(color: Theme.of(context).dividerColor),
       ),
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: EdgeInsets.all(tokens.spaceMd),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -467,7 +470,7 @@ class ChartWidget extends ConsumerWidget {
               child: Center(
                 child: Text('No chart data available',
                     style:
-                        TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.outline)),
+                        TextStyle(fontSize: tokens.fontSm, color: Theme.of(context).colorScheme.outline)),
               ),
             ),
           ],
@@ -477,14 +480,15 @@ class ChartWidget extends ConsumerWidget {
   }
 
   Widget _loadingChart(BuildContext context, String? title, double height) {
+    final tokens = context.tokens;
     return Card(
       elevation: 0,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(tokens.radiusMd),
         side: BorderSide(color: Theme.of(context).dividerColor),
       ),
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: EdgeInsets.all(tokens.spaceMd),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -505,14 +509,15 @@ class ChartWidget extends ConsumerWidget {
   }
 
   Widget _errorChart(BuildContext context, String? title, double height) {
+    final tokens = context.tokens;
     return Card(
       elevation: 0,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(tokens.radiusMd),
         side: BorderSide(color: Theme.of(context).colorScheme.error.withValues(alpha: 0.3)),
       ),
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: EdgeInsets.all(tokens.spaceMd),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -525,7 +530,7 @@ class ChartWidget extends ConsumerWidget {
               child: Center(
                 child: Text('Failed to load chart',
                     style:
-                        TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.error)),
+                        TextStyle(fontSize: tokens.fontSm, color: Theme.of(context).colorScheme.error)),
               ),
             ),
           ],

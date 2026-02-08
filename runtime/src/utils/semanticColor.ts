@@ -26,6 +26,16 @@ export function resolve(color: string): string {
   return COLOR_VAR[color] || COLOR_VAR.neutral;
 }
 
+/** Resolve a semantic color at a specific shade: returns `var(--color-{name}-{shade})` */
+export function resolveShade(color: string, shade: number): string {
+  // Map aliases to canonical names
+  const canonical: Record<string, string> = {
+    blue: 'info', green: 'success', red: 'danger', amber: 'warning', purple: 'secondary',
+  };
+  const name = canonical[color] || color;
+  return `var(--color-${name}-${shade})`;
+}
+
 /** Map semantic name → CSS custom property name (derived from COLOR_VAR) */
 const SEMANTIC_CSS_VAR: Record<string, string> = Object.fromEntries(
   Object.entries(COLOR_VAR).map(([k, v]) => [k, v.replace(/^var\((.+)\)$/, '$1')])

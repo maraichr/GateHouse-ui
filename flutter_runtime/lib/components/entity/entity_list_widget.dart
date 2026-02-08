@@ -6,6 +6,7 @@ import '../../models/component_tree.dart';
 import '../../models/types.dart';
 import '../../providers/auth_provider.dart';
 import '../../utils/config.dart';
+import '../../utils/design_tokens.dart';
 import '../../utils/icon_mapper.dart';
 import 'data_list_widget.dart';
 import 'search_bar_widget.dart';
@@ -105,8 +106,8 @@ class _EntityListWidgetState extends ConsumerState<EntityListWidget> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(context.tokens.radiusXl)),
       ),
       builder: (context) {
         return DraggableScrollableSheet(
@@ -115,8 +116,9 @@ class _EntityListWidgetState extends ConsumerState<EntityListWidget> {
           maxChildSize: 0.9,
           minChildSize: 0.3,
           builder: (context, scrollController) {
+            final tokens = context.tokens;
             return Padding(
-              padding: const EdgeInsets.all(16),
+              padding: EdgeInsets.all(tokens.spaceMd),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -180,6 +182,7 @@ class _EntityListWidgetState extends ConsumerState<EntityListWidget> {
   }
 
   Widget _buildSidebar() {
+    final tokens = context.tokens;
     return Container(
       width: 260,
       decoration: BoxDecoration(
@@ -193,7 +196,7 @@ class _EntityListWidgetState extends ConsumerState<EntityListWidget> {
           // Search bar inside sidebar
           if (_searchNode != null)
             Padding(
-              padding: const EdgeInsets.fromLTRB(12, 12, 12, 8),
+              padding: EdgeInsets.fromLTRB(tokens.spaceSm, tokens.spaceSm, tokens.spaceSm, tokens.spaceXs),
               child: SearchBarWidget(
                 node: _searchNode!,
                 value: _search,
@@ -209,7 +212,7 @@ class _EntityListWidgetState extends ConsumerState<EntityListWidget> {
           // Filter panel
           Expanded(
             child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 12),
+              padding: EdgeInsets.symmetric(horizontal: tokens.spaceSm),
               child: FilterPanelWidget(
                 node: _filterPanelNode!,
                 activeFilters: _filters,
@@ -226,7 +229,7 @@ class _EntityListWidgetState extends ConsumerState<EntityListWidget> {
           // Reset link
           if (_filters.isNotEmpty)
             Padding(
-              padding: const EdgeInsets.all(12),
+              padding: EdgeInsets.all(tokens.spaceSm),
               child: TextButton(
                 onPressed: () {
                   setState(() {
@@ -244,6 +247,7 @@ class _EntityListWidgetState extends ConsumerState<EntityListWidget> {
   }
 
   Widget _buildHeader(BuildContext context, {bool showFilterButton = false}) {
+    final tokens = context.tokens;
     final permissions = ref.watch(permissionCheckerProvider);
     final title = widget.node.stringProp('title') ?? '';
     final iconName = widget.node.stringProp('icon');
@@ -251,12 +255,12 @@ class _EntityListWidgetState extends ConsumerState<EntityListWidget> {
     final primaryActions = (actions?['primary'] as List<dynamic>?) ?? [];
 
     return Padding(
-      padding: const EdgeInsets.all(16),
+      padding: EdgeInsets.all(tokens.spaceMd),
       child: Row(
         children: [
           if (iconName != null) ...[
             Icon(mapIcon(iconName), size: 24),
-            const SizedBox(width: 8),
+            SizedBox(width: tokens.spaceXs),
           ],
           Expanded(
             child: Text(
@@ -269,7 +273,7 @@ class _EntityListWidgetState extends ConsumerState<EntityListWidget> {
           // Filter button (only on narrow/non-sidebar layouts)
           if (showFilterButton && _filterPanelNode != null)
             Padding(
-              padding: const EdgeInsets.only(left: 8),
+              padding: EdgeInsets.only(left: tokens.spaceXs),
               child: Badge(
                 isLabelVisible: _filters.isNotEmpty,
                 label: Text(_filters.length.toString()),
@@ -289,7 +293,7 @@ class _EntityListWidgetState extends ConsumerState<EntityListWidget> {
               .map((a) {
                 final action = a as Map<String, dynamic>;
                 return Padding(
-                  padding: const EdgeInsets.only(left: 8),
+                  padding: EdgeInsets.only(left: tokens.spaceXs),
                   child: FilledButton.icon(
                     onPressed: () {
                       final nav = action['action'] as Map<String, dynamic>?;
@@ -309,10 +313,11 @@ class _EntityListWidgetState extends ConsumerState<EntityListWidget> {
 
   Widget _buildFilterChips() {
     if (_filters.isEmpty) return const SizedBox.shrink();
+    final tokens = context.tokens;
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
+      padding: EdgeInsets.symmetric(horizontal: tokens.spaceMd),
       child: Wrap(
-        spacing: 8,
+        spacing: tokens.spaceXs,
         children: [
           ..._filters.entries.map((e) {
             final displayValue = e.value is Map
@@ -322,7 +327,7 @@ class _EntityListWidgetState extends ConsumerState<EntityListWidget> {
                     : e.value.toString();
             return Chip(
               label: Text('${e.key}: $displayValue',
-                  style: const TextStyle(fontSize: 12)),
+                  style: TextStyle(fontSize: tokens.fontSm)),
               onDeleted: () {
                 setState(() {
                   _filters.remove(e.key);
@@ -349,12 +354,13 @@ class _EntityListWidgetState extends ConsumerState<EntityListWidget> {
 
   @override
   Widget build(BuildContext context) {
+    final tokens = context.tokens;
     final filterPresets = _filterPanelNode?.listProp('presets') ?? [];
     final useSidebar = _hasSidebarLayout;
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        final isWide = constraints.maxWidth >= 840;
+        final isWide = constraints.maxWidth >= GHTokens.breakpointMd;
         final showSidebar = useSidebar && isWide && _filterPanelNode != null;
 
         if (showSidebar) {
@@ -370,7 +376,7 @@ class _EntityListWidgetState extends ConsumerState<EntityListWidget> {
                     _buildHeader(context),
                     if (filterPresets.isNotEmpty)
                       Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        padding: EdgeInsets.symmetric(horizontal: tokens.spaceMd),
                         child: FilterPresetsWidget(
                           presets: filterPresets,
                           activeFilters: _filters,
@@ -400,7 +406,7 @@ class _EntityListWidgetState extends ConsumerState<EntityListWidget> {
             _buildHeader(context, showFilterButton: true),
             if (_searchNode != null)
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
+                padding: EdgeInsets.symmetric(horizontal: tokens.spaceMd),
                 child: SearchBarWidget(
                   node: _searchNode!,
                   value: _search,
@@ -413,10 +419,10 @@ class _EntityListWidgetState extends ConsumerState<EntityListWidget> {
                   },
                 ),
               ),
-            const SizedBox(height: 8),
+            SizedBox(height: tokens.spaceXs),
             if (filterPresets.isNotEmpty)
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
+                padding: EdgeInsets.symmetric(horizontal: tokens.spaceMd),
                 child: FilterPresetsWidget(
                   presets: filterPresets,
                   activeFilters: _filters,
@@ -488,9 +494,10 @@ class _EntityListWidgetState extends ConsumerState<EntityListWidget> {
   }
 
   Widget _buildPagination(BuildContext context) {
+    final tokens = context.tokens;
     final totalPages = (_total / 25).ceil();
     return Padding(
-      padding: const EdgeInsets.all(16),
+      padding: EdgeInsets.all(tokens.spaceMd),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [

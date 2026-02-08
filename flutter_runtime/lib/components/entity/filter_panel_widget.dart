@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../models/component_tree.dart';
 import '../../models/types.dart';
+import '../../utils/design_tokens.dart';
 import '../../utils/icon_mapper.dart';
 
 class FilterPanelWidget extends StatefulWidget {
@@ -67,14 +68,15 @@ class _FilterPanelWidgetState extends State<FilterPanelWidget> {
       final groupFields = (group['fields'] as List?) ?? [];
 
       if (groupLabel != null) {
+        final tokens = context.tokens;
         widgets.add(Padding(
-          padding: const EdgeInsets.only(bottom: 8, top: 4),
+          padding: EdgeInsets.only(bottom: tokens.spaceXs, top: tokens.spaceXs / 2),
           child: Text(
             groupLabel.toUpperCase(),
             style: TextStyle(
-              fontSize: 11,
+              fontSize: tokens.fontXs,
               fontWeight: FontWeight.w600,
-              color: Colors.grey.shade500,
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
               letterSpacing: 0.5,
             ),
           ),
@@ -91,7 +93,7 @@ class _FilterPanelWidgetState extends State<FilterPanelWidget> {
         final field = fieldMap[fieldName];
 
         widgets.add(Padding(
-          padding: const EdgeInsets.only(bottom: 16),
+          padding: EdgeInsets.only(bottom: context.tokens.spaceMd),
           child: _buildFilterControl(
             filterType,
             fieldName,
@@ -238,12 +240,13 @@ class _CheckboxGroupFilter extends StatelessWidget {
         ? List<String>.from(selected as List)
         : <String>[];
 
+    final tokens = context.tokens;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(label,
-            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500)),
-        const SizedBox(height: 4),
+            style: TextStyle(fontSize: tokens.fontSm, fontWeight: FontWeight.w500)),
+        SizedBox(height: tokens.spaceXs / 2),
         ...options.map((opt) {
           return SizedBox(
             height: 36,
@@ -251,7 +254,7 @@ class _CheckboxGroupFilter extends StatelessWidget {
               dense: true,
               contentPadding: EdgeInsets.zero,
               controlAffinity: ListTileControlAffinity.leading,
-              title: Text(opt.label, style: const TextStyle(fontSize: 13)),
+              title: Text(opt.label, style: TextStyle(fontSize: tokens.fontSm)),
               value: selectedList.contains(opt.value),
               onChanged: (checked) {
                 final newList = List<String>.from(selectedList);
@@ -287,29 +290,30 @@ class _SelectFilter extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final tokens = context.tokens;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(label,
-            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500)),
-        const SizedBox(height: 4),
+            style: TextStyle(fontSize: tokens.fontSm, fontWeight: FontWeight.w500)),
+        SizedBox(height: tokens.spaceXs / 2),
         DropdownButtonFormField<String>(
           value: value,
           isExpanded: true,
-          decoration: const InputDecoration(
+          decoration: InputDecoration(
             isDense: true,
-            contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            border: OutlineInputBorder(),
+            contentPadding: EdgeInsets.symmetric(horizontal: tokens.spaceSm, vertical: tokens.spaceXs),
+            border: const OutlineInputBorder(),
           ),
-          hint: const Text('All', style: TextStyle(fontSize: 13)),
+          hint: Text('All', style: TextStyle(fontSize: tokens.fontSm)),
           items: [
-            const DropdownMenuItem<String>(
+            DropdownMenuItem<String>(
               value: null,
-              child: Text('All', style: TextStyle(fontSize: 13)),
+              child: Text('All', style: TextStyle(fontSize: tokens.fontSm)),
             ),
             ...options.map((opt) => DropdownMenuItem<String>(
                   value: opt.value,
-                  child: Text(opt.label, style: const TextStyle(fontSize: 13)),
+                  child: Text(opt.label, style: TextStyle(fontSize: tokens.fontSm)),
                 )),
           ],
           onChanged: onChanged,
@@ -336,24 +340,25 @@ class _MultiSelectFilter extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final tokens = context.tokens;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(label,
-            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500)),
-        const SizedBox(height: 4),
+            style: TextStyle(fontSize: tokens.fontSm, fontWeight: FontWeight.w500)),
+        SizedBox(height: tokens.spaceXs / 2),
         if (options.isEmpty)
-          const Text('No options available',
-              style: TextStyle(fontSize: 12, color: Colors.grey))
+          Text('No options available',
+              style: TextStyle(fontSize: tokens.fontSm, color: Theme.of(context).colorScheme.outline))
         else
           Wrap(
-            spacing: 6,
-            runSpacing: 4,
+            spacing: tokens.spaceXs * 0.75,
+            runSpacing: tokens.spaceXs / 2,
             children: options.map((opt) {
               final isSelected = selected.contains(opt.value);
               return FilterChip(
                 selected: isSelected,
-                label: Text(opt.label, style: const TextStyle(fontSize: 12)),
+                label: Text(opt.label, style: TextStyle(fontSize: tokens.fontSm)),
                 onSelected: (val) {
                   final newList = List<String>.from(selected);
                   if (val) {
@@ -388,6 +393,7 @@ class _DateRangeFilter extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final tokens = context.tokens;
     final from = value?['from'] as String?;
     final to = value?['to'] as String?;
 
@@ -395,8 +401,8 @@ class _DateRangeFilter extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(label,
-            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500)),
-        const SizedBox(height: 4),
+            style: TextStyle(fontSize: tokens.fontSm, fontWeight: FontWeight.w500)),
+        SizedBox(height: tokens.spaceXs / 2),
         OutlinedButton.icon(
           onPressed: () async {
             final range = await showDateRangePicker(
@@ -420,17 +426,17 @@ class _DateRangeFilter extends StatelessWidget {
           icon: Icon(mapIcon('calendar'), size: 14),
           label: Text(
             from != null && to != null ? '$from \u2013 $to' : 'Select dates',
-            style: const TextStyle(fontSize: 12),
+            style: TextStyle(fontSize: tokens.fontSm),
           ),
           style: OutlinedButton.styleFrom(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            padding: EdgeInsets.symmetric(horizontal: tokens.spaceSm, vertical: tokens.spaceXs * 0.75),
           ),
         ),
         if (from != null || to != null)
           TextButton(
             onPressed: () => onChanged(null),
             child:
-                const Text('Clear', style: TextStyle(fontSize: 11)),
+                Text('Clear', style: TextStyle(fontSize: tokens.fontXs)),
           ),
       ],
     );
@@ -487,45 +493,46 @@ class _NumericRangeFilterState extends State<_NumericRangeFilter> {
 
   @override
   Widget build(BuildContext context) {
+    final tokens = context.tokens;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(widget.label,
-            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500)),
-        const SizedBox(height: 4),
+            style: TextStyle(fontSize: tokens.fontSm, fontWeight: FontWeight.w500)),
+        SizedBox(height: tokens.spaceXs / 2),
         Row(
           children: [
             Expanded(
               child: TextFormField(
                 controller: _minCtrl,
                 keyboardType: TextInputType.number,
-                decoration: const InputDecoration(
+                decoration: InputDecoration(
                   isDense: true,
                   hintText: 'Min',
                   contentPadding:
-                      EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                  border: OutlineInputBorder(),
+                      EdgeInsets.symmetric(horizontal: tokens.spaceSm, vertical: tokens.spaceXs),
+                  border: const OutlineInputBorder(),
                 ),
-                style: const TextStyle(fontSize: 13),
+                style: TextStyle(fontSize: tokens.fontSm),
                 onChanged: (_) => _emitChange(),
               ),
             ),
-            const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 8),
-              child: Text('\u2013', style: TextStyle(color: Colors.grey)),
+            Padding(
+              padding: EdgeInsets.symmetric(horizontal: tokens.spaceXs),
+              child: Text('\u2013', style: TextStyle(color: Theme.of(context).colorScheme.outline)),
             ),
             Expanded(
               child: TextFormField(
                 controller: _maxCtrl,
                 keyboardType: TextInputType.number,
-                decoration: const InputDecoration(
+                decoration: InputDecoration(
                   isDense: true,
                   hintText: 'Max',
                   contentPadding:
-                      EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                  border: OutlineInputBorder(),
+                      EdgeInsets.symmetric(horizontal: tokens.spaceSm, vertical: tokens.spaceXs),
+                  border: const OutlineInputBorder(),
                 ),
-                style: const TextStyle(fontSize: 13),
+                style: TextStyle(fontSize: tokens.fontSm),
                 onChanged: (_) => _emitChange(),
               ),
             ),
@@ -589,19 +596,20 @@ class _RangeSliderFilterState extends State<_RangeSliderFilter> {
 
   @override
   Widget build(BuildContext context) {
+    final tokens = context.tokens;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(widget.label,
-            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500)),
-        const SizedBox(height: 4),
+            style: TextStyle(fontSize: tokens.fontSm, fontWeight: FontWeight.w500)),
+        SizedBox(height: tokens.spaceXs / 2),
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Text(_range.start.toStringAsFixed(1),
-                style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                style: TextStyle(fontSize: tokens.fontSm, color: Theme.of(context).colorScheme.outline)),
             Text(_range.end.toStringAsFixed(1),
-                style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                style: TextStyle(fontSize: tokens.fontSm, color: Theme.of(context).colorScheme.outline)),
           ],
         ),
         RangeSlider(
@@ -635,7 +643,7 @@ class _RangeSliderFilterState extends State<_RangeSliderFilter> {
                 setState(() => _range = RangeValues(widget.min, widget.max));
                 widget.onChanged(null);
               },
-              child: const Text('Clear', style: TextStyle(fontSize: 11)),
+              child: Text('Clear', style: TextStyle(fontSize: tokens.fontXs)),
             ),
           ),
       ],

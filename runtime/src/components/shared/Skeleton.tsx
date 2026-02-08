@@ -32,16 +32,16 @@ export function Skeleton({ variant = 'text', width, height, className }: Skeleto
 /** Pre-built skeleton for a data table with N rows and M columns */
 export function TableSkeleton({ rows = 5, cols = 4 }: { rows?: number; cols?: number }) {
   return (
-    <div aria-hidden="true" className="border border-gray-200 rounded-lg overflow-hidden">
+    <div aria-hidden="true" className="border rounded-lg overflow-hidden" style={{ borderColor: 'var(--color-border)' }}>
       {/* Header */}
-      <div className="bg-gray-50 px-4 py-3 flex gap-4">
+      <div className="px-4 py-3 flex gap-4" style={{ backgroundColor: 'var(--color-bg-alt)' }}>
         {Array.from({ length: cols }).map((_, i) => (
           <Skeleton key={i} width={`${60 + Math.random() * 40}%`} height={12} className="flex-1" />
         ))}
       </div>
       {/* Rows */}
       {Array.from({ length: rows }).map((_, r) => (
-        <div key={r} className="px-4 py-3 flex gap-4 border-t border-gray-100">
+        <div key={r} className="px-4 py-3 flex gap-4 border-t" style={{ borderColor: 'var(--color-border-light)' }}>
           {Array.from({ length: cols }).map((_, c) => (
             <Skeleton key={c} width={`${50 + Math.random() * 50}%`} className="flex-1" />
           ))}
@@ -56,7 +56,7 @@ export function DetailSkeleton() {
   return (
     <div aria-hidden="true" className="animate-fadeIn">
       {/* Header area */}
-      <div className="bg-white border-b border-gray-200 px-6 py-4">
+      <div className="border-b px-6 py-4" style={{ backgroundColor: 'var(--color-surface)', borderColor: 'var(--color-border)' }}>
         <div className="flex items-center gap-4">
           <Skeleton variant="circular" width={64} height={64} />
           <div className="flex-1 space-y-2">
@@ -66,12 +66,12 @@ export function DetailSkeleton() {
         </div>
       </div>
       {/* Tab bar */}
-      <div className="border-b border-gray-200 px-6 py-3 flex gap-6">
+      <div className="border-b px-6 py-3 flex gap-6" style={{ borderColor: 'var(--color-border)' }}>
         <Skeleton width={60} height={14} />
         <Skeleton width={80} height={14} />
         <Skeleton width={70} height={14} />
       </div>
-      {/* Content - 2x2 grid of label/value pairs */}
+      {/* Content */}
       <div className="p-6 grid grid-cols-2 gap-6">
         {Array.from({ length: 4 }).map((_, i) => (
           <div key={i} className="space-y-2">
@@ -89,7 +89,7 @@ export function StatCardsSkeleton({ count = 4 }: { count?: number }) {
   return (
     <div aria-hidden="true" className="grid grid-cols-2 md:grid-cols-4 gap-4">
       {Array.from({ length: count }).map((_, i) => (
-        <div key={i} className="bg-white rounded-lg border border-gray-200 p-4">
+        <div key={i} className="rounded-lg border p-4" style={{ backgroundColor: 'var(--color-surface)', borderColor: 'var(--color-border)' }}>
           <Skeleton width="60%" height={12} />
           <Skeleton width="40%" height={24} className="mt-2" />
         </div>

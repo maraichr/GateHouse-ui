@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
+import '../../utils/design_tokens.dart';
 
 /// Notification bell icon with dropdown (matching React NotificationBell).
 /// Currently a stub that shows "No new notifications".
@@ -36,11 +37,11 @@ class NotificationBell extends StatelessWidget {
               const SizedBox(height: 12),
               Center(
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  padding: EdgeInsets.symmetric(vertical: context.tokens.spaceXs),
                   child: Text(
                     'No new notifications',
                     style: TextStyle(
-                        color: Colors.grey.shade400, fontSize: 13),
+                        color: Theme.of(context).colorScheme.outline, fontSize: context.tokens.fontSm),
                   ),
                 ),
               ),

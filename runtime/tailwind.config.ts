@@ -1,10 +1,48 @@
 import type { Config } from 'tailwindcss';
 import typography from '@tailwindcss/typography';
 
+// Generate shade scale object for a semantic palette
+function shadeScale(name: string) {
+  const scale: Record<string | number, string> = { DEFAULT: `var(--color-${name})` };
+  for (const s of [50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 950]) {
+    scale[s] = `var(--color-${name}-${s})`;
+  }
+  return scale;
+}
+
 export default {
   content: ['./index.html', './src/**/*.{js,ts,jsx,tsx}'],
   theme: {
     extend: {
+      colors: {
+        primary: shadeScale('primary'),
+        secondary: shadeScale('secondary'),
+        accent: shadeScale('accent'),
+        danger: shadeScale('danger'),
+        success: shadeScale('success'),
+        info: shadeScale('info'),
+        warning: shadeScale('warning'),
+        neutral: shadeScale('neutral'),
+        // Surface/text utility colors
+        surface: {
+          DEFAULT: 'var(--color-surface)',
+          hover: 'var(--color-surface-hover)',
+        },
+        bg: {
+          DEFAULT: 'var(--color-bg)',
+          alt: 'var(--color-bg-alt)',
+        },
+        txt: {
+          DEFAULT: 'var(--color-text)',
+          secondary: 'var(--color-text-secondary)',
+          muted: 'var(--color-text-muted)',
+          faint: 'var(--color-text-faint)',
+        },
+        border: {
+          DEFAULT: 'var(--color-border)',
+          light: 'var(--color-border-light)',
+        },
+      },
       spacing: {
         'token-xs': 'var(--spacing-xs, 8px)',
         'token-sm': 'var(--spacing-sm, 12px)',

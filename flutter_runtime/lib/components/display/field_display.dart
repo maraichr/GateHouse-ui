@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_html/flutter_html.dart';
 import '../../models/types.dart';
+import '../../utils/design_tokens.dart';
 import '../../utils/display_rule_evaluator.dart';
 import '../../utils/theme_colors.dart';
 import 'enum_badge_widget.dart';
@@ -21,7 +22,7 @@ class FieldDisplay extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (value == null) {
-      return Text('\u2013', style: TextStyle(color: Colors.grey.shade400));
+      return Text('\u2013', style: TextStyle(color: Theme.of(context).colorScheme.outline));
     }
 
     // Check display rules first
@@ -94,14 +95,15 @@ class FieldDisplay extends StatelessWidget {
 
     // Wrap with display rule styling
     if (ruleResult != null) {
+      final tokens = context.tokens;
       final ruleColor = _ruleStyleColor(ruleResult.style, context);
       return Tooltip(
         message: ruleResult.tooltip ?? '',
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+          padding: EdgeInsets.symmetric(horizontal: tokens.spaceXs * 0.75, vertical: 2),
           decoration: BoxDecoration(
             color: ruleColor.withValues(alpha: 0.1),
-            borderRadius: BorderRadius.circular(4),
+            borderRadius: BorderRadius.circular(tokens.radiusSm),
           ),
           child: DefaultTextStyle.merge(
             style: TextStyle(color: ruleColor, fontWeight: FontWeight.w500),
@@ -160,16 +162,17 @@ class _StarRating extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final tokens = context.tokens;
     final numVal = (value is num) ? value.toDouble() : (double.tryParse(value.toString()) ?? 0);
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: List.generate(5, (i) {
         if (i < numVal.floor()) {
-          return const Icon(Icons.star, size: 16, color: Colors.amber);
+          return Icon(Icons.star, size: 16, color: tokens.warning[500]!);
         } else if (i < numVal) {
-          return const Icon(Icons.star_half, size: 16, color: Colors.amber);
+          return Icon(Icons.star_half, size: 16, color: tokens.warning[500]!);
         } else {
-          return Icon(Icons.star_border, size: 16, color: Colors.grey.shade300);
+          return Icon(Icons.star_border, size: 16, color: Theme.of(context).colorScheme.outlineVariant);
         }
       }),
     );
@@ -204,35 +207,37 @@ class _ArrayDisplay extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (value is! List) return Text(value.toString());
+    final tokens = context.tokens;
+    final colorScheme = Theme.of(context).colorScheme;
     final items = value as List;
     final display = compact ? items.take(2).toList() : items;
     final remaining = items.length - display.length;
 
     return Wrap(
-      spacing: 4,
-      runSpacing: 4,
+      spacing: tokens.spaceXs / 2,
+      runSpacing: tokens.spaceXs / 2,
       children: [
         ...display.map((item) => Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+              padding: EdgeInsets.symmetric(horizontal: tokens.spaceXs, vertical: 2),
               decoration: BoxDecoration(
-                color: Colors.grey.shade100,
-                borderRadius: BorderRadius.circular(12),
+                color: colorScheme.surfaceContainerHighest,
+                borderRadius: BorderRadius.circular(tokens.radiusMd),
               ),
               child: Text(
                 item.toString(),
-                style: const TextStyle(fontSize: 12),
+                style: TextStyle(fontSize: tokens.fontSm),
               ),
             )),
         if (remaining > 0)
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+            padding: EdgeInsets.symmetric(horizontal: tokens.spaceXs, vertical: 2),
             decoration: BoxDecoration(
-              color: Colors.grey.shade50,
-              borderRadius: BorderRadius.circular(12),
+              color: colorScheme.surfaceContainerLow,
+              borderRadius: BorderRadius.circular(tokens.radiusMd),
             ),
             child: Text(
               '+$remaining more',
-              style: TextStyle(fontSize: 12, color: Colors.grey.shade500),
+              style: TextStyle(fontSize: tokens.fontSm, color: colorScheme.onSurfaceVariant),
             ),
           ),
       ],
@@ -247,6 +252,8 @@ class _AvatarDisplay extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final tokens = context.tokens;
     if (value is String && (value as String).isNotEmpty) {
       return CircleAvatar(
         radius: 16,
@@ -258,21 +265,21 @@ class _AvatarDisplay extends StatelessWidget {
     if (initials.isNotEmpty) {
       return CircleAvatar(
         radius: 16,
-        backgroundColor: Colors.grey.shade200,
+        backgroundColor: colorScheme.surfaceContainerHighest,
         child: Text(
           initials,
           style: TextStyle(
-            fontSize: 12,
+            fontSize: tokens.fontSm,
             fontWeight: FontWeight.w600,
-            color: Colors.grey.shade600,
+            color: colorScheme.onSurfaceVariant,
           ),
         ),
       );
     }
     return CircleAvatar(
       radius: 16,
-      backgroundColor: Colors.grey.shade200,
-      child: Icon(Icons.business, size: 16, color: Colors.grey.shade400),
+      backgroundColor: colorScheme.surfaceContainerHighest,
+      child: Icon(Icons.business, size: 16, color: colorScheme.outline),
     );
   }
 
@@ -302,7 +309,7 @@ class _AddressDisplay extends StatelessWidget {
       }
     }
     if (parts.isEmpty) {
-      return Text('\u2013', style: TextStyle(color: Colors.grey.shade400));
+      return Text('\u2013', style: TextStyle(color: Theme.of(context).colorScheme.outline));
     }
     return Text(parts.join(', '));
   }
@@ -331,7 +338,7 @@ class _RichtextDisplay extends StatelessWidget {
         'body': Style(
           margin: Margins.zero,
           padding: HtmlPaddings.zero,
-          fontSize: FontSize(14),
+          fontSize: FontSize(context.tokens.fontBase),
         ),
       },
     );

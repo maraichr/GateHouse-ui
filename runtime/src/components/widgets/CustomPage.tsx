@@ -27,7 +27,7 @@ export function CustomPage({ title, icon, description, layout, columns, children
     <div className="flex flex-col h-full">
       <PageHeader title={title || 'Dashboard'} icon={icon} />
       {description && (
-        <p className="px-6 text-sm text-gray-500">{description}</p>
+        <p className="px-6 text-sm" style={{ color: 'var(--color-text-muted)' }}>{description}</p>
       )}
       <div className="flex-1 p-6">
         <div className={`grid grid-cols-1 ${isGrid ? colClass : ''} gap-6`}>

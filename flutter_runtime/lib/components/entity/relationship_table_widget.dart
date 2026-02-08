@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import '../../api/api_client.dart';
 import '../../utils/config.dart';
+import '../../utils/design_tokens.dart';
 import '../../utils/entity_to_resource.dart';
 import '../../utils/string_utils.dart';
 
@@ -69,11 +70,12 @@ class _RelationshipTableWidgetState extends State<RelationshipTableWidget> {
 
   @override
   Widget build(BuildContext context) {
+    final tokens = context.tokens;
     if (_loading) {
-      return const Center(
+      return Center(
         child: Padding(
-          padding: EdgeInsets.all(32),
-          child: CircularProgressIndicator(),
+          padding: EdgeInsets.all(tokens.spaceXl),
+          child: const CircularProgressIndicator(),
         ),
       );
     }
@@ -81,7 +83,7 @@ class _RelationshipTableWidgetState extends State<RelationshipTableWidget> {
     if (_error) {
       return Center(
         child: Padding(
-          padding: const EdgeInsets.all(32),
+          padding: EdgeInsets.all(tokens.spaceXl),
           child: Text(
             'Unable to load related data',
             style: TextStyle(color: Theme.of(context).colorScheme.outline),
@@ -97,7 +99,7 @@ class _RelationshipTableWidgetState extends State<RelationshipTableWidget> {
     if (_records.isEmpty) {
       return Center(
         child: Padding(
-          padding: const EdgeInsets.all(32),
+          padding: EdgeInsets.all(tokens.spaceXl),
           child: Text(
             'No $displayName found',
             style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
@@ -122,7 +124,7 @@ class _RelationshipTableWidgetState extends State<RelationshipTableWidget> {
                   label: Text(
                     humanize(col),
                     style: TextStyle(
-                      fontSize: 12,
+                      fontSize: tokens.fontSm,
                       fontWeight: FontWeight.w500,
                       color: Theme.of(context).colorScheme.onSurfaceVariant,
                     ),
@@ -135,7 +137,7 @@ class _RelationshipTableWidgetState extends State<RelationshipTableWidget> {
               return DataCell(
                 Text(
                   _formatValue(rec[col]),
-                  style: const TextStyle(fontSize: 13),
+                  style: TextStyle(fontSize: tokens.fontSm),
                 ),
               );
             }).toList(),

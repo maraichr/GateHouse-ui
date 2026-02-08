@@ -12,7 +12,7 @@ import { Avatar } from './display/Avatar';
 export function Page({ title, children }: { title?: string; children?: ReactNode }) {
   return (
     <div>
-      {title && <h2 className="text-xl font-semibold text-gray-900 mb-4">{title}</h2>}
+      {title && <h2 className="text-xl font-semibold mb-4" style={{ color: 'var(--color-text)' }}>{title}</h2>}
       {children}
     </div>
   );

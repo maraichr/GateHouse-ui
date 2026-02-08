@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
-/// Converts spec theme config to Flutter ThemeData
+import 'design_tokens.dart';
+
+/// Converts spec theme config to Flutter ThemeData with GHTokens extension.
 ThemeData buildThemeFromSpec(Map<String, dynamic>? theme) {
   final mode = theme?['mode'] as String? ?? 'light';
   final primaryHex = theme?['primary_color'] as String?;
@@ -16,6 +18,9 @@ ThemeData buildThemeFromSpec(Map<String, dynamic>? theme) {
     brightness: brightness,
   );
 
+  // Build design tokens from the spec theme map.
+  final tokens = GHTokens.fromSpec(theme);
+
   return ThemeData(
     useMaterial3: true,
     colorScheme: colorScheme,
@@ -24,16 +29,20 @@ ThemeData buildThemeFromSpec(Map<String, dynamic>? theme) {
       foregroundColor: colorScheme.onSurface,
       elevation: 0,
     ),
-    cardTheme: const CardThemeData(
+    cardTheme: CardThemeData(
       elevation: 1,
-      margin: EdgeInsets.symmetric(vertical: 4),
+      margin: const EdgeInsets.symmetric(vertical: 4),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(tokens.radiusMd),
+      ),
     ),
     inputDecorationTheme: InputDecorationTheme(
       border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(tokens.radiusSm),
       ),
       contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
     ),
+    extensions: <ThemeExtension<dynamic>>[tokens],
   );
 }
 
@@ -44,8 +53,40 @@ Color? _parseColor(String? hex) {
   return Color(int.parse(hex, radix: 16));
 }
 
-/// Get a color for a semantic name (success, danger, warning, info, neutral)
-Color semanticColor(String? name, {required ColorScheme colorScheme}) {
+/// Get a color for a semantic name (success, danger, warning, info, neutral).
+///
+/// When a [GHTokens] instance is available (via [tokens] parameter), the shade
+/// 600 from the token palette is used instead of the hardcoded Material colors.
+/// This keeps semantic colors consistent with the spec theme.
+Color semanticColor(
+  String? name, {
+  required ColorScheme colorScheme,
+  GHTokens? tokens,
+}) {
+  // If tokens are available, resolve from the palette shade 600.
+  if (tokens != null) {
+    switch (name) {
+      case 'success':
+        return tokens.success[600]!;
+      case 'danger':
+      case 'error':
+        return tokens.danger[600]!;
+      case 'warning':
+        return tokens.warning[600]!;
+      case 'info':
+        return tokens.info[600]!;
+      case 'neutral':
+        return tokens.neutral[600]!;
+      case 'primary':
+        return tokens.primary[600]!;
+      case 'secondary':
+        return tokens.secondary[600]!;
+      case 'accent':
+        return tokens.accent[600]!;
+    }
+  }
+
+  // Fallback to hardcoded Material colors when tokens are not provided.
   switch (name) {
     case 'success':
       return Colors.green.shade600;
@@ -65,7 +106,7 @@ Color semanticColor(String? name, {required ColorScheme colorScheme}) {
   }
 }
 
-/// Semantic name → spec theme key mapping
+/// Semantic name -> spec theme key mapping
 const _semanticToThemeKey = <String, String>{
   'primary': 'primary_color',
   'secondary': 'secondary_color',

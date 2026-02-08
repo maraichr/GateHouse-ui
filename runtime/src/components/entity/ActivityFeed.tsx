@@ -30,7 +30,6 @@ interface ActivityFeedProps {
 
 function resolveSource(source: string, parentId?: string): string {
   if (!source) return '';
-  // "api:GET /subcontractors/{{id}}/activity" → "/subcontractors/{id}/activity"
   let path = source.replace(/^api:(?:GET\s+)?/i, '');
   if (parentId) {
     path = path.replace(/\{\{id\}\}/g, parentId);
@@ -67,11 +66,11 @@ export function ActivityFeed({ source, parentId, item_template }: ActivityFeedPr
   }
 
   if (isError) {
-    return <div className="text-center py-8 text-gray-400 text-sm">Unable to load activity feed.</div>;
+    return <div className="text-center py-8 text-sm" style={{ color: 'var(--color-text-faint)' }}>Unable to load activity feed.</div>;
   }
 
   if (items.length === 0) {
-    return <div className="text-center py-8 text-gray-500 text-sm">No activity yet.</div>;
+    return <div className="text-center py-8 text-sm" style={{ color: 'var(--color-text-muted)' }}>No activity yet.</div>;
   }
 
   return (
@@ -84,27 +83,24 @@ export function ActivityFeed({ source, parentId, item_template }: ActivityFeedPr
         const timestamp = item.created_at || '';
 
         return (
-          <div key={item.id || i} className="flex gap-3 py-3 border-b border-gray-100 last:border-0">
-            {/* Timeline dot + avatar */}
+          <div key={item.id || i} className="flex gap-3 py-3 border-b last:border-0" style={{ borderColor: 'var(--color-border-light)' }}>
             <div className="flex-shrink-0 relative">
               <Avatar src={userAvatar} name={userName} size="sm" />
-              {/* Connecting line */}
               {i < items.length - 1 && (
-                <div className="absolute left-1/2 top-full w-px h-3 bg-gray-200 -translate-x-1/2" aria-hidden="true" />
+                <div className="absolute left-1/2 top-full w-px h-3 -translate-x-1/2" style={{ backgroundColor: 'var(--color-border)' }} aria-hidden="true" />
               )}
             </div>
 
-            {/* Content */}
             <div className="flex-1 min-w-0">
-              <p className="text-sm text-gray-900">
+              <p className="text-sm" style={{ color: 'var(--color-text)' }}>
                 <span className="font-medium">{userName}</span>
-                {action && <span className="text-gray-600"> {action}</span>}
+                {action && <span style={{ color: 'var(--color-text-secondary)' }}> {action}</span>}
               </p>
               {details && (
-                <p className="text-sm text-gray-500 mt-0.5">{details}</p>
+                <p className="text-sm mt-0.5" style={{ color: 'var(--color-text-muted)' }}>{details}</p>
               )}
               {timestamp && (
-                <p className="text-xs text-gray-400 mt-1">
+                <p className="text-xs mt-1" style={{ color: 'var(--color-text-faint)' }}>
                   <DateDisplay value={timestamp} format="relative" />
                 </p>
               )}

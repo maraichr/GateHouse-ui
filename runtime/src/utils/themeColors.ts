@@ -52,6 +52,51 @@ const ELEVATION: Record<string, Record<string, string>> = {
   },
 };
 
+// Shade scale: mix percentages for generating 50-950 from a seed color (at 600)
+// Lighter shades mix toward white, darker shades mix toward black
+const SHADE_MIX: Record<number, { with: 'white' | 'black'; pct: number }> = {
+  50:  { with: 'white', pct: 90 },
+  100: { with: 'white', pct: 80 },
+  200: { with: 'white', pct: 65 },
+  300: { with: 'white', pct: 45 },
+  400: { with: 'white', pct: 25 },
+  500: { with: 'white', pct: 10 },
+  600: { with: 'white', pct: 0 },  // seed color
+  700: { with: 'black', pct: 15 },
+  800: { with: 'black', pct: 30 },
+  900: { with: 'black', pct: 45 },
+  950: { with: 'black', pct: 60 },
+};
+
+const SHADES = [50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 950] as const;
+
+/** Generate CSS custom properties for a full shade scale using color-mix(in oklch) */
+function generateShadeScale(seedHex: string, name: string): Record<string, string> {
+  const vars: Record<string, string> = {};
+  for (const shade of SHADES) {
+    const mix = SHADE_MIX[shade];
+    if (mix.pct === 0) {
+      vars[`--color-${name}-${shade}`] = seedHex;
+    } else {
+      vars[`--color-${name}-${shade}`] = `color-mix(in oklch, ${seedHex} ${100 - mix.pct}%, ${mix.with})`;
+    }
+  }
+  return vars;
+}
+
+const SEMANTIC_PALETTES = ['primary', 'secondary', 'accent', 'danger', 'success', 'info', 'warning'] as const;
+
+const NEUTRAL_SHADES_LIGHT: Record<number, string> = {
+  50: '#f9fafb', 100: '#f3f4f6', 200: '#e5e7eb', 300: '#d1d5db',
+  400: '#9ca3af', 500: '#6b7280', 600: '#4b5563', 700: '#374151',
+  800: '#1f2937', 900: '#111827', 950: '#030712',
+};
+const NEUTRAL_SHADES_DARK: Record<number, string> = {
+  50: '#0f172a', 100: '#1e293b', 200: '#334155', 300: '#475569',
+  400: '#64748b', 500: '#94a3b8', 600: '#cbd5e1', 700: '#e2e8f0',
+  800: '#f1f5f9', 900: '#f8fafc', 950: '#ffffff',
+};
+
 export function themeToVars(theme?: Partial<ThemeConfig>): Record<string, string> {
   const t = theme || {};
   const dark = t.mode === 'dark';
@@ -69,17 +114,43 @@ export function themeToVars(theme?: Partial<ThemeConfig>): Record<string, string
   const elevation = ELEVATION[t.elevation || 'md'] || ELEVATION.md;
   const surfaceStyle = t.surface_style || 'bordered';
 
-  return {
-    // Colors
-    '--color-primary': t.primary_color || '#1E40AF',
-    '--color-secondary': t.secondary_color || '#7C3AED',
-    '--color-accent': t.accent_color || '#F59E0B',
-    '--color-danger': t.danger_color || '#DC2626',
-    '--color-success': t.success_color || '#16A34A',
-    '--color-info': t.info_color || '#3B82F6',
-    '--color-warning': t.warning_color || '#F59E0B',
+  // Seed colors for shade scales
+  const seeds: Record<string, string> = {
+    primary: t.primary_color || '#1E40AF',
+    secondary: t.secondary_color || '#7C3AED',
+    accent: t.accent_color || '#F59E0B',
+    danger: t.danger_color || '#DC2626',
+    success: t.success_color || '#16A34A',
+    info: t.info_color || '#3B82F6',
+    warning: t.warning_color || '#F59E0B',
+  };
 
-    // Radius — --radius is for small UI (badges, buttons); --radius-lg is capped for containers
+  // Generate shade scales for all semantic palettes
+  let shadeVars: Record<string, string> = {};
+  for (const name of SEMANTIC_PALETTES) {
+    Object.assign(shadeVars, generateShadeScale(seeds[name], name));
+  }
+
+  // Neutral shades use explicit values (not color-mix) for precision
+  const neutralShades = dark ? NEUTRAL_SHADES_DARK : NEUTRAL_SHADES_LIGHT;
+  for (const shade of SHADES) {
+    shadeVars[`--color-neutral-${shade}`] = neutralShades[shade];
+  }
+
+  return {
+    // Base colors (keep for backward compat)
+    '--color-primary': seeds.primary,
+    '--color-secondary': seeds.secondary,
+    '--color-accent': seeds.accent,
+    '--color-danger': seeds.danger,
+    '--color-success': seeds.success,
+    '--color-info': seeds.info,
+    '--color-warning': seeds.warning,
+
+    // Full shade scales (~88 vars)
+    ...shadeVars,
+
+    // Radius
     '--radius': radiusBase,
     '--radius-sm': RADIUS_MAP[borderRadius === 'none' ? 'none' : 'sm'] || '0.25rem',
     '--radius-lg': borderRadius === 'full' ? '1rem' : borderRadius === 'none' ? '0' : (RADIUS_MAP['lg'] || '0.5rem'),
