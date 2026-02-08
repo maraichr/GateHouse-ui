@@ -44,6 +44,17 @@ function resolveFromColorMap(label: string, colorMap: Record<string, string>): s
   return resolveSemanticHex(semantic);
 }
 
+/** Format axis values: use "k" suffix for thousands */
+function formatAxisValue(value: number): string {
+  if (value >= 10000) return `${(value / 1000).toFixed(0)}k`;
+  if (value >= 1000) return `${(value / 1000).toFixed(1)}k`;
+  if (value === Math.round(value)) return String(value);
+  return value.toFixed(1);
+}
+
+/** Balanced chart margin — right margin matches typical Y-axis width */
+const balancedMargin = { top: 5, right: 30, left: 0, bottom: 5 };
+
 /** Pivot series data: [{month:"Jan", type:"A", count:3}, ...] → [{month:"Jan", A:3, B:2}, ...] */
 function pivotSeriesData(
   data: any[],
@@ -139,28 +150,28 @@ export function ChartWidget({
             <Legend />
           </PieChart>
         ) : chart_type === 'line' ? (
-          <LineChart data={chartData}>
+          <LineChart data={chartData} margin={balancedMargin}>
             <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
             <XAxis dataKey={xKey} tick={{ fontSize: 12, fill: textColor }} />
-            <YAxis tick={{ fontSize: 12, fill: textColor }} />
+            <YAxis tick={{ fontSize: 12, fill: textColor }} tickFormatter={formatAxisValue} />
             <Tooltip />
             <Line type="monotone" dataKey={yKey} stroke={palette[0]} strokeWidth={2} />
           </LineChart>
         ) : chart_type === 'area' ? (
-          <AreaChart data={chartData}>
+          <AreaChart data={chartData} margin={balancedMargin}>
             <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
             <XAxis dataKey={xKey} tick={{ fontSize: 12, fill: textColor }} />
-            <YAxis tick={{ fontSize: 12, fill: textColor }} />
+            <YAxis tick={{ fontSize: 12, fill: textColor }} tickFormatter={formatAxisValue} />
             <Tooltip />
             <Area type="monotone" dataKey={yKey} stroke={palette[0]} fill={palette[0]} fillOpacity={0.2} />
           </AreaChart>
         ) : hasSeries ? (
           <SeriesBarChart data={chartData} xKey={xKey} yKey={yKey} seriesKey={seriesKey!} colorMap={colorMap} palette={palette} gridColor={gridColor} textColor={textColor} />
         ) : (
-          <BarChart data={chartData}>
+          <BarChart data={chartData} margin={balancedMargin}>
             <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
             <XAxis dataKey={xKey} tick={{ fontSize: 12, fill: textColor }} />
-            <YAxis tick={{ fontSize: 12, fill: textColor }} />
+            <YAxis tick={{ fontSize: 12, fill: textColor }} tickFormatter={formatAxisValue} />
             <Tooltip />
             <Bar dataKey={yKey} fill={palette[0]} radius={[4, 4, 0, 0]}>
               {cellColors && chartData.map((_: any, i: number) => (
@@ -193,10 +204,10 @@ function SeriesBarChart({
   );
 
   return (
-    <BarChart data={pivoted}>
+    <BarChart data={pivoted} margin={balancedMargin}>
       <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
       <XAxis dataKey={xKey} tick={{ fontSize: 12, fill: textColor }} />
-      <YAxis tick={{ fontSize: 12, fill: textColor }} />
+      <YAxis tick={{ fontSize: 12, fill: textColor }} tickFormatter={formatAxisValue} />
       <Tooltip />
       <Legend />
       {seriesNames.map((name, i) => {

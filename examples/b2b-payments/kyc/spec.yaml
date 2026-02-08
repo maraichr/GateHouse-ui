@@ -1,0 +1,444 @@
+# ============================================================================
+# KYC / Compliance Service — Know Your Customer reviews & sanctions screening
+# ============================================================================
+
+app:
+  name: "paybridge-kyc"
+  display_name: "PayBridge Compliance"
+  version: "1.0.0"
+  description: "KYC verification and sanctions screening"
+
+  theme:
+    mode: light
+    primary_color: "#4338CA"
+
+  i18n:
+    default_locale: en-US
+    currency: USD
+
+auth:
+  provider: oidc
+  roles:
+    admin:
+      display_name: "Administrator"
+    compliance_officer:
+      display_name: "Compliance Officer"
+
+shell:
+  layout: sidebar
+  sidebar:
+    position: left
+
+navigation:
+  items:
+    - id: kyc_reviews
+      label: "KYC Reviews"
+      icon: shield-check
+      path: /kyc-reviews
+      entity: KYCReview
+      badge:
+        type: count
+        filter: { status: [pending, in_progress] }
+        color: warning
+
+    - id: sanctions
+      label: "Sanctions Screening"
+      icon: alert-triangle
+      path: /sanctions-screenings
+      entity: SanctionsScreening
+      badge:
+        type: count
+        filter: { status: flagged }
+        color: danger
+
+entities:
+  # ---- KYC Review ----
+  - name: KYCReview
+    display_name: "KYC Review"
+    display_name_plural: "KYC Reviews"
+    icon: shield-check
+    api_resource: /kyc-reviews
+    label_field: customer_name
+    status_field: status
+
+    fields:
+      - name: id
+        label: "ID"
+        type: string
+        primary_key: true
+        hidden: true
+
+      - name: customer_id
+        label: "Customer ID"
+        type: reference
+        entity: Customer
+        hidden: true
+
+      - name: customer_name
+        label: "Customer"
+        type: string
+        required: true
+
+      - name: review_type
+        label: "Review Type"
+        type: enum
+        required: true
+        values:
+          - { value: initial, label: "Initial", color: info }
+          - { value: periodic, label: "Periodic", color: secondary }
+          - { value: enhanced, label: "Enhanced Due Diligence", color: warning }
+          - { value: triggered, label: "Triggered Review", color: danger }
+
+      - name: risk_level
+        label: "Risk Level"
+        type: enum
+        values:
+          - { value: low, label: "Low", color: success }
+          - { value: medium, label: "Medium", color: warning }
+          - { value: high, label: "High", color: danger }
+          - { value: critical, label: "Critical", color: danger }
+
+      - name: assigned_to
+        label: "Assigned To"
+        type: string
+
+      - name: initiated_at
+        label: "Initiated"
+        type: date
+
+      - name: due_date
+        label: "Due Date"
+        type: date
+        display_rules:
+          - condition: "value < today + 7d"
+            style: danger
+
+      - name: completed_at
+        label: "Completed"
+        type: date
+
+      - name: documents_verified
+        label: "Docs Verified"
+        type: enum
+        values:
+          - { value: "true", label: "Yes", color: success }
+          - { value: "false", label: "No", color: secondary }
+          - { value: partial, label: "Partial", color: warning }
+
+      - name: beneficial_owners_checked
+        label: "UBO Check"
+        type: enum
+        values:
+          - { value: "true", label: "Complete", color: success }
+          - { value: "false", label: "Pending", color: warning }
+
+      - name: notes
+        label: "Notes"
+        type: richtext
+
+      - name: status
+        label: "Status"
+        type: enum
+        required: true
+        values:
+          - { value: pending, label: "Pending", color: secondary }
+          - { value: in_progress, label: "In Progress", color: info }
+          - { value: passed, label: "Passed", color: success }
+          - { value: failed, label: "Failed", color: danger }
+          - { value: escalated, label: "Escalated", color: warning }
+
+    state_machine:
+      field: status
+      initial: pending
+
+      transitions:
+        - name: start_review
+          label: "Start Review"
+          from: [pending]
+          to: in_progress
+          icon: play
+          color: info
+          permissions: [admin, compliance_officer]
+
+        - name: pass
+          label: "Pass"
+          from: [in_progress]
+          to: passed
+          icon: check-circle
+          color: success
+          permissions: [admin, compliance_officer]
+          confirmation:
+            title: "Pass KYC Review"
+            message: "Mark this KYC review as passed?"
+            style: info
+          guards:
+            - name: documents_verified_check
+              message: "All documents must be verified before passing"
+              field_check: documents_verified
+              expected:
+                value: "true"
+
+        - name: fail
+          label: "Fail"
+          from: [in_progress]
+          to: failed
+          icon: x-circle
+          color: danger
+          permissions: [admin, compliance_officer]
+          confirmation:
+            title: "Fail KYC Review"
+            message: "Fail this KYC review? The customer may be suspended."
+            style: danger
+
+        - name: escalate
+          label: "Escalate"
+          from: [in_progress]
+          to: escalated
+          icon: arrow-up-right
+          color: warning
+          permissions: [admin, compliance_officer]
+
+        - name: return_to_review
+          label: "Return to Review"
+          from: [escalated]
+          to: in_progress
+          icon: arrow-down-left
+          color: info
+          permissions: [admin]
+
+    views:
+      list:
+        title: "KYC Reviews"
+        columns:
+          - { field: customer_name, sortable: true }
+          - { field: review_type }
+          - { field: risk_level }
+          - { field: assigned_to }
+          - { field: due_date, sortable: true }
+          - { field: status, sortable: true }
+        default_sort: { field: due_date, order: asc }
+        search:
+          fields: [customer_name, assigned_to]
+          placeholder: "Search reviews..."
+        filters:
+          layout: sidebar
+          groups:
+            - label: "Filter Reviews"
+              fields:
+                - field: status
+                  type: checkbox_group
+                - field: risk_level
+                  type: checkbox_group
+                - field: review_type
+                  type: select
+                - field: due_date
+                  type: date_range
+                  presets:
+                    - label: "Overdue"
+                      range: [null, "today"]
+        empty:
+          icon: shield-check
+          title: "No KYC reviews"
+          message: "All reviews have been processed."
+
+      detail:
+        header:
+          title: "KYC Review — {{ customer_name }}"
+          subtitle: "{{ review_type | uppercase }} · Risk: {{ risk_level }}"
+          stats:
+            - label: "Days Open"
+              value: "{{ initiated_at | days_since }}"
+            - label: "Docs Verified"
+              value: "{{ documents_verified }}"
+
+        tabs:
+          - id: overview
+            label: "Overview"
+            icon: info
+            sections:
+              - title: "Review Details"
+                layout: two_column
+                fields:
+                  - customer_name
+                  - customer_id
+                  - review_type
+                  - risk_level
+                  - assigned_to
+
+              - title: "Timeline"
+                layout: two_column
+                fields:
+                  - initiated_at
+                  - due_date
+                  - completed_at
+
+              - title: "Checks"
+                layout: two_column
+                fields:
+                  - documents_verified
+                  - beneficial_owners_checked
+
+          - id: notes
+            label: "Notes"
+            icon: message-square
+            sections:
+              - title: "Review Notes"
+                fields:
+                  - notes
+
+  # ---- Sanctions Screening ----
+  - name: SanctionsScreening
+    display_name: "Sanctions Screening"
+    display_name_plural: "Sanctions Screenings"
+    icon: alert-triangle
+    api_resource: /sanctions-screenings
+    label_field: entity_name
+    status_field: status
+
+    fields:
+      - name: id
+        label: "ID"
+        type: string
+        primary_key: true
+        hidden: true
+
+      - name: entity_name
+        label: "Screened Entity"
+        type: string
+        required: true
+
+      - name: entity_type
+        label: "Entity Type"
+        type: enum
+        values:
+          - { value: business, label: "Business", color: primary }
+          - { value: individual, label: "Individual", color: info }
+
+      - name: customer_id
+        label: "Customer ID"
+        type: reference
+        entity: Customer
+
+      - name: screening_date
+        label: "Screening Date"
+        type: date
+
+      - name: lists_checked
+        label: "Lists Checked"
+        type: string
+
+      - name: result
+        label: "Result"
+        type: enum
+        values:
+          - { value: clear, label: "Clear", color: success }
+          - { value: potential_match, label: "Potential Match", color: warning }
+          - { value: confirmed_match, label: "Confirmed Match", color: danger }
+
+      - name: match_details
+        label: "Match Details"
+        type: richtext
+
+      - name: resolved_by
+        label: "Resolved By"
+        type: string
+
+      - name: resolved_at
+        label: "Resolved"
+        type: date
+
+      - name: status
+        label: "Status"
+        type: enum
+        required: true
+        values:
+          - { value: pending, label: "Pending", color: secondary }
+          - { value: clear, label: "Clear", color: success }
+          - { value: flagged, label: "Flagged", color: danger }
+          - { value: resolved, label: "Resolved", color: info }
+
+    state_machine:
+      field: status
+      initial: pending
+
+      transitions:
+        - name: mark_clear
+          label: "Mark Clear"
+          from: [pending]
+          to: clear
+          icon: check
+          color: success
+          permissions: [admin, compliance_officer]
+
+        - name: flag
+          label: "Flag"
+          from: [pending]
+          to: flagged
+          icon: flag
+          color: danger
+          permissions: [admin, compliance_officer]
+          confirmation:
+            title: "Flag Entity"
+            message: "Flag this entity for sanctions match?"
+            style: danger
+
+        - name: resolve
+          label: "Resolve"
+          from: [flagged]
+          to: resolved
+          icon: check-circle
+          color: success
+          permissions: [admin, compliance_officer]
+
+    views:
+      list:
+        title: "Sanctions Screenings"
+        columns:
+          - { field: entity_name, sortable: true }
+          - { field: entity_type }
+          - { field: screening_date, sortable: true }
+          - { field: result }
+          - { field: status, sortable: true }
+        default_sort: { field: screening_date, order: desc }
+        search:
+          fields: [entity_name]
+          placeholder: "Search screenings..."
+        filters:
+          layout: toolbar
+          groups:
+            - label: "Filters"
+              fields:
+                - field: status
+                  type: select
+                - field: result
+                  type: select
+        empty:
+          icon: shield
+          title: "No screenings"
+          message: "Screenings are triggered automatically during onboarding and periodically."
+
+      detail:
+        header:
+          title: "{{ entity_name }}"
+          subtitle: "{{ entity_type }} · Screened {{ screening_date }}"
+
+        tabs:
+          - id: overview
+            label: "Details"
+            icon: info
+            sections:
+              - title: "Screening Information"
+                layout: two_column
+                fields:
+                  - entity_name
+                  - entity_type
+                  - customer_id
+                  - screening_date
+                  - lists_checked
+                  - result
+
+              - title: "Resolution"
+                fields:
+                  - match_details
+                  - resolved_by
+                  - resolved_at

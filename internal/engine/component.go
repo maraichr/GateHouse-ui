@@ -8,11 +8,12 @@ type ComponentTree struct {
 }
 
 type TreeMetadata struct {
-	AppName    string   `json:"app_name"`
-	Version    string   `json:"version"`
-	Entities   []string `json:"entities"`
-	RouteCount int      `json:"route_count"`
-	Target     string   `json:"target,omitempty"`
+	AppName    string            `json:"app_name"`
+	Version    string            `json:"version"`
+	Entities   []string          `json:"entities"`
+	RouteCount int               `json:"route_count"`
+	Target     string            `json:"target,omitempty"`
+	Sources    map[string]string `json:"sources,omitempty"` // entity name → source service name
 }
 
 type ComponentNode struct {

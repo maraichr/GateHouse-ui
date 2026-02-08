@@ -58,3 +58,55 @@ func (s *Server) watchSpec() {
 		}
 	}
 }
+
+// watchComposed watches all local spec files in a composition config and recomposes on change.
+func (s *Server) watchComposed() {
+	if s.aggregator == nil {
+		return
+	}
+
+	paths := s.aggregator.Config.LocalSpecPaths()
+	if len(paths) == 0 {
+		slog.Info("no local spec paths to watch in composed mode")
+		return
+	}
+
+	watcher, err := fsnotify.NewWatcher()
+	if err != nil {
+		slog.Error("failed to create composed watcher", "error", err)
+		return
+	}
+	defer watcher.Close()
+
+	for _, p := range paths {
+		if err := watcher.Add(p); err != nil {
+			slog.Warn("failed to watch composed spec", "path", p, "error", err)
+		}
+	}
+
+	slog.Info("watching composed specs for changes", "paths", paths)
+
+	var debounce *time.Timer
+	for {
+		select {
+		case event, ok := <-watcher.Events:
+			if !ok {
+				return
+			}
+			if event.Op&(fsnotify.Write|fsnotify.Create) != 0 {
+				if debounce != nil {
+					debounce.Stop()
+				}
+				debounce = time.AfterFunc(300*time.Millisecond, func() {
+					slog.Info("composed spec changed, recomposing...", "file", event.Name)
+					s.recompose()
+				})
+			}
+		case err, ok := <-watcher.Errors:
+			if !ok {
+				return
+			}
+			slog.Error("composed watcher error", "error", err)
+		}
+	}
+}

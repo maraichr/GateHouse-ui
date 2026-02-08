@@ -1,0 +1,538 @@
+# ============================================================================
+# Payments Service — Payment orders, batches, and reconciliation
+# ============================================================================
+
+app:
+  name: "paybridge-payments"
+  display_name: "PayBridge Payments"
+  version: "1.0.0"
+  description: "Payment processing and batch management"
+
+  theme:
+    mode: light
+    primary_color: "#4338CA"
+
+  i18n:
+    default_locale: en-US
+    currency: USD
+
+auth:
+  provider: oidc
+  roles:
+    admin:
+      display_name: "Administrator"
+    finance_manager:
+      display_name: "Finance Manager"
+
+shell:
+  layout: sidebar
+  sidebar:
+    position: left
+
+navigation:
+  items:
+    - id: payments
+      label: "Payments"
+      icon: dollar-sign
+      path: /payments
+      entity: Payment
+      badge:
+        type: count
+        filter: { status: pending_approval }
+        color: warning
+
+    - id: batches
+      label: "Batches"
+      icon: layers
+      path: /payment-batches
+      entity: PaymentBatch
+
+entities:
+  # ---- Payment ----
+  - name: Payment
+    display_name: "Payment"
+    display_name_plural: "Payments"
+    icon: dollar-sign
+    api_resource: /payments
+    label_field: reference
+    status_field: status
+
+    fields:
+      - name: id
+        label: "ID"
+        type: string
+        primary_key: true
+        hidden: true
+
+      - name: reference
+        label: "Reference"
+        type: string
+        required: true
+
+      - name: customer_id
+        label: "Customer"
+        type: reference
+        entity: Customer
+
+      - name: customer_name
+        label: "Customer"
+        type: string
+
+      - name: payee_id
+        label: "Payee"
+        type: reference
+        entity: Payee
+
+      - name: payee_name
+        label: "Payee"
+        type: string
+
+      - name: amount
+        label: "Amount"
+        type: currency
+        currency: USD
+        required: true
+
+      - name: currency
+        label: "Currency"
+        type: string
+
+      - name: payment_method
+        label: "Method"
+        type: enum
+        required: true
+        values:
+          - { value: ach, label: "ACH", color: info }
+          - { value: wire, label: "Wire", color: primary }
+          - { value: check, label: "Check", color: secondary }
+
+      - name: memo
+        label: "Memo"
+        type: string
+
+      - name: initiated_by
+        label: "Initiated By"
+        type: string
+
+      - name: approved_by
+        label: "Approved By"
+        type: string
+
+      - name: initiated_at
+        label: "Initiated"
+        type: date
+
+      - name: approved_at
+        label: "Approved"
+        type: date
+
+      - name: processed_at
+        label: "Processed"
+        type: date
+
+      - name: completed_at
+        label: "Completed"
+        type: date
+
+      - name: failure_reason
+        label: "Failure Reason"
+        type: string
+
+      - name: batch_id
+        label: "Batch"
+        type: reference
+        entity: PaymentBatch
+
+      - name: status
+        label: "Status"
+        type: enum
+        required: true
+        values:
+          - { value: pending_approval, label: "Pending Approval", color: warning }
+          - { value: approved, label: "Approved", color: info }
+          - { value: processing, label: "Processing", color: info }
+          - { value: completed, label: "Completed", color: success }
+          - { value: failed, label: "Failed", color: danger }
+          - { value: cancelled, label: "Cancelled", color: secondary }
+
+    state_machine:
+      field: status
+      initial: pending_approval
+      transitions:
+        - name: approve
+          label: "Approve"
+          from: [pending_approval]
+          to: approved
+          icon: check
+          color: success
+          permissions: [admin, finance_manager]
+          confirmation:
+            title: "Approve Payment"
+            message: "Approve this payment of {{ amount }}?"
+
+        - name: cancel
+          label: "Cancel"
+          from: [pending_approval]
+          to: cancelled
+          icon: x
+          color: danger
+          confirmation:
+            title: "Cancel Payment"
+            message: "Cancel this payment?"
+
+        - name: process
+          label: "Process"
+          from: [approved]
+          to: processing
+          icon: play
+          color: primary
+          permissions: [admin, finance_manager]
+
+        - name: mark_complete
+          label: "Mark Complete"
+          from: [processing]
+          to: completed
+          icon: check-circle
+          color: success
+          permissions: [admin, finance_manager]
+
+        - name: mark_failed
+          label: "Mark Failed"
+          from: [processing]
+          to: failed
+          icon: x-circle
+          color: danger
+          permissions: [admin, finance_manager]
+
+        - name: retry
+          label: "Retry"
+          from: [failed]
+          to: pending_approval
+          icon: refresh-cw
+          color: warning
+          permissions: [admin, finance_manager]
+
+    views:
+      list:
+        title: "Payments"
+        columns:
+          - { field: reference, label: "Reference", sortable: true }
+          - { field: customer_name, label: "Customer" }
+          - { field: payee_name, label: "Payee" }
+          - { field: amount, label: "Amount", sortable: true }
+          - { field: payment_method, label: "Method" }
+          - { field: initiated_at, label: "Date", sortable: true }
+          - { field: status, label: "Status", sortable: true }
+        default_sort: { field: initiated_at, order: desc }
+        search:
+          fields: [reference, customer_name, payee_name, memo]
+          placeholder: "Search payments..."
+        filters:
+          layout: sidebar
+          groups:
+            - label: "Filter Payments"
+              fields:
+                - field: status
+                  type: checkbox_group
+                - field: payment_method
+                  type: checkbox_group
+                - field: amount
+                  type: numeric_range
+                  min: 0
+                  max: 1000000
+                  step: 1000
+                - field: initiated_at
+                  type: date_range
+        actions:
+          primary:
+            - label: "New Payment"
+              icon: plus
+              action:
+                type: navigate
+                path: /payments/new
+        bulk_actions:
+          - label: "Approve Selected"
+            icon: check
+            action:
+              type: bulk_transition
+              transition: approve
+            permissions: [admin, finance_manager]
+            confirmation:
+              title: "Approve Selected"
+              message: "Approve all selected payments?"
+        empty:
+          icon: dollar-sign
+          title: "No payments"
+          message: "Create a payment to send funds to a payee."
+          action:
+            label: "New Payment"
+            path: /payments/new
+
+      detail:
+        header:
+          title: "Payment {{ reference }}"
+          subtitle: "{{ customer_name }} → {{ payee_name }}"
+          show_status: true
+          show_actions: true
+          stats:
+            - label: "Amount"
+              value: "{{ amount }}"
+              icon: dollar-sign
+            - label: "Method"
+              value: "{{ payment_method }}"
+              icon: credit-card
+
+        tabs:
+          - id: overview
+            label: "Details"
+            icon: info
+            sections:
+              - title: "Payment Information"
+                layout: two_column
+                fields:
+                  - reference
+                  - amount
+                  - currency
+                  - payment_method
+                  - memo
+
+              - title: "Parties"
+                layout: two_column
+                fields:
+                  - customer_name
+                  - payee_name
+
+              - title: "Timeline"
+                layout: two_column
+                fields:
+                  - initiated_by
+                  - initiated_at
+                  - approved_by
+                  - approved_at
+                  - processed_at
+                  - completed_at
+
+              - title: "Failure Details"
+                fields:
+                  - failure_reason
+                permissions: [admin, finance_manager]
+
+      create:
+        title: "New Payment"
+        submit_label: "Submit for Approval"
+        cancel_path: /payments
+        sections:
+          - title: "Payment Details"
+            fields: [customer_id, payee_id, amount, payment_method, memo]
+
+  # ---- Payment Batch ----
+  - name: PaymentBatch
+    display_name: "Payment Batch"
+    display_name_plural: "Payment Batches"
+    icon: layers
+    api_resource: /payment-batches
+    label_field: batch_name
+    status_field: status
+
+    fields:
+      - name: id
+        label: "ID"
+        type: string
+        primary_key: true
+        hidden: true
+
+      - name: batch_name
+        label: "Batch Name"
+        type: string
+        required: true
+
+      - name: customer_id
+        label: "Customer"
+        type: reference
+        entity: Customer
+
+      - name: customer_name
+        label: "Customer"
+        type: string
+
+      - name: total_amount
+        label: "Total Amount"
+        type: currency
+        currency: USD
+
+      - name: payment_count
+        label: "Payments"
+        type: string
+
+      - name: file_name
+        label: "Source File"
+        type: string
+
+      - name: uploaded_by
+        label: "Uploaded By"
+        type: string
+
+      - name: created_at
+        label: "Created"
+        type: date
+
+      - name: processed_at
+        label: "Processed"
+        type: date
+
+      - name: completed_count
+        label: "Completed"
+        type: string
+
+      - name: failed_count
+        label: "Failed"
+        type: string
+
+      - name: status
+        label: "Status"
+        type: enum
+        required: true
+        values:
+          - { value: uploaded, label: "Uploaded", color: secondary }
+          - { value: validating, label: "Validating", color: info }
+          - { value: ready, label: "Ready", color: warning }
+          - { value: processing, label: "Processing", color: info }
+          - { value: completed, label: "Completed", color: success }
+          - { value: partial_failure, label: "Partial Failure", color: warning }
+          - { value: failed, label: "Failed", color: danger }
+
+    state_machine:
+      field: status
+      initial: uploaded
+      transitions:
+        - name: validate
+          label: "Validate"
+          from: [uploaded]
+          to: validating
+          icon: check-square
+          color: primary
+          permissions: [admin, finance_manager]
+
+        - name: mark_ready
+          label: "Mark Ready"
+          from: [validating]
+          to: ready
+          icon: check
+          color: success
+          permissions: [admin, finance_manager]
+
+        - name: reject
+          label: "Reject"
+          from: [validating]
+          to: failed
+          icon: x-circle
+          color: danger
+          permissions: [admin, finance_manager]
+
+        - name: process_batch
+          label: "Process Batch"
+          from: [ready]
+          to: processing
+          icon: play
+          color: primary
+          permissions: [admin, finance_manager]
+          confirmation:
+            title: "Process Batch"
+            message: "Process this batch? {{ payment_count }} payments totaling {{ total_amount }} will be submitted."
+
+        - name: complete
+          label: "Complete"
+          from: [processing]
+          to: completed
+          icon: check-circle
+          color: success
+          permissions: [admin, finance_manager]
+
+        - name: partial_failure
+          label: "Partial Failure"
+          from: [processing]
+          to: partial_failure
+          icon: alert-triangle
+          color: warning
+          permissions: [admin, finance_manager]
+
+    relationships:
+      - name: payments
+        entity: Payment
+        type: has_many
+        foreign_key: batch_id
+        display_name: "Payments"
+
+    views:
+      list:
+        title: "Payment Batches"
+        columns:
+          - { field: batch_name, label: "Batch", sortable: true }
+          - { field: customer_name, label: "Customer" }
+          - { field: payment_count, label: "Payments" }
+          - { field: total_amount, label: "Total", sortable: true }
+          - { field: created_at, label: "Created", sortable: true }
+          - { field: status, label: "Status", sortable: true }
+        default_sort: { field: created_at, order: desc }
+        search:
+          fields: [batch_name, customer_name, file_name]
+          placeholder: "Search batches..."
+        filters:
+          layout: toolbar
+          groups:
+            - label: "Filter Batches"
+              fields:
+                - field: status
+                  type: select
+        empty:
+          icon: layers
+          title: "No batches"
+          message: "Upload a payment file to create a batch."
+
+      detail:
+        header:
+          title: "{{ batch_name }}"
+          subtitle: "{{ customer_name }} · {{ payment_count }} payments"
+          show_status: true
+          show_actions: true
+          stats:
+            - label: "Total"
+              value: "{{ total_amount }}"
+              icon: dollar-sign
+            - label: "Payments"
+              value: "{{ payment_count }}"
+              icon: hash
+            - label: "Completed"
+              value: "{{ completed_count }}"
+              icon: check
+
+        tabs:
+          - id: overview
+            label: "Overview"
+            icon: info
+            sections:
+              - title: "Batch Information"
+                layout: two_column
+                fields:
+                  - batch_name
+                  - customer_name
+                  - file_name
+                  - uploaded_by
+                  - total_amount
+                  - payment_count
+
+              - title: "Processing Results"
+                layout: two_column
+                fields:
+                  - completed_count
+                  - failed_count
+                  - created_at
+                  - processed_at
+
+          - id: payments
+            label: "Payments"
+            icon: dollar-sign
+            content:
+              type: relationship_table
+              relationship: payments
+              columns: [reference, payee_name, amount, status]

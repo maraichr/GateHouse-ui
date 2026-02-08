@@ -48,9 +48,9 @@ function getCardSource(cards?: StatCardConfig[]): string | undefined {
 
 const GRID_COLS: Record<number, string> = {
   1: 'grid-cols-1',
-  2: 'grid-cols-2',
-  3: 'grid-cols-3',
-  4: 'grid-cols-4',
+  2: 'grid-cols-1 sm:grid-cols-2',
+  3: 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3',
+  4: 'grid-cols-2 sm:grid-cols-2 lg:grid-cols-4',
 };
 
 export function StatCards({ title, layout, cards, columns }: StatCardsProps) {
@@ -84,7 +84,7 @@ export function StatCards({ title, layout, cards, columns }: StatCardsProps) {
             <div className="surface-card surface-card-lift p-4">
               <div className="flex items-center justify-between">
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm truncate" style={{ color: 'var(--color-text-muted)' }}>{card.title}</p>
+                  <p className="text-sm leading-tight" style={{ color: 'var(--color-text-muted)' }}>{card.title}</p>
                   <p className="mt-1 text-2xl font-semibold" style={{ color: 'var(--color-text)' }}>
                     {String(resolved)}
                   </p>

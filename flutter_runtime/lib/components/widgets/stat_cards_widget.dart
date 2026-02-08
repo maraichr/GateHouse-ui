@@ -147,7 +147,7 @@ class StatCardsWidget extends ConsumerWidget {
 
   int _responsiveCols(double width, int count) {
     final maxCols = count.clamp(1, 4);
-    if (width < 400) return 1;
+    if (width < 400) return maxCols.clamp(1, 2);
     if (width < 600) return maxCols.clamp(1, 2);
     return maxCols;
   }

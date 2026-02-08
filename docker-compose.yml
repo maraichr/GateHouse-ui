@@ -2,12 +2,12 @@ services:
   go-server:
     build:
       context: .
-      dockerfile: docker/Dockerfile.go
+      dockerfile: docker/Dockerfile.goapp
     ports:
       - "${GO_SERVER_PORT:-3000}:${GO_SERVER_PORT:-3000}"
     environment:
       - PORT=${GO_SERVER_PORT:-3000}
-      - EXAMPLES_DIR=${EXAMPLES_DIR:-examples}
+      - COMPOSE_FILE=${COMPOSE_FILE:-examples/b2b-payments/compose.yaml}
     volumes:
       - ./cmd:/app/cmd
       - ./internal:/app/internal

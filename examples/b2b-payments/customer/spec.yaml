@@ -1,0 +1,493 @@
+# ============================================================================
+# Customer Service — Business accounts and contact management
+# ============================================================================
+
+app:
+  name: "paybridge-customer"
+  display_name: "PayBridge Customers"
+  version: "1.0.0"
+  description: "Customer account and contact management"
+
+  theme:
+    mode: light
+    primary_color: "#4338CA"
+
+  i18n:
+    default_locale: en-US
+    currency: USD
+
+auth:
+  provider: oidc
+  roles:
+    admin:
+      display_name: "Administrator"
+    operations_manager:
+      display_name: "Operations Manager"
+    compliance_officer:
+      display_name: "Compliance Officer"
+
+shell:
+  layout: sidebar
+  sidebar:
+    position: left
+
+navigation:
+  items:
+    - id: customers
+      label: "Customers"
+      icon: building-2
+      path: /customers
+      entity: Customer
+
+    - id: contacts
+      label: "Contacts"
+      icon: users
+      path: /contacts
+      entity: Contact
+
+entities:
+  # ---- Customer ----
+  - name: Customer
+    display_name: "Customer"
+    display_name_plural: "Customers"
+    icon: building-2
+    api_resource: /customers
+    label_field: company_name
+    status_field: status
+
+    fields:
+      - name: id
+        label: "ID"
+        type: string
+        primary_key: true
+        hidden: true
+
+      - name: company_name
+        label: "Company Name"
+        type: string
+        required: true
+
+      - name: legal_name
+        label: "Legal Name"
+        type: string
+
+      - name: ein
+        label: "EIN / Tax ID"
+        type: string
+        mask_pattern: "XX-XXX####"
+
+      - name: business_type
+        label: "Business Type"
+        type: enum
+        values:
+          - { value: llc, label: "LLC", color: info }
+          - { value: corporation, label: "Corporation", color: primary }
+          - { value: partnership, label: "Partnership", color: secondary }
+          - { value: sole_proprietor, label: "Sole Proprietor", color: warning }
+
+      - name: industry
+        label: "Industry"
+        type: string
+
+      - name: tier
+        label: "Tier"
+        type: enum
+        values:
+          - { value: standard, label: "Standard", color: secondary }
+          - { value: premium, label: "Premium", color: info }
+          - { value: enterprise, label: "Enterprise", color: primary }
+
+      - name: account_manager
+        label: "Account Manager"
+        type: string
+
+      - name: primary_contact_name
+        label: "Primary Contact"
+        type: string
+
+      - name: primary_contact_email
+        label: "Contact Email"
+        type: string
+
+      - name: primary_contact_phone
+        label: "Contact Phone"
+        type: string
+        format: phone
+
+      - name: street1
+        label: "Street"
+        type: string
+
+      - name: city
+        label: "City"
+        type: string
+
+      - name: state
+        label: "State"
+        type: string
+
+      - name: zip
+        label: "ZIP"
+        type: string
+
+      - name: address
+        label: "Address"
+        type: address
+        components:
+          street1:
+            required: true
+          city:
+            required: true
+          state:
+            required: true
+          zip:
+            required: true
+
+      - name: monthly_volume_limit
+        label: "Monthly Volume Limit"
+        type: currency
+        currency: USD
+
+      - name: onboarded_at
+        label: "Onboarded"
+        type: date
+
+      - name: kyc_expiry_date
+        label: "KYC Expiry"
+        type: date
+        display_rules:
+          - condition: "value < today + 30d"
+            style: warning
+          - condition: "value < today"
+            style: danger
+
+      - name: status
+        label: "Status"
+        type: enum
+        required: true
+        values:
+          - { value: active, label: "Active", color: success }
+          - { value: suspended, label: "Suspended", color: danger }
+          - { value: under_review, label: "Under Review", color: warning }
+          - { value: closed, label: "Closed", color: secondary }
+
+    state_machine:
+      field: status
+      initial: active
+      transitions:
+        - name: suspend
+          label: "Suspend"
+          from: [active]
+          to: suspended
+          icon: pause-circle
+          color: danger
+          permissions: [admin, compliance_officer]
+          confirmation:
+            title: "Suspend Customer"
+            message: "Suspend this customer? All pending payments will be held."
+
+        - name: flag_for_review
+          label: "Flag for Review"
+          from: [active]
+          to: under_review
+          icon: flag
+          color: warning
+          permissions: [admin, compliance_officer, operations_manager]
+
+        - name: reactivate_from_suspended
+          label: "Reactivate"
+          from: [suspended]
+          to: active
+          icon: play-circle
+          color: success
+          permissions: [admin]
+          confirmation:
+            title: "Reactivate Customer"
+            message: "Reactivate this customer?"
+
+        - name: close_account
+          label: "Close Account"
+          from: [suspended]
+          to: closed
+          icon: x-circle
+          color: danger
+          permissions: [admin]
+          confirmation:
+            title: "Close Account"
+            message: "Permanently close this account?"
+
+        - name: clear_review
+          label: "Clear Review"
+          from: [under_review]
+          to: active
+          icon: check-circle
+          color: success
+          permissions: [admin, compliance_officer]
+
+        - name: suspend_from_review
+          label: "Suspend"
+          from: [under_review]
+          to: suspended
+          icon: pause-circle
+          color: danger
+          permissions: [admin, compliance_officer]
+
+    relationships:
+      - name: payees
+        entity: Payee
+        type: has_many
+        foreign_key: customer_id
+        display_name: "Payees"
+
+      - name: payments
+        entity: Payment
+        type: has_many
+        foreign_key: customer_id
+        display_name: "Payments"
+
+      - name: contacts
+        entity: Contact
+        type: has_many
+        foreign_key: customer_id
+        display_name: "Contacts"
+
+    views:
+      list:
+        title: "Customers"
+        columns:
+          - { field: company_name, label: "Company", sortable: true }
+          - { field: tier, label: "Tier" }
+          - { field: account_manager, label: "Account Manager" }
+          - { field: primary_contact_name, label: "Contact" }
+          - { field: kyc_expiry_date, label: "KYC Expiry", sortable: true }
+          - { field: status, label: "Status", sortable: true }
+        default_sort: { field: company_name, order: asc }
+        search:
+          fields: [company_name, legal_name, primary_contact_name, primary_contact_email, account_manager]
+          placeholder: "Search customers..."
+        filters:
+          layout: sidebar
+          groups:
+            - label: "Filter by"
+              fields:
+                - field: status
+                  type: checkbox_group
+                - field: tier
+                  type: checkbox_group
+                - field: business_type
+                  type: select
+        empty:
+          icon: building-2
+          title: "No customers"
+          message: "Customers are created when onboarding applications are approved."
+
+      detail:
+        header:
+          title: "{{ company_name }}"
+          subtitle: "{{ tier }} · {{ business_type }}"
+          avatar: company_name
+          show_status: true
+          show_actions: true
+          stats:
+            - label: "Tier"
+              value: "{{ tier }}"
+              icon: award
+            - label: "KYC Expiry"
+              value: "{{ kyc_expiry_date }}"
+              icon: shield
+
+        tabs:
+          - id: overview
+            label: "Overview"
+            icon: info
+            sections:
+              - title: "Company Information"
+                layout: two_column
+                fields:
+                  - company_name
+                  - legal_name
+                  - ein
+                  - business_type
+                  - industry
+
+              - title: "Account Details"
+                layout: two_column
+                fields:
+                  - tier
+                  - account_manager
+                  - monthly_volume_limit
+                  - onboarded_at
+                  - kyc_expiry_date
+
+              - title: "Primary Contact"
+                layout: two_column
+                fields:
+                  - primary_contact_name
+                  - primary_contact_email
+                  - primary_contact_phone
+
+              - title: "Address"
+                fields:
+                  - address
+
+          - id: contacts
+            label: "Contacts"
+            icon: users
+            content:
+              type: relationship_table
+              relationship: contacts
+              columns: [first_name, last_name, email, role, is_primary]
+
+          - id: payees
+            label: "Payees"
+            icon: landmark
+            content:
+              type: relationship_table
+              relationship: payees
+              columns: [payee_name, payee_type, payment_method, status]
+
+          - id: payments
+            label: "Payments"
+            icon: dollar-sign
+            content:
+              type: relationship_table
+              relationship: payments
+              columns: [reference, payee_name, amount, status, initiated_at]
+
+      edit:
+        title: "Edit Customer"
+        submit_label: "Save Changes"
+        sections:
+          - title: "Company Information"
+            fields: [company_name, legal_name, industry]
+          - title: "Account Settings"
+            fields: [tier, account_manager, monthly_volume_limit]
+          - title: "Contact"
+            fields: [primary_contact_name, primary_contact_email, primary_contact_phone]
+          - title: "Address"
+            fields: [street1, city, state, zip]
+
+  # ---- Contact ----
+  - name: Contact
+    display_name: "Contact"
+    display_name_plural: "Contacts"
+    icon: user
+    api_resource: /contacts
+    label_field: first_name
+    status_field: status
+
+    fields:
+      - name: id
+        label: "ID"
+        type: string
+        primary_key: true
+        hidden: true
+
+      - name: customer_id
+        label: "Customer"
+        type: reference
+        entity: Customer
+        required: true
+
+      - name: customer_name
+        label: "Company"
+        type: string
+
+      - name: first_name
+        label: "First Name"
+        type: string
+        required: true
+
+      - name: last_name
+        label: "Last Name"
+        type: string
+        required: true
+
+      - name: email
+        label: "Email"
+        type: string
+        required: true
+
+      - name: phone
+        label: "Phone"
+        type: string
+        format: phone
+
+      - name: role
+        label: "Role"
+        type: enum
+        values:
+          - { value: admin, label: "Administrator", color: primary }
+          - { value: finance, label: "Finance", color: info }
+          - { value: operations, label: "Operations", color: secondary }
+          - { value: authorized_signer, label: "Authorized Signer", color: warning }
+
+      - name: is_primary
+        label: "Primary Contact"
+        type: enum
+        values:
+          - { value: "true", label: "Yes", color: success }
+          - { value: "false", label: "No", color: secondary }
+
+      - name: status
+        label: "Status"
+        type: enum
+        values:
+          - { value: active, label: "Active", color: success }
+          - { value: inactive, label: "Inactive", color: secondary }
+
+    views:
+      list:
+        title: "Contacts"
+        columns:
+          - { field: first_name, label: "First Name", sortable: true }
+          - { field: last_name, label: "Last Name", sortable: true }
+          - { field: customer_name, label: "Company" }
+          - { field: email, label: "Email" }
+          - { field: role, label: "Role" }
+          - { field: is_primary, label: "Primary" }
+          - { field: status, label: "Status" }
+        default_sort: { field: last_name, order: asc }
+        search:
+          fields: [first_name, last_name, email, customer_name]
+          placeholder: "Search contacts..."
+        filters:
+          layout: toolbar
+          groups:
+            - label: "Filter by"
+              fields:
+                - field: role
+                  type: select
+                - field: status
+                  type: select
+
+      detail:
+        header:
+          title: "{{ first_name }} {{ last_name }}"
+          subtitle: "{{ role }} at {{ customer_name }}"
+          avatar: first_name
+          show_status: true
+
+        tabs:
+          - id: overview
+            label: "Details"
+            icon: info
+            sections:
+              - title: "Contact Information"
+                layout: two_column
+                fields:
+                  - first_name
+                  - last_name
+                  - email
+                  - phone
+                  - role
+                  - is_primary
+                  - customer_name
+
+      create:
+        title: "Add Contact"
+        submit_label: "Create Contact"
+        cancel_path: /contacts
+        sections:
+          - title: "Contact Details"
+            fields: [customer_id, first_name, last_name, email, phone, role, is_primary]

@@ -1,0 +1,45 @@
+# ============================================================================
+# PayBridge — B2B Payments Platform (Composed Microservices Example)
+# ============================================================================
+# 5 services: onboarding, kyc, customer, payee, payments
+# Each owns its domain entities. Cross-service references resolve after merge.
+#
+# Run with:
+#   go run cmd/serve/main.go --compose examples/b2b-payments/compose.yaml --watch
+# ============================================================================
+
+host:
+  name: paybridge
+  spec_path: examples/b2b-payments/host.yaml
+  data_path: examples/b2b-payments/data.json
+
+services:
+  - name: onboarding
+    spec_path: examples/b2b-payments/onboarding/spec.yaml
+    nav_group: Onboarding
+    nav_order: 10
+    watch: true
+
+  - name: kyc
+    spec_path: examples/b2b-payments/kyc/spec.yaml
+    nav_group: Compliance
+    nav_order: 20
+    watch: true
+
+  - name: customer
+    spec_path: examples/b2b-payments/customer/spec.yaml
+    nav_group: Accounts
+    nav_order: 30
+    watch: true
+
+  - name: payee
+    spec_path: examples/b2b-payments/payee/spec.yaml
+    nav_group: Accounts
+    nav_order: 35
+    watch: true
+
+  - name: payments
+    spec_path: examples/b2b-payments/payments/spec.yaml
+    nav_group: Payments
+    nav_order: 40
+    watch: true

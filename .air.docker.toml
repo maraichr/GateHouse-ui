@@ -4,7 +4,7 @@ tmp_dir = "tmp"
 [build]
   cmd = "go build -o ./tmp/serve ./cmd/serve"
   bin = "./tmp/serve"
-  full_bin = "sh -c './tmp/serve --examples-dir ${EXAMPLES_DIR:-examples} --watch --port ${PORT:-3000}'"
+  full_bin = "sh -c './tmp/serve --compose ${COMPOSE_FILE:-examples/b2b-payments/compose.yaml} --watch --port ${PORT:-3000}'"
   include_ext = ["go"]
   exclude_dir = ["tmp", "runtime", "flutter_runtime", "node_modules", "docs"]
   delay = 1000

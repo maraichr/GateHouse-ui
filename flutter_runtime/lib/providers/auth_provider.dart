@@ -1,7 +1,17 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-/// Current role provider — reads ?role= from URL for stub auth
-final currentRoleProvider = StateProvider<String>((ref) => 'admin');
+/// Current role notifier — reads ?role= from URL for stub auth
+class CurrentRoleNotifier extends Notifier<String> {
+  @override
+  String build() => 'admin';
+
+  void setRole(String role) {
+    state = role;
+  }
+}
+
+final currentRoleProvider =
+    NotifierProvider<CurrentRoleNotifier, String>(CurrentRoleNotifier.new);
 
 /// Permission check helper
 class PermissionChecker {

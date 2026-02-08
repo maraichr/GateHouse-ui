@@ -297,7 +297,7 @@ class _ResponsiveShell extends ConsumerWidget {
           tooltip: 'Role: $currentRole',
           icon: const Icon(Icons.person_outline, size: 20),
           onSelected: (role) {
-            ref.read(currentRoleProvider.notifier).state = role;
+            ref.read(currentRoleProvider.notifier).setRole(role);
           },
           itemBuilder: (_) => [
             PopupMenuItem(

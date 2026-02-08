@@ -1,0 +1,312 @@
+# ============================================================================
+# Payee Service — Payment recipients and bank account management
+# ============================================================================
+
+app:
+  name: "paybridge-payee"
+  display_name: "PayBridge Payees"
+  version: "1.0.0"
+  description: "Payee and bank account management"
+
+  theme:
+    mode: light
+    primary_color: "#4338CA"
+
+  i18n:
+    default_locale: en-US
+    currency: USD
+
+auth:
+  provider: oidc
+  roles:
+    admin:
+      display_name: "Administrator"
+    finance_manager:
+      display_name: "Finance Manager"
+    compliance_officer:
+      display_name: "Compliance Officer"
+
+shell:
+  layout: sidebar
+  sidebar:
+    position: left
+
+navigation:
+  items:
+    - id: payees
+      label: "Payees"
+      icon: landmark
+      path: /payees
+      entity: Payee
+
+entities:
+  - name: Payee
+    display_name: "Payee"
+    display_name_plural: "Payees"
+    icon: landmark
+    api_resource: /payees
+    label_field: payee_name
+    status_field: status
+
+    fields:
+      - name: id
+        label: "ID"
+        type: string
+        primary_key: true
+        hidden: true
+
+      - name: customer_id
+        label: "Customer"
+        type: reference
+        entity: Customer
+        required: true
+
+      - name: customer_name
+        label: "Paying Company"
+        type: string
+
+      - name: payee_name
+        label: "Payee Name"
+        type: string
+        required: true
+
+      - name: payee_type
+        label: "Type"
+        type: enum
+        required: true
+        values:
+          - { value: vendor, label: "Vendor", color: primary }
+          - { value: contractor, label: "Contractor", color: info }
+          - { value: employee, label: "Employee", color: secondary }
+          - { value: government, label: "Government", color: warning }
+
+      - name: payment_method
+        label: "Payment Method"
+        type: enum
+        required: true
+        values:
+          - { value: ach, label: "ACH", color: info }
+          - { value: wire, label: "Wire", color: primary }
+          - { value: check, label: "Check", color: secondary }
+
+      - name: bank_name
+        label: "Bank Name"
+        type: string
+
+      - name: account_type
+        label: "Account Type"
+        type: enum
+        values:
+          - { value: checking, label: "Checking" }
+          - { value: savings, label: "Savings" }
+
+      - name: account_number_masked
+        label: "Account Number"
+        type: string
+        mask_pattern: "XXXXXX####"
+
+      - name: routing_number
+        label: "Routing Number"
+        type: string
+        mask_pattern: "XXXXX####"
+
+      - name: nickname
+        label: "Nickname"
+        type: string
+
+      - name: email
+        label: "Notification Email"
+        type: string
+
+      - name: verified_at
+        label: "Verified"
+        type: date
+
+      - name: created_at
+        label: "Created"
+        type: date
+
+      - name: status
+        label: "Status"
+        type: enum
+        required: true
+        values:
+          - { value: pending_verification, label: "Pending Verification", color: warning }
+          - { value: active, label: "Active", color: success }
+          - { value: suspended, label: "Suspended", color: danger }
+          - { value: closed, label: "Closed", color: secondary }
+
+    state_machine:
+      field: status
+      initial: pending_verification
+      transitions:
+        - name: verify_activate
+          label: "Verify & Activate"
+          from: [pending_verification]
+          to: active
+          icon: check-circle
+          color: success
+          permissions: [admin, finance_manager]
+          confirmation:
+            title: "Verify & Activate Payee"
+            message: "Verify this payee's bank details and activate?"
+
+        - name: reject
+          label: "Reject"
+          from: [pending_verification]
+          to: closed
+          icon: x-circle
+          color: danger
+          permissions: [admin, finance_manager]
+
+        - name: suspend
+          label: "Suspend"
+          from: [active]
+          to: suspended
+          icon: pause-circle
+          color: danger
+          permissions: [admin, finance_manager, compliance_officer]
+          confirmation:
+            title: "Suspend Payee"
+            message: "Suspend this payee? Pending payments will be held."
+
+        - name: reactivate
+          label: "Reactivate"
+          from: [suspended]
+          to: active
+          icon: play-circle
+          color: success
+          permissions: [admin, finance_manager]
+
+        - name: close
+          label: "Close"
+          from: [suspended]
+          to: closed
+          icon: x-circle
+          color: danger
+          permissions: [admin]
+
+    relationships:
+      - name: payments
+        entity: Payment
+        type: has_many
+        foreign_key: payee_id
+        display_name: "Payments"
+
+    views:
+      list:
+        title: "Payees"
+        columns:
+          - { field: payee_name }
+          - { field: customer_name }
+          - { field: payee_type }
+          - { field: payment_method }
+          - { field: bank_name }
+          - { field: account_number_masked }
+          - { field: status }
+        default_sort: { field: payee_name, order: asc }
+        search:
+          fields: [payee_name, customer_name, bank_name, nickname]
+          placeholder: "Search payees..."
+        filters:
+          layout: sidebar
+          groups:
+            - label: "Filter Payees"
+              fields:
+                - field: status
+                  type: checkbox_group
+                - field: payee_type
+                  type: checkbox_group
+                - field: payment_method
+                  type: checkbox_group
+        actions:
+          primary:
+            - label: "Add Payee"
+              icon: plus
+              action:
+                type: navigate
+                path: /payees/new
+        empty:
+          icon: landmark
+          title: "No payees"
+          message: "Add a payee to start making payments."
+          action:
+            label: "Add Payee"
+            path: /payees/new
+
+      detail:
+        header:
+          title: "{{ payee_name }}"
+          subtitle: "{{ payee_type }} · {{ payment_method | uppercase }}"
+
+        tabs:
+          - id: overview
+            label: "Overview"
+            icon: info
+            sections:
+              - title: "Payee Information"
+                layout: two_column
+                fields:
+                  - payee_name
+                  - payee_type
+                  - customer_name
+                  - nickname
+                  - email
+
+              - title: "Bank Details"
+                layout: two_column
+                fields:
+                  - payment_method
+                  - bank_name
+                  - account_type
+                  - account_number_masked
+                  - routing_number
+
+              - title: "Status"
+                layout: two_column
+                fields:
+                  - verified_at
+                  - created_at
+
+          - id: payments
+            label: "Payments"
+            icon: dollar-sign
+            content:
+              type: relationship_table
+              relationship: payments
+              columns: [reference, customer_name, amount, status, initiated_at]
+
+      create:
+        title: "Add Payee"
+        submit_label: "Create Payee"
+        cancel_path: /payees
+        layout: stepped
+        steps:
+          - id: details
+            title: "Payee Details"
+            description: "Who are you paying?"
+            fields:
+              - customer_id
+              - payee_name
+              - payee_type
+              - nickname
+              - email
+
+          - id: bank
+            title: "Bank Information"
+            description: "Where should funds be sent?"
+            fields:
+              - payment_method
+              - bank_name
+              - account_type
+              - account_number_masked
+              - routing_number
+
+      edit:
+        title: "Edit Payee"
+        submit_label: "Save Changes"
+        sections:
+          - title: "Payee Details"
+            fields: [payee_name, payee_type, nickname, email]
+          - title: "Bank Information"
+            fields: [payment_method, bank_name, account_type, account_number_masked, routing_number]
