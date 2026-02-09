@@ -39,6 +39,11 @@ tasks:
     cmds:
       - docker compose logs -f flutter-runtime
 
+  logs:reviewer:
+    desc: Follow Reviewer runtime logs
+    cmds:
+      - docker compose logs -f reviewer-runtime
+
   clean:
     desc: Stop services and remove volumes/images
     cmds:
@@ -67,3 +72,25 @@ tasks:
     dir: flutter_runtime
     cmds:
       - bash scripts/flutter-hot-reload.sh
+
+  dev:reviewer:
+    desc: Run Spec Reviewer locally
+    dir: reviewer
+    cmds:
+      - pnpm dev
+
+  # --- Database ---
+  db:up:
+    desc: Start PostgreSQL only
+    cmds:
+      - docker compose up -d postgres
+
+  db:down:
+    desc: Stop PostgreSQL
+    cmds:
+      - docker compose stop postgres
+
+  db:psql:
+    desc: Open psql shell
+    cmds:
+      - docker compose exec postgres psql -U gatehouse

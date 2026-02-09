@@ -64,11 +64,20 @@ entities:
       - name: customer_name
         label: "Paying Company"
         type: string
+        fake: "company"
 
       - name: payee_name
         label: "Payee Name"
         type: string
         required: true
+        fake:
+          depends_on: payee_type
+          map:
+            vendor: company
+            contractor: company
+            employee: full_name
+            government: company
+          default: company
 
       - name: payee_type
         label: "Type"
@@ -92,6 +101,7 @@ entities:
       - name: bank_name
         label: "Bank Name"
         type: string
+        fake: "bank_name"
 
       - name: account_type
         label: "Account Type"
@@ -104,11 +114,13 @@ entities:
         label: "Account Number"
         type: string
         mask_pattern: "XXXXXX####"
+        fake: "account_number"
 
       - name: routing_number
         label: "Routing Number"
         type: string
         mask_pattern: "XXXXX####"
+        fake: "routing_number"
 
       - name: nickname
         label: "Nickname"
@@ -117,6 +129,7 @@ entities:
       - name: email
         label: "Notification Email"
         type: string
+        fake: "email"
 
       - name: verified_at
         label: "Verified"

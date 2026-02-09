@@ -1,5 +1,11 @@
 package spec
 
+import (
+	"encoding/json"
+
+	"gopkg.in/yaml.v3"
+)
+
 type Field struct {
 	Name           string              `yaml:"name" json:"name"`
 	Type           string              `yaml:"type" json:"type"`
@@ -60,6 +66,8 @@ type Field struct {
 	MaxRows    int                 `yaml:"max_rows" json:"max_rows,omitempty"`
 	// Highlight (used in field_overrides)
 	Highlight bool `yaml:"highlight" json:"highlight,omitempty"`
+	// Fake data hint for mock data generation
+	Fake *FakeHint `yaml:"fake" json:"fake,omitempty"`
 }
 
 type FieldItem struct {
@@ -120,4 +128,70 @@ type InlineTableFooter struct {
 	Value     string `yaml:"value" json:"value,omitempty"`
 	Aggregate string `yaml:"aggregate" json:"aggregate,omitempty"`
 	Style     string `yaml:"style" json:"style,omitempty"`
+}
+
+// FakeHint controls mock data generation for a field.
+// Simple form: fake: "first_name"
+// Conditional form: fake: { depends_on: entity_type, map: { business: company, individual: full_name } }
+type FakeHint struct {
+	// Tag is the faker tag (e.g., "first_name", "company") — used in simple form.
+	Tag string `yaml:"-" json:"tag,omitempty"`
+	// DependsOn is the field name whose value determines which tag to use.
+	DependsOn string `yaml:"depends_on" json:"depends_on,omitempty"`
+	// Map maps dependency field values to faker tags.
+	Map map[string]string `yaml:"map" json:"map,omitempty"`
+	// Default is the fallback tag when depends_on value isn't in the map.
+	Default string `yaml:"default" json:"default,omitempty"`
+}
+
+// IsConditional returns true if this hint depends on another field's value.
+func (fh *FakeHint) IsConditional() bool {
+	return fh.DependsOn != "" && len(fh.Map) > 0
+}
+
+// ResolveTag returns the appropriate faker tag for the given dependency value.
+func (fh *FakeHint) ResolveTag(depValue string) string {
+	if fh.IsConditional() {
+		if tag, ok := fh.Map[depValue]; ok {
+			return tag
+		}
+		if fh.Default != "" {
+			return fh.Default
+		}
+		return ""
+	}
+	return fh.Tag
+}
+
+func (fh *FakeHint) UnmarshalYAML(value *yaml.Node) error {
+	// Simple string form: fake: "first_name"
+	if value.Kind == yaml.ScalarNode {
+		fh.Tag = value.Value
+		return nil
+	}
+	// Object form: fake: { depends_on: ..., map: ... }
+	type plain FakeHint
+	return value.Decode((*plain)(fh))
+}
+
+func (fh *FakeHint) UnmarshalJSON(data []byte) error {
+	// Try string first
+	var s string
+	if err := json.Unmarshal(data, &s); err == nil {
+		fh.Tag = s
+		return nil
+	}
+	// Object form
+	type plain FakeHint
+	return json.Unmarshal(data, (*plain)(fh))
+}
+
+func (fh FakeHint) MarshalJSON() ([]byte, error) {
+	// Simple form: just emit the tag string
+	if fh.Tag != "" && fh.DependsOn == "" {
+		return json.Marshal(fh.Tag)
+	}
+	// Object form
+	type plain FakeHint
+	return json.Marshal((plain)(fh))
 }

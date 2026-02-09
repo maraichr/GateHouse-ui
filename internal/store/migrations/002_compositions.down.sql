@@ -1,0 +1,2 @@
+DROP TABLE IF EXISTS composition_members CASCADE;
+DROP TABLE IF EXISTS compositions CASCADE;

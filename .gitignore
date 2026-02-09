@@ -13,6 +13,11 @@ tmp/
 runtime/node_modules/
 runtime/dist/
 
+# Reviewer / Node
+reviewer/node_modules/
+reviewer/dist/
+
+
 # Flutter
 flutter_runtime/.dart_tool/
 flutter_runtime/build/

@@ -1,4 +1,22 @@
 services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: gatehouse
+      POSTGRES_USER: gatehouse
+      POSTGRES_PASSWORD: gatehouse
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U gatehouse"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    networks:
+      - gatehouse-net
+
   go-server:
     build:
       context: .
@@ -8,6 +26,8 @@ services:
     environment:
       - PORT=${GO_SERVER_PORT:-3000}
       - COMPOSE_FILE=${COMPOSE_FILE:-examples/b2b-payments/compose.yaml}
+      - DATABASE_URL=postgres://gatehouse:gatehouse@postgres:5432/gatehouse?sslmode=disable
+      - ADMIN_EMAIL=${ADMIN_EMAIL:-admin@gatehouse.local}
     volumes:
       - ./cmd:/app/cmd
       - ./internal:/app/internal
@@ -15,11 +35,14 @@ services:
       - ./docs:/app/docs
       - ./examples:/app/examples
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost:${GO_SERVER_PORT:-3000}/_renderer/spec"]
+      test: ["CMD", "wget", "-qO-", "http://localhost:${GO_SERVER_PORT:-3000}/_renderer/health"]
       interval: 5s
       timeout: 3s
       retries: 10
       start_period: 15s
+    depends_on:
+      postgres:
+        condition: service_healthy
     networks:
       - gatehouse-net
 
@@ -54,7 +77,6 @@ services:
     environment:
       - FLUTTER_PORT=6175
       - FLUTTER_HOST=0.0.0.0
-      # Browser-facing URLs — must use localhost, not Docker-internal hostname
       - GO_SERVER_URL=http://localhost:${GO_SERVER_PORT:-3000}
       - API_BASE_URL=http://localhost:${GO_SERVER_PORT:-3000}/api/v1
     volumes:
@@ -67,6 +89,31 @@ services:
     tty: true
     networks:
       - gatehouse-net
+
+  reviewer-runtime:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.reviewer
+    ports:
+      - "${REVIEWER_PORT:-5175}:5175"
+    environment:
+      - VITE_PORT=5175
+      - VITE_HOST=0.0.0.0
+      - VITE_GO_SERVER_URL=http://go-server:${GO_SERVER_PORT:-3000}
+    volumes:
+      - ./reviewer/src:/app/src
+      - ./reviewer/vite.config.ts:/app/vite.config.ts
+      - ./reviewer/tailwind.config.ts:/app/tailwind.config.ts
+      - ./reviewer/postcss.config.js:/app/postcss.config.js
+      - ./reviewer/index.html:/app/index.html
+    depends_on:
+      go-server:
+        condition: service_healthy
+    networks:
+      - gatehouse-net
+
+volumes:
+  pgdata:
 
 networks:
   gatehouse-net:

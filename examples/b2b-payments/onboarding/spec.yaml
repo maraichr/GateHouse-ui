@@ -61,16 +61,19 @@ entities:
         label: "Company Name"
         type: string
         required: true
+        fake: "company"
 
       - name: legal_name
         label: "Legal Entity Name"
         type: string
         required: true
+        fake: "company"
 
       - name: ein
         label: "EIN / Tax ID"
         type: string
         required: true
+        fake: "ein"
         mask_pattern: "XX-XXX####"
 
       - name: state_of_incorporation
@@ -99,11 +102,13 @@ entities:
       - name: industry
         label: "Industry"
         type: string
+        fake: "industry"
 
       - name: website
         label: "Website"
         type: string
         format: url
+        fake: "url"
 
       - name: annual_revenue
         label: "Annual Revenue"
@@ -119,16 +124,19 @@ entities:
         label: "Primary Contact"
         type: string
         required: true
+        fake: "full_name"
 
       - name: primary_contact_email
         label: "Contact Email"
         type: string
         required: true
+        fake: "email"
 
       - name: primary_contact_phone
         label: "Contact Phone"
         type: string
         format: phone
+        fake: "phone"
 
       - name: submitted_at
         label: "Submitted"
@@ -137,6 +145,7 @@ entities:
       - name: reviewed_by
         label: "Reviewed By"
         type: string
+        fake: "full_name"
 
       - name: review_notes
         label: "Review Notes"

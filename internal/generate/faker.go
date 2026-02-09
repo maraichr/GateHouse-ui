@@ -18,10 +18,33 @@ var industries = []string{
 
 // generateFieldValue produces a realistic fake value for the given field.
 func (g *Generator) generateFieldValue(entity *spec.Entity, field *spec.Field, index int) any {
+	return g.generateFieldValueWithRecord(entity, field, index, nil)
+}
+
+// generateFieldValueWithRecord produces a fake value, optionally using record context for conditional hints.
+func (g *Generator) generateFieldValueWithRecord(entity *spec.Entity, field *spec.Field, index int, record map[string]any) any {
 	// Non-required fields: ~20% chance of nil (but never for status/enum fields with state machines)
 	isStatusField := entity.StatusField == field.Name && entity.StateMachine != nil
 	if !field.Required && !field.PrimaryKey && !isStatusField && g.faker.Float64() < 0.2 {
 		return nil
+	}
+
+	// Check for fake hint (simple tag)
+	if field.Fake != nil && !field.Fake.IsConditional() && field.Fake.Tag != "" {
+		if val := g.fakeTagValue(field.Fake.Tag); val != nil {
+			return val
+		}
+	}
+
+	// Check for conditional fake hint
+	if field.Fake != nil && field.Fake.IsConditional() && record != nil {
+		depValue := fmt.Sprintf("%v", record[field.Fake.DependsOn])
+		tag := field.Fake.ResolveTag(depValue)
+		if tag != "" {
+			if val := g.fakeTagValue(tag); val != nil {
+				return val
+			}
+		}
 	}
 
 	// Mask pattern takes precedence for strings
@@ -93,6 +116,107 @@ func (g *Generator) generateFieldValue(entity *spec.Entity, field *spec.Field, i
 	default:
 		return g.faker.Word()
 	}
+}
+
+// fakeTagValue generates a value for a known faker tag.
+func (g *Generator) fakeTagValue(tag string) any {
+	switch tag {
+	// Person names
+	case "first_name":
+		return g.faker.FirstName()
+	case "last_name":
+		return g.faker.LastName()
+	case "full_name", "person_name", "name":
+		return g.faker.Name()
+	case "name_prefix":
+		return g.faker.NamePrefix()
+	case "name_suffix":
+		return g.faker.NameSuffix()
+
+	// Company / organization
+	case "company", "company_name", "business_name", "organization":
+		return g.faker.Company()
+	case "company_suffix":
+		return g.faker.CompanySuffix()
+
+	// Contact
+	case "email":
+		return g.faker.Email()
+	case "phone":
+		return fmt.Sprintf("(%03d) %03d-%04d",
+			200+g.faker.IntN(800),
+			200+g.faker.IntN(800),
+			g.faker.IntN(10000))
+	case "url", "website":
+		return "https://" + g.faker.DomainName()
+	case "domain":
+		return g.faker.DomainName()
+
+	// Address
+	case "street", "street_address":
+		return g.faker.Street()
+	case "city":
+		return g.faker.City()
+	case "state":
+		return g.faker.StateAbr()
+	case "zip", "zip_code", "postal_code":
+		return g.faker.Zip()
+	case "country":
+		return g.faker.Country()
+
+	// Professional
+	case "job_title":
+		return g.faker.JobTitle()
+	case "department":
+		return departments[g.faker.IntN(len(departments))]
+	case "industry":
+		return industries[g.faker.IntN(len(industries))]
+
+	// Finance
+	case "ein", "tax_id":
+		return fmt.Sprintf("%02d-%07d", 10+g.faker.IntN(90), g.faker.IntN(10000000))
+	case "ssn":
+		return fmt.Sprintf("***-**-%04d", g.faker.IntN(10000))
+	case "routing_number":
+		return generateFromMask(g.faker, "####-####-#")
+	case "account_number":
+		return generateFromMask(g.faker, "####-####-####")
+	case "credit_card":
+		return g.faker.CreditCardNumber(nil)
+	case "bank_name":
+		return bankNames[g.faker.IntN(len(bankNames))]
+
+	// Text
+	case "sentence":
+		return g.faker.Sentence(8)
+	case "paragraph":
+		return g.faker.Paragraph(2, 3, 8, " ")
+	case "word":
+		return g.faker.Word()
+	case "bs", "buzzword":
+		return g.faker.BS()
+
+	// Identifiers
+	case "uuid":
+		return g.faker.UUID()
+	case "username":
+		return g.faker.Username()
+
+	default:
+		return nil // unknown tag — fall through to heuristics
+	}
+}
+
+var departments = []string{
+	"Engineering", "Sales", "Marketing", "Finance", "Human Resources",
+	"Operations", "Legal", "Customer Support", "Product", "Design",
+	"IT", "Research", "Compliance", "Administration", "Quality Assurance",
+}
+
+var bankNames = []string{
+	"JPMorgan Chase", "Bank of America", "Wells Fargo", "Citibank",
+	"Goldman Sachs", "Morgan Stanley", "U.S. Bank", "TD Bank",
+	"Capital One", "PNC Financial", "Charles Schwab", "HSBC",
 }
 
 // unmaskPattern converts a display mask pattern to a generation mask.

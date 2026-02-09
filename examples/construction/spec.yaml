@@ -250,6 +250,7 @@ entities:
         type: string
         display_name: "Company Name"
         required: true
+        fake: "company"
         min_length: 2
         max_length: 200
         placeholder: "Enter company legal name"
@@ -267,6 +268,7 @@ entities:
         type: string
         display_name: "Tax ID (EIN)"
         required: true
+        fake: "ein"
         pattern: "^\\d{2}-\\d{7}$"
         pattern_message: "Must be in format XX-XXXXXXX"
         sensitive: true               # masked in display: "12-***4567"

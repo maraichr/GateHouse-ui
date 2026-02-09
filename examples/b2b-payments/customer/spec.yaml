@@ -66,14 +66,17 @@ entities:
         label: "Company Name"
         type: string
         required: true
+        fake: "company"
 
       - name: legal_name
         label: "Legal Name"
         type: string
+        fake: "company"
 
       - name: ein
         label: "EIN / Tax ID"
         type: string
+        fake: "ein"
         mask_pattern: "XX-XXX####"
 
       - name: business_type
@@ -88,6 +91,7 @@ entities:
       - name: industry
         label: "Industry"
         type: string
+        fake: "industry"
 
       - name: tier
         label: "Tier"
@@ -100,35 +104,43 @@ entities:
       - name: account_manager
         label: "Account Manager"
         type: string
+        fake: "full_name"
 
       - name: primary_contact_name
         label: "Primary Contact"
         type: string
+        fake: "full_name"
 
       - name: primary_contact_email
         label: "Contact Email"
         type: string
+        fake: "email"
 
       - name: primary_contact_phone
         label: "Contact Phone"
         type: string
         format: phone
+        fake: "phone"
 
       - name: street1
         label: "Street"
         type: string
+        fake: "street"
 
       - name: city
         label: "City"
         type: string
+        fake: "city"
 
       - name: state
         label: "State"
         type: string
+        fake: "state"
 
       - name: zip
         label: "ZIP"
         type: string
+        fake: "zip"
 
       - name: address
         label: "Address"
@@ -392,26 +404,31 @@ entities:
       - name: customer_name
         label: "Company"
         type: string
+        fake: "company"
 
       - name: first_name
         label: "First Name"
         type: string
         required: true
+        fake: "first_name"
 
       - name: last_name
         label: "Last Name"
         type: string
         required: true
+        fake: "last_name"
 
       - name: email
         label: "Email"
         type: string
         required: true
+        fake: "email"
 
       - name: phone
         label: "Phone"
         type: string
         format: phone
+        fake: "phone"
 
       - name: role
         label: "Role"
