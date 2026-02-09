@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/maraichr/GateHouse-ui/internal/auth"
 )
 
 func (s *Server) Routes() http.Handler {
@@ -20,6 +21,14 @@ func (s *Server) Routes() http.Handler {
 		r.Post("/switch", s.handleSwitchExample)
 		r.Get("/services", s.handleServices)
 	})
+
+	// Reviewer API — only available when database is configured
+	if s.store != nil {
+		r.Route("/_reviewer", func(r chi.Router) {
+			r.Use(auth.Middleware(s.store))
+			s.mountReviewerRoutes(r)
+		})
+	}
 
 	// Mock data — try service router first (composition mode), then fall through to host
 	r.Route("/api/v1", func(r chi.Router) {

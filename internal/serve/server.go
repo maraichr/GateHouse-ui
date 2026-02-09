@@ -1,6 +1,7 @@
 package serve
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"log/slog"
@@ -13,6 +14,7 @@ import (
 	"github.com/maraichr/GateHouse-ui/internal/compose"
 	"github.com/maraichr/GateHouse-ui/internal/engine"
 	"github.com/maraichr/GateHouse-ui/internal/parser"
+	"github.com/maraichr/GateHouse-ui/internal/store"
 )
 
 type Server struct {
@@ -21,6 +23,8 @@ type Server struct {
 	apiBaseURL  string
 	examplesDir string
 	composeFile string
+	databaseURL string
+	adminEmail  string
 	port        int
 	watch       bool
 	appTarget   string
@@ -28,6 +32,9 @@ type Server struct {
 	sseHub      *SSEHub
 	mockStore   *MockStore
 	mockMu      sync.RWMutex // guards mockStore swaps
+
+	// Database (for spec reviewer)
+	store *store.DB
 
 	// Composition mode fields
 	aggregator    *compose.Aggregator
@@ -41,6 +48,8 @@ type Config struct {
 	DataPath    string
 	ExamplesDir string
 	ComposeFile string
+	DatabaseURL string
+	AdminEmail  string
 	Port        int
 	Watch       bool
 	Target      string
@@ -58,10 +67,19 @@ func NewServer(cfg Config) (*Server, error) {
 		apiBaseURL:  cfg.APIBaseURL,
 		examplesDir: cfg.ExamplesDir,
 		composeFile: cfg.ComposeFile,
+		databaseURL: cfg.DatabaseURL,
+		adminEmail:  cfg.AdminEmail,
 		port:        cfg.Port,
 		watch:       cfg.Watch,
 		appTarget:   cfg.Target,
 		sseHub:      NewSSEHub(),
+	}
+
+	// Initialize database if configured
+	if s.databaseURL != "" {
+		if err := s.initDatabase(); err != nil {
+			return nil, fmt.Errorf("initializing database: %w", err)
+		}
 	}
 
 	// Composition mode
@@ -80,18 +98,51 @@ func NewServer(cfg Config) (*Server, error) {
 	}
 
 	if s.dataPath != "" {
-		store, err := LoadMockData(s.dataPath)
+		ms, err := LoadMockData(s.dataPath)
 		if err != nil {
 			return nil, fmt.Errorf("loading mock data: %w", err)
 		}
-		s.mockStore = store
+		s.mockStore = ms
 	}
 
-	if err := s.loadSpec(); err != nil {
-		return nil, err
+	// Load spec from file if provided (DB-only mode doesn't require a spec file)
+	if s.specPath != "" {
+		if err := s.loadSpec(); err != nil {
+			return nil, err
+		}
 	}
 
 	return s, nil
+}
+
+// initDatabase connects to PostgreSQL, runs migrations, and seeds the default admin.
+func (s *Server) initDatabase() error {
+	ctx := context.Background()
+	db, err := store.New(ctx, s.databaseURL)
+	if err != nil {
+		return err
+	}
+	s.store = db
+
+	if err := db.RunMigrations(s.databaseURL); err != nil {
+		return fmt.Errorf("running migrations: %w", err)
+	}
+
+	email := s.adminEmail
+	if email == "" {
+		email = "admin@gatehouse.local"
+	}
+	admin, err := db.SeedDefaultAdmin(ctx, email)
+	if err != nil {
+		return fmt.Errorf("seeding admin: %w", err)
+	}
+	slog.Info("database initialized", "admin", admin.Email)
+	return nil
+}
+
+// GetStore returns the database store (nil if database not configured).
+func (s *Server) GetStore() *store.DB {
+	return s.store
 }
 
 // initComposed loads composition config, builds all partial trees, and composes them.

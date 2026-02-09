@@ -13,7 +13,11 @@ func Parse(path string) (*spec.AppSpec, error) {
 	if err != nil {
 		return nil, fmt.Errorf("reading spec file: %w", err)
 	}
+	return ParseBytes(data)
+}
 
+// ParseBytes parses YAML spec bytes into an AppSpec.
+func ParseBytes(data []byte) (*spec.AppSpec, error) {
 	var appSpec spec.AppSpec
 	if err := yaml.Unmarshal(data, &appSpec); err != nil {
 		return nil, fmt.Errorf("parsing YAML: %w", err)
