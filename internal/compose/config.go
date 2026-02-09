@@ -30,6 +30,18 @@ type ServiceSource struct {
 	HealthURL string `yaml:"health_url,omitempty"` // custom health check URL
 }
 
+// LoadConfigFromBytes parses and validates a composition config from raw YAML bytes.
+func LoadConfigFromBytes(data []byte) (*CompositionConfig, error) {
+	var cfg CompositionConfig
+	if err := yaml.Unmarshal(data, &cfg); err != nil {
+		return nil, fmt.Errorf("parsing composition config: %w", err)
+	}
+	if err := cfg.validate(); err != nil {
+		return nil, err
+	}
+	return &cfg, nil
+}
+
 // LoadConfig reads and validates a composition config YAML file.
 func LoadConfig(path string) (*CompositionConfig, error) {
 	data, err := os.ReadFile(path)

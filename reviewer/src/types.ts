@@ -544,3 +544,55 @@ export interface CoverageGap {
 export interface SpecWithVersion extends Spec {
   latest_version?: SpecVersionSummary;
 }
+
+// --- Composition types ---
+
+export interface Composition {
+  id: string;
+  name: string;
+  display_name: string;
+  description?: string;
+  host_spec_id: string;
+  owner_id?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CompositionWithInfo extends Composition {
+  host_spec_name: string;
+  member_count: number;
+}
+
+export interface CompositionMember {
+  id: string;
+  composition_id: string;
+  spec_id: string;
+  service_name: string;
+  prefix: string;
+  nav_group: string;
+  nav_order: number;
+  optional: boolean;
+  added_at: string;
+}
+
+export interface ComposedSpecResponse {
+  composed_spec: AppSpec;
+  sources: Record<string, string>;
+  host_name: string;
+  members: CompositionMember[];
+}
+
+export interface ComposedCoverageReport extends CoverageReport {
+  sources: Record<string, string>;
+  service_coverages: ServiceCoverage[];
+}
+
+export interface ServiceCoverage {
+  service: string;
+  entity_count: number;
+  average: number;
+}
+
+export interface EnrichedEntityCoverage extends EntityCoverage {
+  source: string;
+}

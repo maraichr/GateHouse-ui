@@ -1,27 +1,22 @@
 import { useParams, Link } from 'react-router';
 import { useState } from 'react';
 import { ChevronRight } from 'lucide-react';
-import { useSpec, useCoverage } from '../hooks/useSpec';
+import { useAppSpecContext } from '../context/AppSpecContext';
 import { PageHeader } from '../components/layout/PageHeader';
 import { CoverageBadge } from '../components/coverage/CoverageBadge';
-import type { AppSpec, Entity, EntityCoverage } from '../types';
+import { ServiceBadge } from '../components/utility/ServiceBadge';
+import type { Entity, EntityCoverage } from '../types';
 
 import { FieldTable } from '../components/fields/FieldTable';
 import { StateMachineDiagram } from '../components/state-machine/StateMachineDiagram';
 import { ViewsTab } from '../components/views/ViewsTab';
 
 export function EntityDetail() {
-  const { specId, entityName } = useParams<{ specId: string; entityName: string }>();
-  const { data: specData } = useSpec(specId);
-  const latestVersion = specData?.latest_version;
-  const { data: coverage } = useCoverage(specId, latestVersion?.id);
+  const { entityName } = useParams<{ entityName: string }>();
+  const { appSpec, specDisplayName, basePath, sources, coverage } = useAppSpecContext();
   const [activeTab, setActiveTab] = useState('fields');
 
-  const appSpec: AppSpec | null = latestVersion?.spec_data
-    ? (typeof latestVersion.spec_data === 'string' ? JSON.parse(latestVersion.spec_data) : latestVersion.spec_data)
-    : null;
-
-  const entity: Entity | undefined = appSpec?.entities.find((e) => e.name === entityName);
+  const entity: Entity | undefined = appSpec?.entities?.find((e) => e.name === entityName);
   const ec: EntityCoverage | undefined = coverage?.entities.find((e) => e.name === entityName);
 
   if (!entity) {
@@ -29,24 +24,32 @@ export function EntityDetail() {
   }
 
   const tabs = [
-    { id: 'fields', label: 'Fields', count: entity.fields.length },
+    { id: 'fields', label: 'Fields', count: (entity.fields || []).length },
     ...(entity.state_machine ? [{ id: 'state-machine', label: 'State Machine', count: entity.state_machine.transitions.length }] : []),
     { id: 'views', label: 'Views' },
     ...(entity.relationships && entity.relationships.length > 0 ? [{ id: 'relationships', label: 'Relationships', count: entity.relationships.length }] : []),
   ];
 
+  const subtitleParts = [entity.description || `API: ${entity.api_resource}`];
+  const sourceService = sources?.[entity.name];
+
   return (
     <div>
       <PageHeader
         title={entity.display_name || entity.name}
-        subtitle={entity.description || `API: ${entity.api_resource}`}
+        subtitle={
+          <span className="flex items-center gap-2">
+            {subtitleParts[0]}
+            {sourceService && <ServiceBadge service={sourceService} />}
+          </span>
+        }
         breadcrumb={
           <nav className="flex items-center gap-1 text-sm text-gray-500">
             <Link to="/" className="hover:text-gray-700">Specs</Link>
             <ChevronRight className="w-3 h-3" />
-            <Link to={`/specs/${specId}`} className="hover:text-gray-700">{specData?.spec.display_name}</Link>
+            <Link to={basePath} className="hover:text-gray-700">{specDisplayName}</Link>
             <ChevronRight className="w-3 h-3" />
-            <Link to={`/specs/${specId}/entities`} className="hover:text-gray-700">Entities</Link>
+            <Link to={`${basePath}/entities`} className="hover:text-gray-700">Entities</Link>
             <ChevronRight className="w-3 h-3" />
             <span className="text-gray-900">{entity.display_name || entity.name}</span>
           </nav>
@@ -91,7 +94,7 @@ export function EntityDetail() {
           {entity.relationships.map((rel, i) => (
             <div key={i} className="bg-white rounded-lg border border-gray-200 p-3 text-xs">
               <span className="font-medium text-gray-800">{rel.name}</span>
-              <span className="text-gray-400 mx-2">→</span>
+              <span className="text-gray-400 mx-2">-</span>
               <span className="text-gray-600">{rel.entity}</span>
               <span className="text-gray-400 ml-2">({rel.type})</span>
             </div>

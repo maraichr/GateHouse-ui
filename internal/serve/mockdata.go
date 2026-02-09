@@ -85,6 +85,60 @@ func LoadMockData(path string) (*MockStore, error) {
 	return ms, nil
 }
 
+// NewMockStoreFromData creates a MockStore from an in-memory map (e.g., from generate.Generator.Generate()).
+func NewMockStoreFromData(data map[string]any) *MockStore {
+	ms := &MockStore{
+		collections:  make(map[string][]map[string]any),
+		widgets:      make(map[string]any),
+		entityStats:  make(map[string]any),
+		subResources: make(map[string][]map[string]any),
+	}
+
+	for key, val := range data {
+		switch key {
+		case "_widgets":
+			if w, ok := val.(map[string]any); ok {
+				ms.widgets = w
+			}
+		case "_entity_stats":
+			if es, ok := val.(map[string]any); ok {
+				ms.entityStats = es
+			}
+		case "_sub_resources":
+			if sr, ok := val.(map[string]any); ok {
+				for subKey, subVal := range sr {
+					if items, ok := subVal.([]any); ok {
+						records := make([]map[string]any, 0, len(items))
+						for _, item := range items {
+							if rec, ok := item.(map[string]any); ok {
+								records = append(records, rec)
+							}
+						}
+						ms.subResources[subKey] = records
+					}
+				}
+			}
+		default:
+			if items, ok := val.([]any); ok {
+				records := make([]map[string]any, 0, len(items))
+				for _, item := range items {
+					if rec, ok := item.(map[string]any); ok {
+						records = append(records, rec)
+					}
+				}
+				ms.collections[key] = records
+			}
+		}
+	}
+
+	slog.Info("mock data created from map",
+		"collections", len(ms.collections),
+		"widgets", len(ms.widgets),
+		"entity_stats", len(ms.entityStats),
+	)
+	return ms
+}
+
 func (ms *MockStore) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// Strip /api/v1 prefix
 	path := strings.TrimPrefix(r.URL.Path, "/api/v1")

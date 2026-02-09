@@ -1,24 +1,18 @@
-import { useParams, Link } from 'react-router';
+import { Link } from 'react-router';
 import { ChevronRight, Boxes, Search } from 'lucide-react';
 import { useState } from 'react';
-import { useSpec, useCoverage } from '../hooks/useSpec';
+import { useAppSpecContext } from '../context/AppSpecContext';
 import { PageHeader } from '../components/layout/PageHeader';
 import { CoverageBadge } from '../components/coverage/CoverageBadge';
 import { CoverageBar } from '../components/coverage/CoverageBar';
 import { Badge } from '../components/utility/Badge';
-import type { AppSpec, EntityCoverage } from '../types';
+import { ServiceBadge } from '../components/utility/ServiceBadge';
+import type { EntityCoverage } from '../types';
 
 export function EntityExplorer() {
-  const { specId } = useParams<{ specId: string }>();
-  const { data: specData } = useSpec(specId);
-  const latestVersion = specData?.latest_version;
-  const { data: coverage } = useCoverage(specId, latestVersion?.id);
+  const { appSpec, specDisplayName, basePath, sources, coverage } = useAppSpecContext();
   const [filter, setFilter] = useState<'all' | 'complete' | 'attention'>('all');
   const [search, setSearch] = useState('');
-
-  const appSpec: AppSpec | null = latestVersion?.spec_data
-    ? (typeof latestVersion.spec_data === 'string' ? JSON.parse(latestVersion.spec_data) : latestVersion.spec_data)
-    : null;
 
   const coverageMap = new Map<string, EntityCoverage>();
   coverage?.entities.forEach((ec) => coverageMap.set(ec.name, ec));
@@ -42,12 +36,12 @@ export function EntityExplorer() {
     <div>
       <PageHeader
         title="Entities"
-        subtitle={`${appSpec?.entities.length ?? 0} entities defined`}
+        subtitle={`${appSpec?.entities?.length ?? 0} entities defined`}
         breadcrumb={
           <nav className="flex items-center gap-1 text-sm text-gray-500">
             <Link to="/" className="hover:text-gray-700">Specs</Link>
             <ChevronRight className="w-3 h-3" />
-            <Link to={`/specs/${specId}`} className="hover:text-gray-700">{specData?.spec.display_name}</Link>
+            <Link to={basePath} className="hover:text-gray-700">{specDisplayName}</Link>
             <ChevronRight className="w-3 h-3" />
             <span className="text-gray-900">Entities</span>
           </nav>
@@ -90,13 +84,16 @@ export function EntityExplorer() {
           return (
             <Link
               key={entity.name}
-              to={`/specs/${specId}/entities/${entity.name}`}
+              to={`${basePath}/entities/${entity.name}`}
               className="bg-white rounded-lg border border-gray-200 p-4 hover:border-reviewer-300 hover:shadow-sm transition-all group"
             >
               <div className="flex items-start justify-between mb-2">
                 <div className="flex items-center gap-2">
                   <Boxes className="w-4 h-4 text-gray-400 group-hover:text-reviewer-500" />
                   <h3 className="font-semibold text-gray-900">{entity.display_name || entity.name}</h3>
+                  {sources && sources[entity.name] && (
+                    <ServiceBadge service={sources[entity.name]} />
+                  )}
                 </div>
                 {ec && <CoverageBadge value={ec.overall} size="sm" />}
               </div>
@@ -104,7 +101,7 @@ export function EntityExplorer() {
                 <p className="text-xs text-gray-500 mb-3 line-clamp-2">{entity.description}</p>
               )}
               <div className="flex items-center gap-3 text-xs text-gray-400 mb-2">
-                <span>{entity.fields.length} fields</span>
+                <span>{(entity.fields || []).length} fields</span>
                 {entity.state_machine && <Badge color="purple">SM</Badge>}
                 {entity.relationships && entity.relationships.length > 0 && (
                   <span>{entity.relationships.length} rels</span>

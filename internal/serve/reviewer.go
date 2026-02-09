@@ -2,14 +2,18 @@ package serve
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 	"log/slog"
 	"net/http"
+	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 	"github.com/maraichr/GateHouse-ui/internal/auth"
+	"github.com/maraichr/GateHouse-ui/internal/compose"
 	"github.com/maraichr/GateHouse-ui/internal/engine"
 	"github.com/maraichr/GateHouse-ui/internal/parser"
 	"github.com/maraichr/GateHouse-ui/internal/store"
@@ -53,6 +57,18 @@ func (s *Server) mountReviewerRoutes(r chi.Router) {
 
 	// Audit
 	r.Get("/specs/{specID}/audit", s.handleReviewerAudit)
+
+	// Compositions
+	r.Get("/compositions", s.handleReviewerListCompositions)
+	r.Post("/compositions", s.handleReviewerCreateComposition)
+	r.Get("/compositions/{compID}", s.handleReviewerGetComposition)
+	r.Delete("/compositions/{compID}", s.handleReviewerDeleteComposition)
+	r.Get("/compositions/{compID}/composed", s.handleReviewerGetComposedSpec)
+	r.Get("/compositions/{compID}/coverage", s.handleReviewerComposedCoverage)
+	r.Post("/compositions/{compID}/members", s.handleReviewerAddMember)
+	r.Delete("/compositions/{compID}/members/{memberID}", s.handleReviewerRemoveMember)
+	r.Patch("/compositions/{compID}/members/{memberID}", s.handleReviewerUpdateMember)
+	r.Post("/compositions/import", s.handleReviewerImportComposition)
 }
 
 // --- Auth ---
@@ -774,6 +790,560 @@ func (s *Server) writeAudit(r *http.Request, user *store.User, action, resourceT
 		ResourceID:   resourceID,
 		Metadata:     metadata,
 		IPAddress:    ip,
+	})
+}
+
+// --- Compositions ---
+
+func (s *Server) handleReviewerListCompositions(w http.ResponseWriter, r *http.Request) {
+	comps, err := s.store.ListCompositions(r.Context())
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
+		return
+	}
+	if comps == nil {
+		comps = []store.Composition{}
+	}
+
+	// Enrich with host spec info and member count
+	type CompositionWithInfo struct {
+		store.Composition
+		HostSpecName string `json:"host_spec_name"`
+		MemberCount  int    `json:"member_count"`
+	}
+	var result []CompositionWithInfo
+	for _, c := range comps {
+		item := CompositionWithInfo{Composition: c}
+		if sp, _ := s.store.GetSpec(r.Context(), c.HostSpecID); sp != nil {
+			item.HostSpecName = sp.DisplayName
+		}
+		if members, _ := s.store.ListCompositionMembers(r.Context(), c.ID); members != nil {
+			item.MemberCount = len(members)
+		}
+		result = append(result, item)
+	}
+	if result == nil {
+		result = []CompositionWithInfo{}
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"compositions": result})
+}
+
+func (s *Server) handleReviewerCreateComposition(w http.ResponseWriter, r *http.Request) {
+	user := auth.UserFromContext(r.Context())
+	if user == nil {
+		writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "authentication required"})
+		return
+	}
+	if !auth.RequireRole(r.Context(), "admin", "editor") {
+		writeJSON(w, http.StatusForbidden, map[string]string{"error": "editor or admin role required"})
+		return
+	}
+
+	var input struct {
+		Name        string    `json:"name"`
+		DisplayName string    `json:"display_name"`
+		Description string    `json:"description"`
+		HostSpecID  uuid.UUID `json:"host_spec_id"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid JSON"})
+		return
+	}
+	if input.Name == "" || input.DisplayName == "" {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "name and display_name required"})
+		return
+	}
+	if input.HostSpecID == uuid.Nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "host_spec_id required"})
+		return
+	}
+
+	c, err := s.store.CreateComposition(r.Context(), store.CreateCompositionInput{
+		Name:        input.Name,
+		DisplayName: input.DisplayName,
+		Description: input.Description,
+		HostSpecID:  input.HostSpecID,
+		OwnerID:     user.ID,
+	})
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
+		return
+	}
+
+	s.writeAudit(r, user, "composition.create", "composition", c.ID, nil)
+	writeJSON(w, http.StatusCreated, c)
+}
+
+func (s *Server) handleReviewerGetComposition(w http.ResponseWriter, r *http.Request) {
+	compID, err := uuid.Parse(chi.URLParam(r, "compID"))
+	if err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid composition ID"})
+		return
+	}
+
+	c, err := s.store.GetComposition(r.Context(), compID)
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
+		return
+	}
+	if c == nil {
+		writeJSON(w, http.StatusNotFound, map[string]string{"error": "composition not found"})
+		return
+	}
+
+	members, err := s.store.ListCompositionMembers(r.Context(), compID)
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
+		return
+	}
+	if members == nil {
+		members = []store.CompositionMember{}
+	}
+
+	// Get host spec name
+	hostSpecName := ""
+	if sp, _ := s.store.GetSpec(r.Context(), c.HostSpecID); sp != nil {
+		hostSpecName = sp.DisplayName
+	}
+
+	writeJSON(w, http.StatusOK, map[string]any{
+		"composition":    c,
+		"members":        members,
+		"host_spec_name": hostSpecName,
+	})
+}
+
+func (s *Server) handleReviewerDeleteComposition(w http.ResponseWriter, r *http.Request) {
+	if !auth.IsAdmin(r.Context()) {
+		writeJSON(w, http.StatusForbidden, map[string]string{"error": "admin role required"})
+		return
+	}
+	compID, err := uuid.Parse(chi.URLParam(r, "compID"))
+	if err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid composition ID"})
+		return
+	}
+
+	user := auth.UserFromContext(r.Context())
+	s.writeAudit(r, user, "composition.delete", "composition", compID, nil)
+
+	if err := s.store.DeleteComposition(r.Context(), compID); err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]string{"status": "deleted"})
+}
+
+func (s *Server) handleReviewerGetComposedSpec(w http.ResponseWriter, r *http.Request) {
+	compID, err := uuid.Parse(chi.URLParam(r, "compID"))
+	if err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid composition ID"})
+		return
+	}
+
+	c, err := s.store.GetComposition(r.Context(), compID)
+	if err != nil || c == nil {
+		writeJSON(w, http.StatusNotFound, map[string]string{"error": "composition not found"})
+		return
+	}
+
+	members, err := s.store.ListCompositionMembers(r.Context(), c.ID)
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
+		return
+	}
+
+	// Get host spec's latest version
+	hostVersion, err := s.store.GetLatestVersion(r.Context(), c.HostSpecID)
+	if err != nil || hostVersion == nil {
+		writeJSON(w, http.StatusNotFound, map[string]string{"error": "host spec has no version"})
+		return
+	}
+
+	hostSpec, _ := s.store.GetSpec(r.Context(), c.HostSpecID)
+	hostName := "host"
+	if hostSpec != nil {
+		hostName = hostSpec.AppName
+	}
+
+	// Build member specs
+	var memberSpecs []engine.MemberSpec
+	type memberInfo struct {
+		store.CompositionMember
+		SpecName string `json:"spec_name"`
+	}
+	var membersInfo []memberInfo
+
+	for _, m := range members {
+		v, err := s.store.GetLatestVersion(r.Context(), m.SpecID)
+		if err != nil || v == nil {
+			slog.Warn("member spec has no version", "member", m.ServiceName, "spec_id", m.SpecID)
+			continue
+		}
+		memberSpecs = append(memberSpecs, engine.MemberSpec{
+			ServiceName: m.ServiceName,
+			NavGroup:    m.NavGroup,
+			NavOrder:    m.NavOrder,
+			Prefix:      m.Prefix,
+			SpecData:    v.SpecData,
+		})
+		specName := m.ServiceName
+		if sp, _ := s.store.GetSpec(r.Context(), m.SpecID); sp != nil {
+			specName = sp.DisplayName
+		}
+		membersInfo = append(membersInfo, memberInfo{CompositionMember: m, SpecName: specName})
+	}
+
+	merged, sources, err := engine.MergeAppSpecs(hostVersion.SpecData, hostName, memberSpecs)
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "merge failed: " + err.Error()})
+		return
+	}
+
+	writeJSON(w, http.StatusOK, map[string]any{
+		"composed_spec": merged,
+		"sources":       sources,
+		"host_name":     hostName,
+		"members":       membersInfo,
+	})
+}
+
+func (s *Server) handleReviewerComposedCoverage(w http.ResponseWriter, r *http.Request) {
+	compID, err := uuid.Parse(chi.URLParam(r, "compID"))
+	if err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid composition ID"})
+		return
+	}
+
+	c, err := s.store.GetComposition(r.Context(), compID)
+	if err != nil || c == nil {
+		writeJSON(w, http.StatusNotFound, map[string]string{"error": "composition not found"})
+		return
+	}
+
+	members, _ := s.store.ListCompositionMembers(r.Context(), c.ID)
+	hostVersion, _ := s.store.GetLatestVersion(r.Context(), c.HostSpecID)
+	if hostVersion == nil {
+		writeJSON(w, http.StatusNotFound, map[string]string{"error": "host spec has no version"})
+		return
+	}
+
+	hostSpec, _ := s.store.GetSpec(r.Context(), c.HostSpecID)
+	hostName := "host"
+	if hostSpec != nil {
+		hostName = hostSpec.AppName
+	}
+
+	var memberSpecs []engine.MemberSpec
+	for _, m := range members {
+		v, _ := s.store.GetLatestVersion(r.Context(), m.SpecID)
+		if v == nil {
+			continue
+		}
+		memberSpecs = append(memberSpecs, engine.MemberSpec{
+			ServiceName: m.ServiceName,
+			NavGroup:    m.NavGroup,
+			NavOrder:    m.NavOrder,
+			Prefix:      m.Prefix,
+			SpecData:    v.SpecData,
+		})
+	}
+
+	merged, sources, err := engine.MergeAppSpecs(hostVersion.SpecData, hostName, memberSpecs)
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "merge failed: " + err.Error()})
+		return
+	}
+
+	mergedJSON, _ := json.Marshal(merged)
+	report, err := engine.AnalyzeCoverage(mergedJSON)
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "coverage analysis failed: " + err.Error()})
+		return
+	}
+
+	// Enrich entity coverages with source and compute per-service summaries
+	type EnrichedEntityCoverage struct {
+		engine.EntityCoverage
+		Source string `json:"source"`
+	}
+	enriched := make([]EnrichedEntityCoverage, 0, len(report.Entities))
+	serviceTotals := map[string][]float64{}
+
+	for _, ec := range report.Entities {
+		src := sources[ec.Name]
+		enriched = append(enriched, EnrichedEntityCoverage{EntityCoverage: ec, Source: src})
+		serviceTotals[src] = append(serviceTotals[src], ec.Overall)
+	}
+
+	// Compute per-service averages
+	type ServiceCoverage struct {
+		Service     string  `json:"service"`
+		EntityCount int     `json:"entity_count"`
+		Average     float64 `json:"average"`
+	}
+	var serviceCoverages []ServiceCoverage
+	for svc, scores := range serviceTotals {
+		sum := 0.0
+		for _, s := range scores {
+			sum += s
+		}
+		serviceCoverages = append(serviceCoverages, ServiceCoverage{
+			Service:     svc,
+			EntityCount: len(scores),
+			Average:     sum / float64(len(scores)),
+		})
+	}
+
+	writeJSON(w, http.StatusOK, map[string]any{
+		"overall":           report.Overall,
+		"entities":          enriched,
+		"summary":           report.Summary,
+		"gaps":              report.Gaps,
+		"sources":           sources,
+		"service_coverages": serviceCoverages,
+	})
+}
+
+func (s *Server) handleReviewerAddMember(w http.ResponseWriter, r *http.Request) {
+	user := auth.UserFromContext(r.Context())
+	if user == nil {
+		writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "authentication required"})
+		return
+	}
+	compID, err := uuid.Parse(chi.URLParam(r, "compID"))
+	if err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid composition ID"})
+		return
+	}
+
+	var input struct {
+		SpecID      uuid.UUID `json:"spec_id"`
+		ServiceName string    `json:"service_name"`
+		Prefix      string    `json:"prefix"`
+		NavGroup    string    `json:"nav_group"`
+		NavOrder    int       `json:"nav_order"`
+		Optional    bool      `json:"optional"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid JSON"})
+		return
+	}
+	if input.ServiceName == "" || input.SpecID == uuid.Nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "spec_id and service_name required"})
+		return
+	}
+
+	m, err := s.store.AddCompositionMember(r.Context(), store.AddCompositionMemberInput{
+		CompositionID: compID,
+		SpecID:        input.SpecID,
+		ServiceName:   input.ServiceName,
+		Prefix:        input.Prefix,
+		NavGroup:      input.NavGroup,
+		NavOrder:      input.NavOrder,
+		Optional:      input.Optional,
+	})
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
+		return
+	}
+
+	s.writeAudit(r, user, "composition.add_member", "composition", compID, map[string]any{"member": input.ServiceName})
+	writeJSON(w, http.StatusCreated, m)
+}
+
+func (s *Server) handleReviewerRemoveMember(w http.ResponseWriter, r *http.Request) {
+	user := auth.UserFromContext(r.Context())
+	if user == nil {
+		writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "authentication required"})
+		return
+	}
+	compID, err := uuid.Parse(chi.URLParam(r, "compID"))
+	if err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid composition ID"})
+		return
+	}
+	memberID, err := uuid.Parse(chi.URLParam(r, "memberID"))
+	if err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid member ID"})
+		return
+	}
+
+	s.writeAudit(r, user, "composition.remove_member", "composition", compID, map[string]any{"member_id": memberID})
+	if err := s.store.RemoveCompositionMember(r.Context(), memberID); err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]string{"status": "removed"})
+}
+
+func (s *Server) handleReviewerUpdateMember(w http.ResponseWriter, r *http.Request) {
+	user := auth.UserFromContext(r.Context())
+	if user == nil {
+		writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "authentication required"})
+		return
+	}
+	memberID, err := uuid.Parse(chi.URLParam(r, "memberID"))
+	if err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid member ID"})
+		return
+	}
+
+	var input struct {
+		NavGroup string `json:"nav_group"`
+		NavOrder int    `json:"nav_order"`
+		Prefix   string `json:"prefix"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid JSON"})
+		return
+	}
+
+	m, err := s.store.UpdateCompositionMember(r.Context(), memberID, input.NavGroup, input.NavOrder, input.Prefix)
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
+		return
+	}
+
+	_ = user // audit uses compID from the member; keep simple
+	writeJSON(w, http.StatusOK, m)
+}
+
+func (s *Server) handleReviewerImportComposition(w http.ResponseWriter, r *http.Request) {
+	user := auth.UserFromContext(r.Context())
+	if user == nil {
+		writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "authentication required"})
+		return
+	}
+	if !auth.RequireRole(r.Context(), "admin", "editor") {
+		writeJSON(w, http.StatusForbidden, map[string]string{"error": "editor or admin role required"})
+		return
+	}
+
+	body, err := io.ReadAll(r.Body)
+	if err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "failed to read body"})
+		return
+	}
+
+	cfg, err := compose.LoadConfigFromBytes(body)
+	if err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid compose config: " + err.Error()})
+		return
+	}
+
+	// Import each spec from disk paths
+	importSpec := func(src compose.ServiceSource) (*store.Spec, error) {
+		if src.SpecPath == "" {
+			return nil, fmt.Errorf("service %q has no spec_path", src.Name)
+		}
+		absPath := src.SpecPath
+		if !filepath.IsAbs(absPath) {
+			// Relative to base_dir query param if provided
+			if base := r.URL.Query().Get("base_dir"); base != "" {
+				absPath = filepath.Join(base, absPath)
+			}
+		}
+		data, err := os.ReadFile(absPath)
+		if err != nil {
+			return nil, fmt.Errorf("reading %q: %w", absPath, err)
+		}
+		appSpec, err := parser.ParseBytes(data)
+		if err != nil {
+			return nil, fmt.Errorf("parsing %q: %w", src.Name, err)
+		}
+		specJSON, _ := json.Marshal(appSpec)
+
+		appName := appSpec.App.Name
+		displayName := appSpec.App.DisplayName
+		if displayName == "" {
+			displayName = appName
+		}
+
+		sp, err := s.store.CreateSpec(r.Context(), store.CreateSpecInput{
+			AppName:     appName,
+			DisplayName: displayName,
+			Description: appSpec.App.Description,
+			OwnerID:     user.ID,
+		})
+		if err != nil {
+			return nil, fmt.Errorf("creating spec for %q: %w", src.Name, err)
+		}
+		_ = s.store.SetSpecPermission(r.Context(), sp.ID, user.ID, "owner", user.ID)
+
+		version := appSpec.App.Version
+		if version == "" {
+			version = "1.0.0"
+		}
+		_, err = s.store.CreateVersion(r.Context(), store.CreateVersionInput{
+			SpecID:        sp.ID,
+			Version:       version,
+			SpecData:      specJSON,
+			CreatedBy:     user.ID,
+			ChangeSummary: "Imported via composition",
+		})
+		if err != nil {
+			return nil, fmt.Errorf("creating version for %q: %w", src.Name, err)
+		}
+		return sp, nil
+	}
+
+	// Import host spec
+	hostSp, err := importSpec(cfg.Host)
+	if err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "host import failed: " + err.Error()})
+		return
+	}
+
+	// Create composition
+	compName := cfg.Host.Name + "-composition"
+	comp, err := s.store.CreateComposition(r.Context(), store.CreateCompositionInput{
+		Name:        compName,
+		DisplayName: cfg.Host.Name + " Composition",
+		HostSpecID:  hostSp.ID,
+		OwnerID:     user.ID,
+	})
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "create composition: " + err.Error()})
+		return
+	}
+
+	// Import service specs and add as members
+	specsCreated := 1 // host
+	membersCreated := 0
+	for _, svc := range cfg.Services {
+		sp, err := importSpec(svc)
+		if err != nil {
+			slog.Warn("skipping service import", "service", svc.Name, "error", err)
+			continue
+		}
+		specsCreated++
+
+		_, err = s.store.AddCompositionMember(r.Context(), store.AddCompositionMemberInput{
+			CompositionID: comp.ID,
+			SpecID:        sp.ID,
+			ServiceName:   svc.Name,
+			Prefix:        svc.Prefix,
+			NavGroup:      svc.NavGroup,
+			NavOrder:      svc.NavOrder,
+			Optional:      svc.Optional,
+		})
+		if err != nil {
+			slog.Warn("failed to add member", "service", svc.Name, "error", err)
+			continue
+		}
+		membersCreated++
+	}
+
+	s.writeAudit(r, user, "composition.import", "composition", comp.ID, map[string]any{
+		"specs_created":   specsCreated,
+		"members_created": membersCreated,
+	})
+
+	writeJSON(w, http.StatusCreated, map[string]any{
+		"composition":     comp,
+		"specs_created":   specsCreated,
+		"members_created": membersCreated,
 	})
 }
 

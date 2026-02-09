@@ -1,5 +1,18 @@
 import 'package:dio/dio.dart';
 
+/// Preview params captured once at load time (before GoRouter navigation strips them).
+final Map<String, String> _previewParams = () {
+  final params = Uri.base.queryParameters;
+  final result = <String, String>{};
+  for (final key in ['specId', 'versionId', 'compId']) {
+    final val = params[key];
+    if (val != null && val.isNotEmpty) {
+      result[key] = val;
+    }
+  }
+  return result;
+}();
+
 class ApiClient {
   final Dio _dio;
 
@@ -23,6 +36,7 @@ class ApiClient {
     final params = <String, dynamic>{
       'page': page,
       'page_size': pageSize,
+      ..._previewParams,
     };
     if (sort != null) params['sort'] = sort;
     if (order != null) params['order'] = order;
@@ -60,22 +74,32 @@ class ApiClient {
 
   /// GET detail endpoint
   Future<Map<String, dynamic>> getDetail(String resource, String id) async {
-    final response = await _dio.get('${_normalizePath(resource)}/$id');
+    final response = await _dio.get(
+      '${_normalizePath(resource)}/$id',
+      queryParameters: _previewParams,
+    );
     return response.data as Map<String, dynamic>;
   }
 
   /// POST create
   Future<Map<String, dynamic>> create(
       String resource, Map<String, dynamic> body) async {
-    final response = await _dio.post(_normalizePath(resource), data: body);
+    final response = await _dio.post(
+      _normalizePath(resource),
+      data: body,
+      queryParameters: _previewParams,
+    );
     return response.data as Map<String, dynamic>;
   }
 
   /// PATCH update
   Future<Map<String, dynamic>> update(
       String resource, String id, Map<String, dynamic> body) async {
-    final response =
-        await _dio.patch('${_normalizePath(resource)}/$id', data: body);
+    final response = await _dio.patch(
+      '${_normalizePath(resource)}/$id',
+      data: body,
+      queryParameters: _previewParams,
+    );
     return response.data as Map<String, dynamic>;
   }
 
@@ -89,6 +113,7 @@ class ApiClient {
     final response = await _dio.post(
       '${_normalizePath(resource)}/$id/transitions/$transitionName',
       data: body ?? {},
+      queryParameters: _previewParams,
     );
     return response.data as Map<String, dynamic>;
   }

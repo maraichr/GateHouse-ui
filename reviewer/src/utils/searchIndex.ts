@@ -12,7 +12,7 @@ export function buildSearchIndex(spec: AppSpec): SearchEntry[] {
   const entries: SearchEntry[] = [];
 
   // Entities
-  for (const entity of spec.entities) {
+  for (const entity of spec.entities || []) {
     entries.push({
       type: 'entity',
       label: entity.display_name || entity.name,
@@ -21,7 +21,7 @@ export function buildSearchIndex(spec: AppSpec): SearchEntry[] {
     });
 
     // Fields
-    for (const field of entity.fields) {
+    for (const field of entity.fields || []) {
       entries.push({
         type: 'field',
         label: field.display_name || field.name,

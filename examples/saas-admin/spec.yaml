@@ -182,6 +182,7 @@ entities:
         type: string
         display_name: "Name"
         required: true
+        fake: "full_name"
       - name: email
         type: email
         display_name: "Email"
@@ -189,6 +190,7 @@ entities:
       - name: company
         type: string
         display_name: "Company"
+        fake: "company"
       - name: plan
         type: enum
         display_name: "Plan"
@@ -479,6 +481,7 @@ entities:
       - name: assigned_to
         type: string
         display_name: "Assigned To"
+        fake: "full_name"
       - name: description
         type: richtext
         display_name: "Description"

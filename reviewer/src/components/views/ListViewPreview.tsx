@@ -8,7 +8,7 @@ interface ListViewPreviewProps {
 }
 
 export function ListViewPreview({ listView, entity }: ListViewPreviewProps) {
-  const fieldMap = new Map(entity.fields.map((f) => [f.name, f]));
+  const fieldMap = new Map((entity.fields || []).map((f) => [f.name, f]));
 
   return (
     <div className="space-y-4">

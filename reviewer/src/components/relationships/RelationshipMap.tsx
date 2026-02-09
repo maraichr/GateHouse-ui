@@ -1,14 +1,16 @@
 import { Badge } from '../utility/Badge';
+import { ServiceBadge } from '../utility/ServiceBadge';
 import type { AppSpec } from '../../types';
 
 interface RelationshipMapProps {
   appSpec: AppSpec;
+  sources?: Record<string, string>;
 }
 
-export function RelationshipMap({ appSpec }: RelationshipMapProps) {
-  const entityNames = new Set(appSpec.entities.map((e) => e.name));
+export function RelationshipMap({ appSpec, sources }: RelationshipMapProps) {
+  const entityNames = new Set((appSpec.entities || []).map((e) => e.name));
 
-  const relationships = appSpec.entities.flatMap((entity) =>
+  const relationships = (appSpec.entities || []).flatMap((entity) =>
     (entity.relationships || []).map((rel) => ({
       from: entity.name,
       fromDisplay: entity.display_name || entity.name,
@@ -19,6 +21,7 @@ export function RelationshipMap({ appSpec }: RelationshipMapProps) {
       isExternal: !entityNames.has(rel.entity),
       showInDetail: rel.show_in_detail,
       inlineCreate: rel.inline_create,
+      isCrossService: sources ? sources[entity.name] !== sources[rel.entity] : false,
     })),
   );
 
@@ -30,29 +33,34 @@ export function RelationshipMap({ appSpec }: RelationshipMapProps) {
     <div className="space-y-4">
       {/* Entity nodes */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {appSpec.entities.map((entity) => {
+        {(appSpec.entities || []).map((entity) => {
           const rels = relationships.filter((r) => r.from === entity.name);
           const incomingRels = relationships.filter((r) => r.to === entity.name);
+          const entitySource = sources?.[entity.name];
           return (
             <div
               key={entity.name}
               className="bg-white rounded-lg border border-gray-200 p-4"
             >
-              <h3 className="font-semibold text-gray-900 mb-2">{entity.display_name || entity.name}</h3>
+              <div className="flex items-center gap-2 mb-2">
+                <h3 className="font-semibold text-gray-900">{entity.display_name || entity.name}</h3>
+                {entitySource && <ServiceBadge service={entitySource} />}
+              </div>
               <div className="text-xs text-gray-500 mb-3">
-                {entity.fields.slice(0, 3).map((f) => f.name).join(', ')}
-                {entity.fields.length > 3 && `, +${entity.fields.length - 3}`}
+                {(entity.fields || []).slice(0, 3).map((f) => f.name).join(', ')}
+                {(entity.fields || []).length > 3 && `, +${(entity.fields || []).length - 3}`}
               </div>
               {rels.length > 0 && (
                 <div className="space-y-1">
                   {rels.map((rel, i) => (
                     <div key={i} className="flex items-center gap-2 text-xs">
-                      <span className="text-gray-400">→</span>
-                      <Badge color={rel.isExternal ? 'amber' : 'blue'}>{rel.type}</Badge>
-                      <span className={rel.isExternal ? 'text-amber-600 italic' : 'text-gray-700'}>
+                      <span className="text-gray-400">-</span>
+                      <Badge color={rel.isExternal ? 'amber' : rel.isCrossService ? 'indigo' : 'blue'}>{rel.type}</Badge>
+                      <span className={rel.isExternal ? 'text-amber-600 italic' : rel.isCrossService ? 'text-indigo-600' : 'text-gray-700'}>
                         {rel.to}
                       </span>
                       {rel.isExternal && <span className="text-amber-500 text-[10px]">(external)</span>}
+                      {rel.isCrossService && !rel.isExternal && <span className="text-indigo-500 text-[10px]">(cross-service)</span>}
                     </div>
                   ))}
                 </div>
@@ -89,13 +97,21 @@ export function RelationshipMap({ appSpec }: RelationshipMapProps) {
           <tbody className="divide-y divide-gray-100">
             {relationships.map((rel, i) => (
               <tr key={i} className="hover:bg-gray-50">
-                <td className="px-4 py-2 font-medium text-gray-700">{rel.fromDisplay}</td>
+                <td className="px-4 py-2 font-medium text-gray-700">
+                  <span className="flex items-center gap-1.5">
+                    {rel.fromDisplay}
+                    {sources?.[rel.from] && <ServiceBadge service={sources[rel.from]} />}
+                  </span>
+                </td>
                 <td className="px-4 py-2 text-gray-600">{rel.name}</td>
                 <td className={`px-4 py-2 ${rel.isExternal ? 'text-amber-600 italic' : 'text-gray-700'}`}>
-                  {rel.to}
-                  {rel.isExternal && <span className="text-[10px] ml-1">(ext)</span>}
+                  <span className="flex items-center gap-1.5">
+                    {rel.to}
+                    {rel.isExternal && <span className="text-[10px]">(ext)</span>}
+                    {rel.isCrossService && !rel.isExternal && <span className="text-indigo-500 text-[10px]">(x-svc)</span>}
+                  </span>
                 </td>
-                <td className="px-4 py-2"><Badge color="blue">{rel.type}</Badge></td>
+                <td className="px-4 py-2"><Badge color={rel.isCrossService ? 'indigo' : 'blue'}>{rel.type}</Badge></td>
                 <td className="px-4 py-2 font-mono text-xs text-gray-500">{rel.foreignKey || '—'}</td>
                 <td className="px-4 py-2">
                   <div className="flex gap-1">

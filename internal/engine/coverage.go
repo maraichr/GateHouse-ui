@@ -68,7 +68,7 @@ func AnalyzeCoverageFromSpec(appSpec *spec.AppSpec) *CoverageReport {
 
 	totalFields := 0
 	totalStateMachines := 0
-	var entities []EntityCoverage
+	entities := make([]EntityCoverage, 0)
 
 	for _, entity := range appSpec.Entities {
 		ec := analyzeEntityCoverage(&entity)
@@ -298,7 +298,7 @@ func countNavItemsRecursive(items []spec.NavItem) int {
 }
 
 func findGaps(appSpec *spec.AppSpec, entities []EntityCoverage) []CoverageGap {
-	var gaps []CoverageGap
+	gaps := make([]CoverageGap, 0)
 
 	for _, ec := range entities {
 		if !ec.HasListView {

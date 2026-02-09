@@ -8,19 +8,19 @@ interface PermissionRow {
 }
 
 export function buildPermissionMatrix(appSpec: AppSpec): { roles: string[]; rows: PermissionRow[] } {
-  const roles = Object.keys(appSpec.auth.roles || {});
+  const roles = Object.keys(appSpec.auth?.roles || {});
   const rows: PermissionRow[] = [];
 
-  for (const entity of appSpec.entities) {
+  for (const entity of appSpec.entities || []) {
     // Entity header
     rows.push({ label: entity.display_name || entity.name, isHeader: true, isTransition: false, permissions: {} });
 
     // CRUD actions (check if views exist as proxy for permission)
     const crudActions = [
-      { label: 'View (List)', hasView: !!entity.views.list },
-      { label: 'View (Detail)', hasView: !!entity.views.detail },
-      { label: 'Create', hasView: !!entity.views.create },
-      { label: 'Edit', hasView: !!entity.views.edit },
+      { label: 'View (List)', hasView: !!entity.views?.list },
+      { label: 'View (Detail)', hasView: !!entity.views?.detail },
+      { label: 'Create', hasView: !!entity.views?.create },
+      { label: 'Edit', hasView: !!entity.views?.edit },
     ];
 
     for (const action of crudActions) {

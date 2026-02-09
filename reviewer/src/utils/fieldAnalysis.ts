@@ -12,12 +12,12 @@ export function inferShowIn(
   const name = field.name;
 
   // List: check columns
-  if (entity.views.list?.columns) {
+  if (entity.views?.list?.columns) {
     result.list = entity.views.list.columns.some((c) => c.field === name);
   }
 
   // Detail: check tabs/sections
-  if (entity.views.detail) {
+  if (entity.views?.detail) {
     const dv = entity.views.detail;
     if (dv.tabs) {
       for (const tab of dv.tabs) {
@@ -47,7 +47,7 @@ export function inferShowIn(
   }
 
   // Create: check form steps/sections
-  if (entity.views.create) {
+  if (entity.views?.create) {
     const fv = entity.views.create;
     if (fv.steps) {
       result.create = fv.steps.some((s) => s.fields?.includes(name));
@@ -58,7 +58,7 @@ export function inferShowIn(
   }
 
   // Edit: check form steps/sections
-  if (entity.views.edit) {
+  if (entity.views?.edit) {
     const fv = entity.views.edit;
     if (fv.steps) {
       result.edit = fv.steps.some((s) => s.fields?.includes(name));

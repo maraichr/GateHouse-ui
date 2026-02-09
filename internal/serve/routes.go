@@ -33,6 +33,16 @@ func (s *Server) Routes() http.Handler {
 	// Mock data — try service router first (composition mode), then fall through to host
 	r.Route("/api/v1", func(r chi.Router) {
 		r.HandleFunc("/*", func(w http.ResponseWriter, req *http.Request) {
+			// Preview mode: serve auto-generated mock data
+			q := req.URL.Query()
+			specID := q.Get("specId")
+			versionID := q.Get("versionId")
+			compID := q.Get("compId")
+			if s.store != nil && (specID != "" || compID != "") {
+				s.handlePreviewData(w, req, specID, versionID, compID)
+				return
+			}
+
 			// In composition mode, try service router first
 			if s.serviceRouter != nil && s.serviceRouter.Route(w, req) {
 				return

@@ -8,7 +8,7 @@ interface ViewsTabProps {
 }
 
 export function ViewsTab({ entity }: ViewsTabProps) {
-  const { views } = entity;
+  const views = entity.views || {};
 
   return (
     <div className="space-y-6">

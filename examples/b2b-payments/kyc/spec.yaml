@@ -78,6 +78,7 @@ entities:
         label: "Customer"
         type: string
         required: true
+        fake: "company"
 
       - name: review_type
         label: "Review Type"
@@ -101,6 +102,7 @@ entities:
       - name: assigned_to
         label: "Assigned To"
         type: string
+        fake: "full_name"
 
       - name: initiated_at
         label: "Initiated"
@@ -306,6 +308,12 @@ entities:
         label: "Screened Entity"
         type: string
         required: true
+        fake:
+          depends_on: entity_type
+          map:
+            business: company
+            individual: full_name
+          default: company
 
       - name: entity_type
         label: "Entity Type"
@@ -342,6 +350,7 @@ entities:
       - name: resolved_by
         label: "Resolved By"
         type: string
+        fake: "full_name"
 
       - name: resolved_at
         label: "Resolved"

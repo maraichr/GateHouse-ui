@@ -7,8 +7,12 @@ interface NavBlueprintProps {
 }
 
 export function NavBlueprint({ appSpec }: NavBlueprintProps) {
-  const entityNames = new Set(appSpec.entities.map((e) => e.name));
-  const pageIds = new Set(appSpec.pages.map((p) => p.id));
+  const entityNames = new Set((appSpec.entities || []).map((e) => e.name));
+  const pageIds = new Set((appSpec.pages || []).map((p) => p.id));
+
+  if (!appSpec.navigation?.items?.length) {
+    return <p className="text-sm text-gray-500">No navigation defined in this spec.</p>;
+  }
 
   return (
     <div className="bg-white rounded-lg border border-gray-200 p-5">

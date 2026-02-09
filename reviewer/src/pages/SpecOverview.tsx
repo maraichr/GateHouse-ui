@@ -3,7 +3,8 @@ import {
   Database, GitBranch, Shield, Layout, FileText, Eye, ChevronRight,
   Boxes, Workflow, Lock, Map, Navigation, PanelLeft,
 } from 'lucide-react';
-import { useSpec, useVersions, useCoverage } from '../hooks/useSpec';
+import { useSpec, useVersions } from '../hooks/useSpec';
+import { useAppSpecContext } from '../context/AppSpecContext';
 import { PageHeader } from '../components/layout/PageHeader';
 import { CoverageBadge } from '../components/coverage/CoverageBadge';
 import { CoverageBar } from '../components/coverage/CoverageBar';
@@ -11,23 +12,14 @@ import { CoverageBreakdown } from '../components/coverage/CoverageBreakdown';
 import { AttentionList } from '../components/coverage/AttentionList';
 import { Badge } from '../components/utility/Badge';
 import { statusColor, statusLabel } from '../utils/coverage';
-import type { AppSpec } from '../types';
 
 export function SpecOverview() {
   const { specId } = useParams<{ specId: string }>();
   const { data: specData, isLoading: specLoading } = useSpec(specId);
   const { data: versions } = useVersions(specId);
+  const { appSpec, basePath, coverage } = useAppSpecContext();
 
   const latestVersion = specData?.latest_version;
-  const versionId = latestVersion?.id;
-  const { data: coverage } = useCoverage(specId, versionId);
-
-  // Parse spec_data if available
-  const appSpec: AppSpec | null = latestVersion?.spec_data
-    ? (typeof latestVersion.spec_data === 'string'
-        ? JSON.parse(latestVersion.spec_data)
-        : latestVersion.spec_data)
-    : null;
 
   if (specLoading) {
     return <div className="animate-pulse space-y-4">
@@ -46,11 +38,11 @@ export function SpecOverview() {
   const { spec } = specData;
 
   const navSections = [
-    { label: 'Entities', icon: Boxes, path: 'entities', count: appSpec?.entities.length },
-    { label: 'Permissions', icon: Lock, path: 'permissions', count: appSpec ? Object.keys(appSpec.auth.roles || {}).length : 0 },
+    { label: 'Entities', icon: Boxes, path: 'entities', count: appSpec?.entities?.length },
+    { label: 'Permissions', icon: Lock, path: 'permissions', count: appSpec ? Object.keys(appSpec.auth?.roles || {}).length : 0 },
     { label: 'Relationships', icon: GitBranch, path: 'relationships' },
-    { label: 'Navigation', icon: Navigation, path: 'navigation', count: appSpec?.navigation.items.length },
-    { label: 'Pages', icon: PanelLeft, path: 'pages', count: appSpec?.pages.length },
+    { label: 'Navigation', icon: Navigation, path: 'navigation', count: appSpec?.navigation?.items?.length },
+    { label: 'Pages', icon: PanelLeft, path: 'pages', count: appSpec?.pages?.length },
     { label: 'Live Preview', icon: Eye, path: 'preview' },
   ];
 
@@ -83,7 +75,7 @@ export function SpecOverview() {
 
       {/* Stat cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
-        <StatCard icon={Database} label="Entities" value={appSpec?.entities.length ?? 0} />
+        <StatCard icon={Database} label="Entities" value={appSpec?.entities?.length ?? 0} />
         <StatCard icon={FileText} label="Fields" value={coverage?.summary.field_count ?? 0} />
         <StatCard icon={Workflow} label="State Machines" value={coverage?.summary.state_machine_count ?? 0} />
         <StatCard icon={Layout} label="Views" value={coverage?.summary.view_count ?? 0} />
@@ -112,13 +104,13 @@ export function SpecOverview() {
           {appSpec && coverage && (
             <section className="bg-white rounded-lg border border-gray-200 p-5">
               <h2 className="font-semibold text-gray-900 mb-4">
-                Entities ({appSpec.entities.length})
+                Entities ({appSpec.entities?.length ?? 0})
               </h2>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {coverage.entities.map((ec) => (
+                {(coverage.entities || []).map((ec) => (
                   <Link
                     key={ec.name}
-                    to={`/specs/${specId}/entities/${ec.name}`}
+                    to={`${basePath}/entities/${ec.name}`}
                     className="flex items-center justify-between p-3 rounded-lg border border-gray-100 hover:border-reviewer-200 hover:bg-reviewer-50/50 transition-all group"
                   >
                     <div>
@@ -148,7 +140,7 @@ export function SpecOverview() {
               {navSections.map(({ label, icon: Icon, path, count }) => (
                 <Link
                   key={path}
-                  to={`/specs/${specId}/${path}`}
+                  to={`${basePath}/${path}`}
                   className="flex items-center justify-between px-3 py-2 text-sm rounded-md hover:bg-gray-50 text-gray-700 hover:text-gray-900 transition-colors group"
                 >
                   <span className="flex items-center gap-2">
@@ -167,7 +159,7 @@ export function SpecOverview() {
           </section>
 
           {/* Attention required */}
-          {coverage && coverage.gaps.length > 0 && (
+          {coverage && coverage.gaps && coverage.gaps.length > 0 && (
             <section className="bg-white rounded-lg border border-gray-200 p-5">
               <h2 className="font-semibold text-gray-900 mb-3">Attention Required</h2>
               <AttentionList gaps={coverage.gaps} maxItems={5} />
@@ -192,11 +184,11 @@ export function SpecOverview() {
           )}
 
           {/* Auth & Roles */}
-          {appSpec && Object.keys(appSpec.auth.roles || {}).length > 0 && (
+          {appSpec && Object.keys(appSpec.auth?.roles || {}).length > 0 && (
             <section className="bg-white rounded-lg border border-gray-200 p-5">
               <h2 className="font-semibold text-gray-900 mb-3">Roles</h2>
               <div className="flex flex-wrap gap-2">
-                {Object.entries(appSpec.auth.roles).map(([key, role]) => (
+                {Object.entries(appSpec.auth?.roles || {}).map(([key, role]) => (
                   <Badge key={key} color="purple">
                     {role.display_name || key}
                   </Badge>
@@ -206,7 +198,7 @@ export function SpecOverview() {
           )}
 
           {/* Theme preview */}
-          {appSpec?.app.theme && (
+          {appSpec?.app?.theme && (
             <section className="bg-white rounded-lg border border-gray-200 p-5">
               <h2 className="font-semibold text-gray-900 mb-3">Theme</h2>
               <div className="flex gap-2 mb-2">

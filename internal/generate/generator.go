@@ -113,16 +113,25 @@ func (g *Generator) generateEntityRecords(entity *spec.Entity) {
 	resource := entityResourceKey(entity)
 	var records []any
 
+	// Identify which fields have conditional fake hints (need second pass)
+	conditionalFields := map[int]bool{}
+	for j := range entity.Fields {
+		if entity.Fields[j].Fake != nil && entity.Fields[j].Fake.IsConditional() {
+			conditionalFields[j] = true
+		}
+	}
+
 	for i := 0; i < g.cfg.Count; i++ {
 		record := map[string]any{}
 
-		// Generate each field value
+		// First pass: generate all non-conditional fields
 		for j := range entity.Fields {
+			if conditionalFields[j] {
+				continue
+			}
 			field := &entity.Fields[j]
 
-			// Skip hidden computed-only fields (except primary key)
 			if field.Computed != nil && !field.PrimaryKey {
-				// Generate a plausible value for computed fields that appear in displays
 				record[field.Name] = g.generateFieldValue(entity, field, i)
 				continue
 			}
@@ -133,6 +142,15 @@ func (g *Generator) generateEntityRecords(entity *spec.Entity) {
 			}
 
 			record[field.Name] = g.generateFieldValue(entity, field, i)
+		}
+
+		// Second pass: generate conditional fields (they can now read dependency values)
+		for j := range entity.Fields {
+			if !conditionalFields[j] {
+				continue
+			}
+			field := &entity.Fields[j]
+			record[field.Name] = g.generateFieldValueWithRecord(entity, field, i, record)
 		}
 
 		// Register ID for cross-references

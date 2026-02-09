@@ -19,7 +19,7 @@ export function FieldTable({ entity, appSpec }: FieldTableProps) {
   const [expandedField, setExpandedField] = useState<string | null>(null);
   const [sortBy, setSortBy] = useState<'name' | 'type' | 'required'>('name');
 
-  const fields = [...entity.fields].sort((a, b) => {
+  const fields = [...(entity.fields || [])].sort((a, b) => {
     if (sortBy === 'type') return a.type.localeCompare(b.type);
     if (sortBy === 'required') return (b.required ? 1 : 0) - (a.required ? 1 : 0);
     return a.name.localeCompare(b.name);

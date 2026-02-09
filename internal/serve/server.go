@@ -295,6 +295,16 @@ func (s *Server) target() string {
 }
 
 func (s *Server) handleGetSpec(w http.ResponseWriter, r *http.Request) {
+	// Dynamic preview: build tree from DB when preview params are present
+	specID := r.URL.Query().Get("specId")
+	versionID := r.URL.Query().Get("versionId")
+	compID := r.URL.Query().Get("compId")
+
+	if s.store != nil && (specID != "" || compID != "") {
+		s.handleDynamicSpec(w, r, specID, versionID, compID)
+		return
+	}
+
 	tree := s.currentTree.Load()
 	if tree == nil {
 		http.Error(w, `{"error":"spec not loaded"}`, http.StatusServiceUnavailable)
