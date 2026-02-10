@@ -11,6 +11,7 @@ import { RelationshipMapPage } from '../pages/RelationshipMapPage';
 import { NavigationBlueprintPage } from '../pages/NavigationBlueprintPage';
 import { PageInspectorPage } from '../pages/PageInspectorPage';
 import { LivePreview } from '../pages/LivePreview';
+import { PublishReportPage } from '../pages/PublishReportPage';
 import { CompositionEditorLayout } from '../components/editor/CompositionEditorLayout';
 import { MetadataEditor } from '../components/editor/MetadataEditor';
 import { EntityListEditor } from '../components/editor/EntityListEditor';
@@ -34,6 +35,7 @@ const sharedChildren = [
   { path: 'relationships', element: <RelationshipMapPage /> },
   { path: 'navigation', element: <NavigationBlueprintPage /> },
   { path: 'pages', element: <PageInspectorPage /> },
+  { path: 'publish-report', element: <PublishReportPage /> },
 ];
 
 const editorChildren = [

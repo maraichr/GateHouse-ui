@@ -50,6 +50,8 @@ No frontend code required. Change the YAML, refresh the page.
 - **Skeleton loading**: Shimmer placeholders for tables, detail views, and stat cards
 - **Two runtimes**: React (production-ready) and Flutter (feature-complete)
 - **Hot reload**: Edit the spec YAML, see changes instantly via SSE
+- **Renderer capability contract**: `GET /_renderer/capabilities` exposes runtime support matrix
+- **Parity checker**: `go run ./cmd/parity --strict` validates runtime coverage against engine kinds
 
 ## Examples
 
@@ -108,6 +110,7 @@ task up
 
 ```
 cmd/serve/            Go server entry point
+cmd/parity/           Runtime parity checker (engine vs React/Flutter maps)
 internal/engine/      Spec → ComponentTree builder
 internal/serve/       HTTP server, SSE hub, mock data store
 pkg/spec/             Go structs matching the YAML spec schema

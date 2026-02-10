@@ -8,12 +8,14 @@ import { StringField } from './fields/StringField';
 import { EnumField } from './fields/EnumField';
 import { DateField } from './fields/DateField';
 import { ReferenceField } from './fields/ReferenceField';
+import { JsonField } from './fields/JsonField';
 import { useEntityCreate } from '../../data/useEntityMutation';
 import { Field, ComponentNode } from '../../types';
 import { cn } from '../../utils/cn';
 import { Check } from 'lucide-react';
 import { Button } from '../shared/Button';
-import type { UseFormRegister, FieldErrors } from 'react-hook-form';
+import type { UseFormRegister, FieldErrors, UseFormSetValue, UseFormWatch } from 'react-hook-form';
+import { flattenFields, setByPath } from '../../utils/fieldPaths';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type FormValues = Record<string, any>;
@@ -66,12 +68,12 @@ export function SteppedForm({
   }, [childNodes]);
 
   const fieldMap = useMemo(
-    () => new Map(fields?.map((f) => [f.name, f]) || []),
+    () => new Map(flattenFields(fields || []).map((f) => [f.name, f])),
     [fields]
   );
 
   const formFields = useMemo(() => {
-    return (fields || [])
+    return flattenFields(fields || [])
       .filter((f) => !f.hidden && !f.primary_key && !f.computed && !f.generated)
       .filter((f) => !f.show_in || f.show_in.create)
       .map((f) => {
@@ -84,6 +86,8 @@ export function SteppedForm({
     const shape: Record<string, z.ZodTypeAny> = {};
     for (const f of formFields) {
       let fieldSchema: z.ZodTypeAny = z.string();
+      if (f.type === 'object') fieldSchema = z.record(z.any());
+      if (f.type === 'array') fieldSchema = z.array(z.any());
       if (f.type === 'email') fieldSchema = z.string().email();
       if (f.min_length) fieldSchema = (fieldSchema as z.ZodString).min(f.min_length);
       if (f.pattern) fieldSchema = (fieldSchema as z.ZodString).regex(new RegExp(f.pattern), f.pattern_message);
@@ -95,6 +99,8 @@ export function SteppedForm({
 
   const {
     register,
+    setValue,
+    watch,
     handleSubmit,
     getValues,
     trigger,
@@ -125,7 +131,16 @@ export function SteppedForm({
   };
 
   const onSubmit = async (data: FormValues) => {
-    await createMutation.mutateAsync(data);
+    let payload = data;
+    const nestedFields = formFields.filter((f) => f.name.includes('.'));
+    if (nestedFields.length > 0) {
+      payload = { ...data };
+      for (const f of nestedFields) {
+        payload = setByPath(payload, f.name, data[f.name]);
+        delete payload[f.name];
+      }
+    }
+    await createMutation.mutateAsync(payload);
     if (cancel_path) navigate(cancel_path);
   };
 
@@ -205,7 +220,14 @@ export function SteppedForm({
           ) : (
             <div className="space-y-4">
               {currentFields.map((field) => (
-                <FieldRenderer key={field.name} field={field} register={register} errors={errors} />
+                <FieldRenderer
+                  key={field.name}
+                  field={field}
+                  register={register}
+                  errors={errors}
+                  setValue={setValue}
+                  watch={watch}
+                />
               ))}
             </div>
           )}
@@ -242,7 +264,20 @@ export function SteppedForm({
   );
 }
 
-function FieldRenderer({ field, register, errors }: { field: Field; register: UseFormRegister<FormValues>; errors: FieldErrors<FormValues> }) {
+function FieldRenderer({
+  field,
+  register,
+  errors,
+  setValue,
+  watch,
+}: {
+  field: Field;
+  register: UseFormRegister<FormValues>;
+  errors: FieldErrors<FormValues>;
+  setValue: UseFormSetValue<FormValues>;
+  watch: UseFormWatch<FormValues>;
+}) {
+  const error = errors[field.name]?.message as string | undefined;
   switch (field.type) {
     case 'enum':
       return <EnumField field={field} register={register} errors={errors} />;
@@ -251,6 +286,16 @@ function FieldRenderer({ field, register, errors }: { field: Field; register: Us
       return <DateField field={field} register={register} errors={errors} />;
     case 'reference':
       return <ReferenceField field={field} register={register} errors={errors} />;
+    case 'object':
+    case 'array':
+      return (
+        <JsonField
+          field={field}
+          value={watch(field.name)}
+          onChange={(v) => setValue(field.name, v, { shouldValidate: true })}
+          error={error}
+        />
+      );
     default:
       return <StringField field={field} register={register} errors={errors} />;
   }

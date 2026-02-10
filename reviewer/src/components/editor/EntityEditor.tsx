@@ -8,7 +8,7 @@ import { Card } from '../ui/Card';
 import type { Entity, Relationship } from '../../types';
 import { countConfiguredViews } from './views/viewDefaults';
 
-const REL_TYPES = ['has_many', 'belongs_to', 'has_one'] as const;
+const REL_TYPES = ['has_many', 'belongs_to', 'has_one', 'many_to_many'] as const;
 
 export function EntityEditor() {
   const { specId, compId, entityIndex: indexStr } = useParams<{ specId: string; compId: string; entityIndex: string }>();

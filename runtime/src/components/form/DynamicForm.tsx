@@ -14,11 +14,13 @@ import { CurrencyField } from './fields/CurrencyField';
 import { AddressField } from './fields/AddressField';
 import { FileField } from './fields/FileField';
 import { ImageField } from './fields/ImageField';
+import { JsonField } from './fields/JsonField';
 import { useEntityCreate, useEntityUpdate } from '../../data/useEntityMutation';
 import { useEntityDetail } from '../../data/useEntityDetail';
 import { usePermissions } from '../../auth/usePermissions';
 import { Field, ComponentNode, FormSectionConfig } from '../../types';
 import type { UseFormRegister, FieldErrors, UseFormSetValue, UseFormWatch } from 'react-hook-form';
+import { flattenFields, getByPath, setByPath } from '../../utils/fieldPaths';
 
 const LazyRichTextField = React.lazy(() =>
   import('./fields/RichTextField').then(m => ({ default: m.RichTextField }))
@@ -65,7 +67,7 @@ export function DynamicForm({
 
   const formFields = useMemo(() => {
     if (!fields) return [];
-    return fields.filter((f) => {
+    return flattenFields(fields).filter((f) => {
       if (f.hidden || f.primary_key) return false;
       if (f.computed || f.generated) return false;
       const showIn = f.show_in;
@@ -83,6 +85,8 @@ export function DynamicForm({
     const shape: Record<string, z.ZodTypeAny> = {};
     for (const f of formFields) {
       let fieldSchema: z.ZodTypeAny = z.string();
+      if (f.type === 'object') fieldSchema = z.record(z.any());
+      if (f.type === 'array') fieldSchema = z.array(z.any());
       if (f.type === 'email') fieldSchema = z.string().email('Invalid email');
       if (f.min_length) fieldSchema = (fieldSchema as z.ZodString).min(f.min_length, `Minimum ${f.min_length} characters`);
       if (f.max_length) fieldSchema = (fieldSchema as z.ZodString).max(f.max_length, `Maximum ${f.max_length} characters`);
@@ -98,9 +102,8 @@ export function DynamicForm({
     if (!isEdit || !record) return {};
     const vals: FormValues = {};
     for (const f of formFields) {
-      if (record[f.name] !== undefined) {
-        vals[f.name] = record[f.name];
-      }
+      const pathValue = getByPath(record, f.name);
+      if (pathValue !== undefined) vals[f.name] = pathValue;
     }
     return vals;
   }, [isEdit, record, formFields]);
@@ -122,22 +125,31 @@ export function DynamicForm({
     if (isEdit && record) {
       const vals: FormValues = {};
       for (const f of formFields) {
-        if (record[f.name] !== undefined) {
-          vals[f.name] = record[f.name];
-        }
+        const pathValue = getByPath(record, f.name);
+        if (pathValue !== undefined) vals[f.name] = pathValue;
       }
       reset(vals);
     }
   }, [isEdit, record, formFields, reset]);
 
   const onSubmit = async (data: FormValues) => {
+    let payload = data;
+    const nestedFields = formFields.filter((f) => f.name.includes('.'));
+    if (nestedFields.length > 0) {
+      payload = { ...data };
+      for (const f of nestedFields) {
+        payload = setByPath(payload, f.name, data[f.name]);
+        delete payload[f.name];
+      }
+    }
+
     try {
       if (isEdit) {
-        await updateMutation.mutateAsync(data);
+        await updateMutation.mutateAsync(payload);
         toast.success('Changes saved');
         navigate(`${api_resource}/${id}`);
       } else {
-        const result = await createMutation.mutateAsync(data);
+        const result = await createMutation.mutateAsync(payload);
         toast.success('Created successfully');
         const newId = (result as Record<string, unknown>)?.id;
         if (newId) {
@@ -310,6 +322,16 @@ function FieldRenderer({
     case 'image':
       return (
         <ImageField
+          field={field}
+          value={watch(field.name)}
+          onChange={(v) => setValue(field.name, v, { shouldValidate: true })}
+          error={error}
+        />
+      );
+    case 'object':
+    case 'array':
+      return (
+        <JsonField
           field={field}
           value={watch(field.name)}
           onChange={(v) => setValue(field.name, v, { shouldValidate: true })}

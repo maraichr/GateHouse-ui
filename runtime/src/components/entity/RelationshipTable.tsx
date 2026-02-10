@@ -15,6 +15,7 @@ export function RelationshipTable({ relationship, parentId, columns }: Relations
   const { data, isLoading, isError } = useEntityList({
     apiResource,
     filters: foreignKey ? { [foreignKey]: parentId } : {},
+    sort: relationship.default_sort,
   });
 
   const records = data?.data ?? [];

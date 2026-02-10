@@ -115,7 +115,12 @@ export const initDraft = (specId: string) =>
   apiPut<{ draft: AppSpec }>(`/specs/${specId}/draft/init`);
 
 export const publishDraft = (specId: string, version?: string, changeSummary?: string) =>
-  apiPost<{ version: SpecVersion; warnings: string[] }>(`/specs/${specId}/publish`, {
+  apiPost<{
+    version: SpecVersion;
+    warnings: string[];
+    blocking_errors?: string[];
+    parity_status?: 'pass' | 'warn' | 'fail';
+  }>(`/specs/${specId}/publish`, {
     version,
     change_summary: changeSummary,
   });
@@ -133,3 +138,13 @@ export const generateMockData = (specId: string) =>
 // Audit
 export const listAudit = (specId: string) =>
   apiGet<{ audit: AuditEntry[] }>(`/specs/${specId}/audit`).then((r) => r.audit);
+
+export const getTimeToFirstSpecKPI = () =>
+  apiGet<{
+    kpi: {
+      projects_with_version: number;
+      average_minutes: number;
+      p50_minutes: number;
+      p90_minutes: number;
+    };
+  }>('/kpi/time-to-first-spec').then((r) => r.kpi);

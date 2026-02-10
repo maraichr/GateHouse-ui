@@ -6,10 +6,12 @@ import { Card } from '../ui/Card';
 import type { Field, EnumValue, DisplayRule, Entity, FakeDepends } from '../../types';
 import { inferShowIn } from '../../utils/fieldAnalysis';
 import { createDefaultListView, createDefaultDetailView, createDefaultFormView } from './views/viewDefaults';
+import { useEditorMode } from '../../hooks/useEditorMode';
 
 const FIELD_TYPES = [
   'string', 'email', 'phone', 'integer', 'decimal', 'currency',
   'date', 'datetime', 'enum', 'reference', 'boolean', 'richtext', 'address',
+  'object', 'array', 'file', 'image', 'inline_table',
 ];
 
 export function FieldEditor() {
@@ -38,6 +40,8 @@ export function FieldEditor() {
   }
 
   const field = entity.fields[fieldIndex];
+  const { mode } = useEditorMode();
+  const isBasic = mode === 'basic';
   const compositionCtx = useCompositionEditor();
   const localEntityNames = spec.entities.map((e) => e.name);
   const entityGroups = buildEntityGroups(compositionCtx, localEntityNames);
@@ -64,6 +68,14 @@ export function FieldEditor() {
           {entity.name} / <span className="font-mono">{field.name}</span>
         </h2>
       </div>
+
+      {isBasic && (
+        <Card>
+          <p className="text-sm text-surface-600 dark:text-zinc-400">
+            Basic mode is active. Advanced sections like permissions, display rules, and mock-data hints are hidden.
+          </p>
+        </Card>
+      )}
 
       {/* Common section */}
       <Section title="Field Settings">
@@ -147,6 +159,15 @@ export function FieldEditor() {
         </Section>
       )}
 
+      {(field.type === 'object' || field.type === 'array') && (
+        <Section title="Nested Structure">
+          <NestedFieldEditor
+            field={field}
+            onChange={(updates) => setField(updates)}
+          />
+        </Section>
+      )}
+
       {/* Currency */}
       {field.type === 'currency' && (
         <Section title="Currency Settings">
@@ -202,7 +223,7 @@ export function FieldEditor() {
       )}
 
       {/* Permissions */}
-      {roles.length > 0 && (
+      {!isBasic && roles.length > 0 && (
         <Section title="Permissions">
           <div className="grid grid-cols-2 gap-4">
             <div>
@@ -229,23 +250,27 @@ export function FieldEditor() {
         </Section>
       )}
 
-      {/* Display Rules */}
-      <Section title="Display Rules">
-        <DisplayRuleEditor
-          rules={field.display_rules || []}
-          onChange={(rules) => setField({ display_rules: rules })}
-        />
-      </Section>
+      {!isBasic && (
+        <>
+          {/* Display Rules */}
+          <Section title="Display Rules">
+            <DisplayRuleEditor
+              rules={field.display_rules || []}
+              onChange={(rules) => setField({ display_rules: rules })}
+            />
+          </Section>
 
-      {/* Mock Data (Fake Hints) */}
-      <Section title="Mock Data">
-        <FakeHintEditor
-          fake={field.fake}
-          onChange={(fake) => setField({ fake })}
-          fieldType={field.type}
-          entityFields={entity.fields.map((f) => f.name)}
-        />
-      </Section>
+          {/* Mock Data (Fake Hints) */}
+          <Section title="Mock Data">
+            <FakeHintEditor
+              fake={field.fake}
+              onChange={(fake) => setField({ fake })}
+              fieldType={field.type}
+              entityFields={entity.fields.map((f) => f.name)}
+            />
+          </Section>
+        </>
+      )}
     </div>
   );
 }
@@ -670,6 +695,132 @@ function ShowInToggles({
         ))}
       </div>
     </Card>
+  );
+}
+
+function NestedFieldEditor({
+  field,
+  onChange,
+}: {
+  field: Field;
+  onChange: (updates: Partial<Field>) => void;
+}) {
+  const nestedFields = field.type === 'object'
+    ? (field.fields || [])
+    : (field.items?.fields || []);
+
+  const setNestedFields = (fields: Field[]) => {
+    if (field.type === 'object') {
+      onChange({ fields });
+      return;
+    }
+    onChange({ items: { ...(field.items || { type: 'object' }), fields } });
+  };
+
+  const addNestedField = () => {
+    const name = `nested_${nestedFields.length + 1}`;
+    setNestedFields([
+      ...nestedFields,
+      {
+        name,
+        type: 'string',
+        display_name: name.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()),
+      },
+    ]);
+  };
+
+  const updateNestedField = (index: number, updates: Partial<Field>) => {
+    const next = [...nestedFields];
+    next[index] = { ...next[index], ...updates };
+    setNestedFields(next);
+  };
+
+  const removeNestedField = (index: number) => {
+    setNestedFields(nestedFields.filter((_, i) => i !== index));
+  };
+
+  return (
+    <div className="space-y-3">
+      {field.type === 'array' && (
+        <div className="grid grid-cols-3 gap-3">
+          <TextInput
+            label="Item Type"
+            value={field.items?.type || 'object'}
+            onChange={(v) => onChange({ items: { ...(field.items || {}), type: v } })}
+            placeholder="object"
+          />
+          <TextInput
+            label="Reference Entity"
+            value={field.items?.entity || ''}
+            onChange={(v) => onChange({ items: { ...(field.items || { type: 'object' }), type: field.items?.type || 'object', entity: v || undefined } })}
+            placeholder="Optional"
+          />
+          <TextInput
+            label="Label Field"
+            value={field.items?.label_field || ''}
+            onChange={(v) => onChange({ items: { ...(field.items || { type: 'object' }), type: field.items?.type || 'object', label_field: v || undefined } })}
+            placeholder="Optional"
+          />
+        </div>
+      )}
+
+      <div className="flex items-center justify-between">
+        <p className="text-xs text-surface-500 dark:text-zinc-400">
+          Define nested fields used by dot paths like <span className="font-mono">address.city</span>.
+        </p>
+        <button
+          onClick={addNestedField}
+          className="inline-flex items-center gap-1 text-xs text-brand-600 dark:text-brand-400 hover:text-brand-700 dark:hover:text-brand-300"
+        >
+          <Plus className="w-3 h-3" />
+          Add nested field
+        </button>
+      </div>
+
+      {nestedFields.length === 0 ? (
+        <div className="rounded-lg border border-dashed border-surface-300 dark:border-zinc-700 p-4 text-sm text-surface-500 dark:text-zinc-400">
+          No nested fields configured yet.
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {nestedFields.map((nf, idx) => (
+            <div key={idx} className="grid grid-cols-[1fr_1fr_1fr_auto] gap-2 items-end">
+              <TextInput
+                label="Name"
+                value={nf.name}
+                onChange={(v) => updateNestedField(idx, { name: v })}
+                placeholder="snake_case"
+              />
+              <TextInput
+                label="Display Name"
+                value={nf.display_name || ''}
+                onChange={(v) => updateNestedField(idx, { display_name: v || undefined })}
+                placeholder="Optional"
+              />
+              <div>
+                <label className="block text-sm font-medium text-surface-700 dark:text-zinc-300 mb-1">Type</label>
+                <select
+                  value={nf.type}
+                  onChange={(e) => updateNestedField(idx, { type: e.target.value })}
+                  className="w-full px-3 py-2 border border-surface-300 dark:border-zinc-700 rounded-lg text-sm bg-white dark:bg-zinc-900"
+                >
+                  {['string', 'email', 'phone', 'integer', 'decimal', 'currency', 'date', 'datetime', 'enum', 'boolean'].map((t) => (
+                    <option key={t} value={t}>{t}</option>
+                  ))}
+                </select>
+              </div>
+              <button
+                onClick={() => removeNestedField(idx)}
+                className="p-2 text-surface-400 dark:text-zinc-500 hover:text-danger-500"
+                aria-label={`Remove nested field ${nf.name}`}
+              >
+                <Trash2 className="w-4 h-4" />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
 

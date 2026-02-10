@@ -7,6 +7,7 @@ import { StarRating } from '../display/StarRating';
 import { evaluateDisplayRules, styleForRule } from '../../utils/displayRuleEvaluator';
 import { sanitizeHtml } from '../../utils/sanitizeHtml';
 import { cn } from '../../utils/cn';
+import { flattenFields, getByPath } from '../../utils/fieldPaths';
 
 interface SectionProps {
   title?: string;
@@ -19,7 +20,8 @@ interface SectionProps {
 export function Section({ title, layout, fields: fieldNames, allFields, record }: SectionProps) {
   if (!fieldNames || !record) return null;
 
-  const fieldMap = new Map(allFields?.map((f) => [f.name, f]) || []);
+  const flatFields = flattenFields(allFields || []);
+  const fieldMap = new Map(flatFields.map((f) => [f.name, f]));
 
   return (
     <div className="mb-6">
@@ -31,9 +33,9 @@ export function Section({ title, layout, fields: fieldNames, allFields, record }
         layout === 'two_column' ? 'grid-cols-1 md:grid-cols-2' : 'grid-cols-1'
       )}>
         {fieldNames.map((name) => {
-          const field = fieldMap.get(name);
+          const field = fieldMap.get(name) || allFields?.find((f) => f.name === name);
           if (!field || field.hidden) return null;
-          const value = record[name];
+          const value = getByPath(record, name);
 
           return (
             <div key={name}>
@@ -72,6 +74,15 @@ function FieldDisplay({ field, value, record }: { field: Field; value: any; reco
   if (field.type === 'address' && typeof value === 'object' && value) {
     const parts = [value.street1, value.street2, value.city, value.state, value.zip].filter(Boolean);
     return <span className="text-gray-900">{parts.join(', ')}</span>;
+  }
+  if (field.type === 'object' && value && typeof value === 'object') {
+    return <span className="text-gray-900">{Object.keys(value).length} properties</span>;
+  }
+  if (field.type === 'array' && Array.isArray(value)) {
+    return <span className="text-gray-900">{value.length} items</span>;
+  }
+  if (value && typeof value === 'object') {
+    return <span className="text-gray-900">{JSON.stringify(value)}</span>;
   }
   // Richtext fields: render sanitized HTML with prose styling
   if (field.type === 'richtext' && value) {

@@ -81,7 +81,11 @@ interface DraftEditorContextValue extends DraftState {
   removePage: (index: number) => void;
   updatePage: (index: number, page: Page) => void;
   save: () => Promise<void>;
-  publish: (version?: string, summary?: string) => Promise<{ warnings: string[] }>;
+  publish: (version?: string, summary?: string) => Promise<{
+    warnings: string[];
+    blockingErrors: string[];
+    parityStatus: 'pass' | 'warn' | 'fail';
+  }>;
   discard: () => Promise<void>;
 }
 
@@ -265,7 +269,11 @@ export function DraftEditorProvider({ specId, children }: DraftEditorProviderPro
     dispatch({ type: 'MARK_CLEAN' });
     queryClient.invalidateQueries({ queryKey: ['spec', specId] });
     queryClient.invalidateQueries({ queryKey: ['versions', specId] });
-    return { warnings: result.warnings || [] };
+    return {
+      warnings: result.warnings || [],
+      blockingErrors: result.blocking_errors || [],
+      parityStatus: result.parity_status || 'pass',
+    };
   }, [specId, state.isDirty, queryClient]);
 
   const discard = useCallback(async () => {

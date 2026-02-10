@@ -96,6 +96,52 @@ const (
 	KindCustomPage ComponentKind = "custom_page"
 )
 
+// AllComponentKinds returns the canonical set of component kinds emitted by the engine.
+func AllComponentKinds() []ComponentKind {
+	return []ComponentKind{
+		KindAppShell,
+		KindSidebar,
+		KindHeader,
+		KindPage,
+		KindTabLayout,
+		KindTab,
+		KindSection,
+		KindTwoColumn,
+		KindEntityList,
+		KindDataTable,
+		KindFilterPanel,
+		KindSearchBar,
+		KindEntityDetail,
+		KindDetailHeader,
+		KindEmptyState,
+		KindCreateForm,
+		KindEditForm,
+		KindSteppedForm,
+		KindFormStep,
+		KindFormSection,
+		KindDisplayString,
+		KindDisplayEnum,
+		KindDisplayDate,
+		KindDisplayCurrency,
+		KindDisplayStarRating,
+		KindDisplayBadge,
+		KindDisplayAvatar,
+		KindFieldString,
+		KindFieldEnum,
+		KindFieldDate,
+		KindFieldReference,
+		KindFieldCurrency,
+		KindFieldRichText,
+		KindFieldAddress,
+		KindNavItem,
+		KindNavGroup,
+		KindStatCards,
+		KindChart,
+		KindEntityTableWidget,
+		KindCustomPage,
+	}
+}
+
 func (t *ComponentTree) ToJSON() ([]byte, error) {
 	return json.Marshal(t)
 }

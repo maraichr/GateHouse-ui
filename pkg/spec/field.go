@@ -7,46 +7,48 @@ import (
 )
 
 type Field struct {
-	Name           string              `yaml:"name" json:"name"`
-	Type           string              `yaml:"type" json:"type"`
-	DisplayName    string              `yaml:"display_name" json:"display_name,omitempty"`
-	Required       bool                `yaml:"required" json:"required"`
-	Hidden         bool                `yaml:"hidden" json:"hidden,omitempty"`
-	PrimaryKey     bool                `yaml:"primary_key" json:"primary_key,omitempty"`
-	Immutable      bool                `yaml:"immutable" json:"immutable,omitempty"`
-	Computed       interface{}         `yaml:"computed" json:"computed,omitempty"`
-	Generated      bool                `yaml:"generated" json:"generated,omitempty"`
-	Sensitive      bool                `yaml:"sensitive" json:"sensitive,omitempty"`
-	MaskPattern    string              `yaml:"mask_pattern" json:"mask_pattern,omitempty"`
-	Default        interface{}         `yaml:"default" json:"default,omitempty"`
-	Placeholder    string              `yaml:"placeholder" json:"placeholder,omitempty"`
-	HelpText       string              `yaml:"help_text" json:"help_text,omitempty"`
-	MinLength      int                 `yaml:"min_length" json:"min_length,omitempty"`
-	MaxLength      int                 `yaml:"max_length" json:"max_length,omitempty"`
-	Min            interface{}         `yaml:"min" json:"min,omitempty"`
-	Max            interface{}         `yaml:"max" json:"max,omitempty"`
-	Pattern        string              `yaml:"pattern" json:"pattern,omitempty"`
-	PatternMessage string              `yaml:"pattern_message" json:"pattern_message,omitempty"`
-	Precision      int                 `yaml:"precision" json:"precision,omitempty"`
-	Format         string              `yaml:"format" json:"format,omitempty"`
-	Currency       string              `yaml:"currency" json:"currency,omitempty"`
-	FutureOnly     bool                `yaml:"future_only" json:"future_only,omitempty"`
-	Searchable     bool                `yaml:"searchable" json:"searchable,omitempty"`
-	Sortable       bool                `yaml:"sortable" json:"sortable,omitempty"`
-	Filterable     bool                `yaml:"filterable" json:"filterable,omitempty"`
-	Values         []EnumValue         `yaml:"values" json:"values,omitempty"`
-	ShowIn         *ShowIn             `yaml:"show_in" json:"show_in,omitempty"`
-	DisplayAs      string              `yaml:"display_as" json:"display_as,omitempty"`
-	DisplayRules   []DisplayRule       `yaml:"display_rules" json:"display_rules,omitempty"`
-	Permissions    *FieldPermissions   `yaml:"permissions" json:"permissions,omitempty"`
+	Name           string            `yaml:"name" json:"name"`
+	Type           string            `yaml:"type" json:"type"`
+	Path           string            `yaml:"path" json:"path,omitempty"`
+	DisplayName    string            `yaml:"display_name" json:"display_name,omitempty"`
+	Required       bool              `yaml:"required" json:"required"`
+	Hidden         bool              `yaml:"hidden" json:"hidden,omitempty"`
+	PrimaryKey     bool              `yaml:"primary_key" json:"primary_key,omitempty"`
+	Immutable      bool              `yaml:"immutable" json:"immutable,omitempty"`
+	Computed       interface{}       `yaml:"computed" json:"computed,omitempty"`
+	Generated      bool              `yaml:"generated" json:"generated,omitempty"`
+	Sensitive      bool              `yaml:"sensitive" json:"sensitive,omitempty"`
+	MaskPattern    string            `yaml:"mask_pattern" json:"mask_pattern,omitempty"`
+	Default        interface{}       `yaml:"default" json:"default,omitempty"`
+	Placeholder    string            `yaml:"placeholder" json:"placeholder,omitempty"`
+	HelpText       string            `yaml:"help_text" json:"help_text,omitempty"`
+	MinLength      int               `yaml:"min_length" json:"min_length,omitempty"`
+	MaxLength      int               `yaml:"max_length" json:"max_length,omitempty"`
+	Min            interface{}       `yaml:"min" json:"min,omitempty"`
+	Max            interface{}       `yaml:"max" json:"max,omitempty"`
+	Pattern        string            `yaml:"pattern" json:"pattern,omitempty"`
+	PatternMessage string            `yaml:"pattern_message" json:"pattern_message,omitempty"`
+	Precision      int               `yaml:"precision" json:"precision,omitempty"`
+	Format         string            `yaml:"format" json:"format,omitempty"`
+	Currency       string            `yaml:"currency" json:"currency,omitempty"`
+	FutureOnly     bool              `yaml:"future_only" json:"future_only,omitempty"`
+	Searchable     bool              `yaml:"searchable" json:"searchable,omitempty"`
+	Sortable       bool              `yaml:"sortable" json:"sortable,omitempty"`
+	Filterable     bool              `yaml:"filterable" json:"filterable,omitempty"`
+	Values         []EnumValue       `yaml:"values" json:"values,omitempty"`
+	ShowIn         *ShowIn           `yaml:"show_in" json:"show_in,omitempty"`
+	DisplayAs      string            `yaml:"display_as" json:"display_as,omitempty"`
+	DisplayRules   []DisplayRule     `yaml:"display_rules" json:"display_rules,omitempty"`
+	Permissions    *FieldPermissions `yaml:"permissions" json:"permissions,omitempty"`
 	// Reference fields
-	Entity       string `yaml:"entity" json:"entity,omitempty"`
-	DisplayField string `yaml:"display_field" json:"display_field,omitempty"`
+	Entity       string         `yaml:"entity" json:"entity,omitempty"`
+	DisplayField string         `yaml:"display_field" json:"display_field,omitempty"`
 	Filter       map[string]any `yaml:"filter" json:"filter,omitempty"`
 	// Array fields
 	MinItems  int        `yaml:"min_items" json:"min_items,omitempty"`
 	MaxItems  int        `yaml:"max_items" json:"max_items,omitempty"`
 	Items     *FieldItem `yaml:"items" json:"items,omitempty"`
+	Fields    []Field    `yaml:"fields" json:"fields,omitempty"`
 	InputType string     `yaml:"input_type" json:"input_type,omitempty"`
 	// Address fields
 	Components map[string]AddressComponent `yaml:"components" json:"components,omitempty"`
@@ -60,10 +62,10 @@ type Field struct {
 	// Rich text
 	Toolbar []string `yaml:"toolbar" json:"toolbar,omitempty"`
 	// Inline table
-	Columns    []InlineTableColumn `yaml:"columns" json:"columns,omitempty"`
-	Footer     []InlineTableFooter `yaml:"footer" json:"footer,omitempty"`
-	MinRows    int                 `yaml:"min_rows" json:"min_rows,omitempty"`
-	MaxRows    int                 `yaml:"max_rows" json:"max_rows,omitempty"`
+	Columns []InlineTableColumn `yaml:"columns" json:"columns,omitempty"`
+	Footer  []InlineTableFooter `yaml:"footer" json:"footer,omitempty"`
+	MinRows int                 `yaml:"min_rows" json:"min_rows,omitempty"`
+	MaxRows int                 `yaml:"max_rows" json:"max_rows,omitempty"`
 	// Highlight (used in field_overrides)
 	Highlight bool `yaml:"highlight" json:"highlight,omitempty"`
 	// Fake data hint for mock data generation
@@ -71,9 +73,10 @@ type Field struct {
 }
 
 type FieldItem struct {
-	Type       string `yaml:"type" json:"type"`
-	Entity     string `yaml:"entity" json:"entity,omitempty"`
-	LabelField string `yaml:"label_field" json:"label_field,omitempty"`
+	Type       string  `yaml:"type" json:"type"`
+	Entity     string  `yaml:"entity" json:"entity,omitempty"`
+	LabelField string  `yaml:"label_field" json:"label_field,omitempty"`
+	Fields     []Field `yaml:"fields" json:"fields,omitempty"`
 }
 
 type FieldPermissions struct {

@@ -15,6 +15,7 @@ import { ServiceBadge } from '../utility/ServiceBadge';
 import { Button } from '../ui/Button';
 import { ConfirmDialog } from '../ui/Dialog';
 import { generateMockData } from '../../api/specs';
+import { useEditorMode } from '../../hooks/useEditorMode';
 
 export function CompositionEditorLayout() {
   const { compId } = useParams<{ compId: string }>();
@@ -45,6 +46,12 @@ function CompositionEditorShell({ compId }: { compId: string }) {
   const [previewRole, setPreviewRole] = useState('');
   const [previewKey, setPreviewKey] = useState(0);
   const [generating, setGenerating] = useState(false);
+  const [publishDetails, setPublishDetails] = useState<{
+    warnings: string[];
+    blockingErrors: string[];
+    parityStatus: 'pass' | 'warn' | 'fail';
+  } | null>(null);
+  const { mode, setMode } = useEditorMode();
 
   const blocker = useBlocker(isDirty && !isSaving);
 
@@ -75,9 +82,9 @@ function CompositionEditorShell({ compId }: { compId: string }) {
     setPublishing(true);
     setPublishError(null);
     try {
-      const { warnings } = await publish();
-      if (warnings.length > 0) {
-        toast.warning(`Published with warnings:\n${warnings.join('\n')}`);
+      const result = await publish();
+      if (result.blockingErrors.length > 0 || result.warnings.length > 0 || result.parityStatus !== 'pass') {
+        setPublishDetails(result);
       } else {
         toast.success('Published successfully');
       }
@@ -336,6 +343,20 @@ function CompositionEditorShell({ compId }: { compId: string }) {
             {(isServiceView || isSingleService) && (
               <EditorSaveIndicator isSaving={isSaving} isDirty={isDirty} lastSavedAt={lastSavedAt} />
             )}
+            <div className="inline-flex rounded-lg border border-surface-200 dark:border-zinc-700 overflow-hidden">
+              <button
+                onClick={() => setMode('basic')}
+                className={`px-2.5 py-1 text-xs ${mode === 'basic' ? 'bg-brand-100 dark:bg-brand-950 text-brand-700 dark:text-brand-400' : 'text-surface-500 dark:text-zinc-400 hover:bg-surface-50 dark:hover:bg-zinc-800'}`}
+              >
+                Basic
+              </button>
+              <button
+                onClick={() => setMode('advanced')}
+                className={`px-2.5 py-1 text-xs border-l border-surface-200 dark:border-zinc-700 ${mode === 'advanced' ? 'bg-brand-100 dark:bg-brand-950 text-brand-700 dark:text-brand-400' : 'text-surface-500 dark:text-zinc-400 hover:bg-surface-50 dark:hover:bg-zinc-800'}`}
+              >
+                Advanced
+              </button>
+            </div>
           </div>
           {(isServiceView || isSingleService) && (
             <div className="flex items-center gap-2">
@@ -457,6 +478,22 @@ function CompositionEditorShell({ compId }: { compId: string }) {
         description="Discard all unsaved changes and revert to the last published version?"
         confirmLabel="Discard"
         confirmColor="danger"
+      />
+
+      <ConfirmDialog
+        open={publishDetails !== null}
+        onClose={() => setPublishDetails(null)}
+        onConfirm={() => setPublishDetails(null)}
+        title="Publish summary"
+        description={
+          publishDetails?.parityStatus === 'fail'
+            ? `Parity blockers: ${(publishDetails?.blockingErrors || []).join('; ')}`
+            : (publishDetails?.warnings || []).length > 0
+              ? `Warnings: ${(publishDetails?.warnings || []).join('; ')}`
+              : 'Published successfully.'
+        }
+        confirmLabel="Close"
+        confirmColor="primary"
       />
     </div>
   );

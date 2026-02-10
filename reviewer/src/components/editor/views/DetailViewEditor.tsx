@@ -3,6 +3,7 @@ import { Plus, Trash2, ChevronDown, ChevronRight, LayoutGrid, Columns2, Rows3, G
 import { Card } from '../../ui/Card';
 import type { DetailView, DetailTab, DetailSection, HeaderStat } from '../../../types';
 import { SectionEditor } from './SectionEditor';
+import { useEditorMode } from '../../../hooks/useEditorMode';
 
 interface DetailViewEditorProps {
   view: DetailView;
@@ -25,8 +26,19 @@ export function DetailViewEditor({
   roles = [],
   relationships = [],
 }: DetailViewEditorProps) {
+  const { mode } = useEditorMode();
+  const isBasic = mode === 'basic';
+
   return (
     <div className="space-y-5">
+      {isBasic && (
+        <Card padding="sm">
+          <p className="text-sm text-surface-600 dark:text-zinc-400">
+            Basic mode is active. Header stats and advanced tab controls are hidden.
+          </p>
+        </Card>
+      )}
+
       {/* Layout */}
       <Card padding="sm">
         <h4 className="font-medium text-surface-900 dark:text-zinc-100 text-sm mb-3">Layout</h4>
@@ -143,20 +155,22 @@ export function DetailViewEditor({
       </Card>
 
       {/* Header Stats */}
-      <HeaderStatsEditor
-        stats={view.header?.stats || []}
-        onChange={(stats) =>
-          onChange({
-            ...view,
-            header: {
-              ...view.header,
-              title: view.header?.title || '',
-              stats: stats.length > 0 ? stats : undefined,
-            },
-          })
-        }
-        availableFields={availableFields}
-      />
+      {!isBasic && (
+        <HeaderStatsEditor
+          stats={view.header?.stats || []}
+          onChange={(stats) =>
+            onChange({
+              ...view,
+              header: {
+                ...view.header,
+                title: view.header?.title || '',
+                stats: stats.length > 0 ? stats : undefined,
+              },
+            })
+          }
+          availableFields={availableFields}
+        />
+      )}
 
       {/* Content -- varies by layout */}
       {view.layout === 'tabbed' && (
@@ -166,6 +180,7 @@ export function DetailViewEditor({
           availableFields={availableFields}
           roles={roles}
           relationships={relationships}
+          basicMode={isBasic}
         />
       )}
       {view.layout === 'two_column' && (
@@ -198,12 +213,14 @@ function TabbedContent({
   availableFields,
   roles,
   relationships,
+  basicMode,
 }: {
   tabs: DetailTab[];
   onChange: (tabs: DetailTab[]) => void;
   availableFields: string[];
   roles: string[];
   relationships: string[];
+  basicMode: boolean;
 }) {
   // Find relationships not yet assigned to any tab
   const usedRelationships = new Set(
@@ -263,7 +280,7 @@ function TabbedContent({
             <FileText className="w-3 h-3" />
             Add Fields Tab
           </button>
-          {unusedRelationships.length > 0 && (
+          {!basicMode && unusedRelationships.length > 0 && (
             <div className="relative group">
               <button className="inline-flex items-center gap-1 text-xs text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300">
                 <GitBranch className="w-3 h-3" />
@@ -285,6 +302,11 @@ function TabbedContent({
           )}
         </div>
       </div>
+      {basicMode && (
+        <p className="text-[11px] text-surface-500 dark:text-zinc-400 mb-2">
+          Advanced mode enables relationship tabs and header stats.
+        </p>
+      )}
       <p className="text-[11px] text-surface-400 dark:text-zinc-500 mb-3">
         Each tab appears as a switchable section in the detail view. Use "Fields" tabs for entity data and "Relationship" tabs to show related records.
       </p>

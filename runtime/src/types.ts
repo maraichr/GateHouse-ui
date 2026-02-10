@@ -114,6 +114,7 @@ export interface NavBadge {
 export interface Field {
   name: string;
   type: string;
+  path?: string;
   display_name?: string;
   required?: boolean;
   hidden?: boolean;
@@ -139,7 +140,8 @@ export interface Field {
   pattern_message?: string;
   future_only?: boolean;
   entity?: string;
-  items?: { type: string; entity?: string; label_field?: string };
+  items?: { type: string; entity?: string; label_field?: string; fields?: Field[] };
+  fields?: Field[];
   input_type?: string;
   currency?: string;
   format?: string;
@@ -323,6 +325,10 @@ export interface Relationship {
   type: string;
   entity: string;
   foreign_key?: string;
+  through?: string;
   display_name?: string;
   show_in_detail?: boolean;
+  inline_create?: boolean;
+  inline_edit?: boolean;
+  default_sort?: SortConfig;
 }

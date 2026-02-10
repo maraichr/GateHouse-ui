@@ -16,6 +16,7 @@ func (s *Server) Routes() http.Handler {
 	r.Route("/_renderer", func(r chi.Router) {
 		r.Get("/spec", s.handleGetSpec)
 		r.Get("/health", s.handleHealth)
+		r.Get("/capabilities", s.handleCapabilities)
 		r.Get("/events", s.sseHub.ServeHTTP)
 		r.Get("/examples", s.handleListExamples)
 		r.Post("/switch", s.handleSwitchExample)

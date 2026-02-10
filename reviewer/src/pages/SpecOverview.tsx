@@ -1,11 +1,11 @@
 import { useParams, Link, useNavigate } from 'react-router';
 import {
   Database, GitBranch, Shield, Layout, FileText, Eye, ChevronRight,
-  Boxes, Workflow, Lock, Map, Navigation, PanelLeft, PenLine, Download,
+  Boxes, Workflow, Lock, Map, Navigation, PanelLeft, PenLine, Download, Timer, History,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useSpec, useVersions } from '../hooks/useSpec';
-import { exportVersion } from '../api/specs';
+import { exportVersion, getTimeToFirstSpecKPI } from '../api/specs';
 import { useAppSpecContext } from '../context/AppSpecContext';
 import { PageHeader } from '../components/layout/PageHeader';
 import { CoverageBadge } from '../components/coverage/CoverageBadge';
@@ -17,6 +17,7 @@ import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { StatSkeleton, CardSkeleton } from '../components/ui/Skeleton';
 import { statusColor, statusLabel } from '../utils/coverage';
+import { useQuery } from '@tanstack/react-query';
 
 export function SpecOverview() {
   const { specId } = useParams<{ specId: string }>();
@@ -24,6 +25,11 @@ export function SpecOverview() {
   const { data: specData, isLoading: specLoading } = useSpec(specId);
   const { data: versions } = useVersions(specId);
   const { appSpec, basePath, coverage } = useAppSpecContext();
+  const { data: ttfKpi } = useQuery({
+    queryKey: ['kpi', 'time-to-first-spec'],
+    queryFn: getTimeToFirstSpecKPI,
+    staleTime: 60_000,
+  });
 
   const latestVersion = specData?.latest_version;
 
@@ -69,6 +75,7 @@ export function SpecOverview() {
     { label: 'Relationships', icon: GitBranch, path: 'relationships' },
     { label: 'Navigation', icon: Navigation, path: 'navigation', count: appSpec?.navigation?.items?.length },
     { label: 'Pages', icon: PanelLeft, path: 'pages', count: appSpec?.pages?.length },
+    { label: 'Publish Report', icon: History, path: 'publish-report' },
     { label: 'Live Preview', icon: Eye, path: 'preview' },
   ];
 
@@ -113,6 +120,11 @@ export function SpecOverview() {
         <StatCard icon={FileText} label="Fields" value={coverage?.summary.field_count ?? 0} color="info" />
         <StatCard icon={Workflow} label="State Machines" value={coverage?.summary.state_machine_count ?? 0} color="accent" />
         <StatCard icon={Layout} label="Views" value={coverage?.summary.view_count ?? 0} color="success" />
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+        <StatCard icon={Timer} label="Avg Time To First Spec" value={`${Math.round(ttfKpi?.average_minutes || 0)}m`} color="brand" />
+        <StatCard icon={Timer} label="P50" value={`${Math.round(ttfKpi?.p50_minutes || 0)}m`} color="info" />
+        <StatCard icon={Timer} label="P90" value={`${Math.round(ttfKpi?.p90_minutes || 0)}m`} color="accent" />
       </div>
 
       {/* Main grid */}
@@ -260,7 +272,7 @@ export function SpecOverview() {
   );
 }
 
-function StatCard({ icon: Icon, label, value, color = 'brand' }: { icon: React.FC<{ className?: string }>; label: string; value: number; color?: string }) {
+function StatCard({ icon: Icon, label, value, color = 'brand' }: { icon: React.FC<{ className?: string }>; label: string; value: number | string; color?: string }) {
   const borderColor: Record<string, string> = {
     brand: 'border-t-brand-500',
     info: 'border-t-info-500',

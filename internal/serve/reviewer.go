@@ -65,6 +65,7 @@ func (s *Server) mountReviewerRoutes(r chi.Router) {
 
 	// Audit
 	r.Get("/specs/{specID}/audit", s.handleReviewerAudit)
+	r.Get("/kpi/time-to-first-spec", s.handleReviewerTimeToFirstSpecKPI)
 
 	// Compositions
 	r.Get("/compositions", s.handleReviewerListCompositions)
@@ -464,6 +465,7 @@ func (s *Server) handleSaveDraft(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
 		return
 	}
+	s.writeAudit(r, user, "draft.save", "spec", specID, nil)
 	writeJSON(w, http.StatusOK, map[string]string{"status": "saved"})
 }
 
@@ -600,8 +602,35 @@ func (s *Server) handlePublishDraft(w http.ResponseWriter, r *http.Request) {
 
 	_ = s.store.DiscardDraft(r.Context(), specID)
 
-	s.writeAudit(r, user, "draft.publish", "spec", specID, map[string]any{"version": version})
-	writeJSON(w, http.StatusOK, map[string]any{"version": v, "warnings": warnings})
+	caps := engine.BuildCapabilitiesReport()
+	parityStatus := "pass"
+	blockingErrors := make([]string, 0)
+	for name, summary := range caps.Renderers {
+		if summary.Blockers > 0 {
+			parityStatus = "fail"
+			blockingErrors = append(blockingErrors, fmt.Sprintf("%s runtime has %d parity blockers", name, summary.Blockers))
+		}
+	}
+	if parityStatus == "pass" {
+		for _, summary := range caps.Renderers {
+			if summary.Warnings > 0 {
+				parityStatus = "warn"
+				break
+			}
+		}
+	}
+	s.writeAudit(r, user, "draft.publish", "spec", specID, map[string]any{
+		"version":         version,
+		"warning_count":   len(warnings),
+		"parity_status":   parityStatus,
+		"parity_blockers": len(blockingErrors),
+	})
+	writeJSON(w, http.StatusOK, map[string]any{
+		"version":         v,
+		"warnings":        warnings,
+		"blocking_errors": blockingErrors,
+		"parity_status":   parityStatus,
+	})
 }
 
 // incrementVersion bumps the patch number of a semver string.
@@ -1035,6 +1064,15 @@ func (s *Server) handleReviewerAudit(w http.ResponseWriter, r *http.Request) {
 		entries = []store.AuditEntry{}
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"audit": entries})
+}
+
+func (s *Server) handleReviewerTimeToFirstSpecKPI(w http.ResponseWriter, r *http.Request) {
+	kpi, err := s.store.GetTimeToFirstSpecKPI(r.Context())
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"kpi": kpi})
 }
 
 // --- Helpers ---

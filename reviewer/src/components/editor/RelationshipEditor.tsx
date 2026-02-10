@@ -7,12 +7,15 @@ import { Button } from '../ui/Button';
 import { Card } from '../ui/Card';
 import { ConfirmDialog } from '../ui/Dialog';
 import type { Relationship, Entity } from '../../types';
+import { useEditorMode } from '../../hooks/useEditorMode';
 
-const REL_TYPES = ['has_many', 'belongs_to', 'has_one'] as const;
+const REL_TYPES = ['has_many', 'belongs_to', 'has_one', 'many_to_many'] as const;
 
 export function RelationshipEditor() {
   const { spec, updateSpec } = useDraftEditor();
   const compositionCtx = useCompositionEditor();
+  const { mode } = useEditorMode();
+  const isBasic = mode === 'basic';
   const [addingFor, setAddingFor] = useState<number | null>(null);
 
   if (!spec) return null;
@@ -86,6 +89,14 @@ export function RelationshipEditor() {
         </div>
       </div>
 
+      {isBasic && (
+        <Card>
+          <p className="text-sm text-surface-600 dark:text-zinc-400">
+            Basic mode is active. Advanced relationship settings are hidden.
+          </p>
+        </Card>
+      )}
+
       {/* Visual map */}
       <RelationshipMapView entities={entities} relationships={allRelationships} />
 
@@ -138,6 +149,7 @@ export function RelationshipEditor() {
                   compositionCtx={compositionCtx}
                   localEntities={entities}
                   isExternal={!allEntityNames.includes(rel.entity)}
+                  basicMode={isBasic}
                   onUpdate={(updated) => updateRelationship(entityIdx, relIdx, updated)}
                   onRemove={() => removeRelationship(entityIdx, relIdx)}
                 />
@@ -171,6 +183,7 @@ export function RelationshipEditor() {
                 entityGroups={entityGroups}
                 compositionCtx={compositionCtx}
                 localEntities={entities}
+                basicMode={isBasic}
                 onAdd={(rel) => addRelationship(entityIdx, rel)}
                 onCancel={() => setAddingFor(null)}
               />
@@ -192,6 +205,7 @@ function RelationshipCard({
   compositionCtx,
   localEntities,
   isExternal,
+  basicMode,
   onUpdate,
   onRemove,
 }: {
@@ -202,6 +216,7 @@ function RelationshipCard({
   compositionCtx: ReturnType<typeof useCompositionEditor>;
   localEntities: Entity[];
   isExternal: boolean;
+  basicMode: boolean;
   onUpdate: (rel: Relationship) => void;
   onRemove: () => void;
 }) {
@@ -328,23 +343,27 @@ function RelationshipCard({
                 )}
               </div>
             </div>
-            <ForeignKeyField
-              value={rel.foreign_key || ''}
-              targetEntity={rel.entity}
-              compositionCtx={compositionCtx}
-              localEntities={localEntities}
-              onChange={(v) => onUpdate({ ...rel, foreign_key: v || undefined })}
-            />
-            <div>
-              <label className="block text-xs font-medium text-surface-500 dark:text-zinc-400 mb-1">Through (join entity)</label>
-              <input
-                type="text"
-                value={rel.through || ''}
-                onChange={(e) => onUpdate({ ...rel, through: e.target.value || undefined })}
-                className="w-full px-2 py-1.5 border border-surface-300 dark:border-zinc-700 rounded text-sm font-mono bg-white dark:bg-zinc-900"
-                placeholder="Optional join entity"
-              />
-            </div>
+            {!basicMode && (
+              <>
+                <ForeignKeyField
+                  value={rel.foreign_key || ''}
+                  targetEntity={rel.entity}
+                  compositionCtx={compositionCtx}
+                  localEntities={localEntities}
+                  onChange={(v) => onUpdate({ ...rel, foreign_key: v || undefined })}
+                />
+                <div>
+                  <label className="block text-xs font-medium text-surface-500 dark:text-zinc-400 mb-1">Through (join entity)</label>
+                  <input
+                    type="text"
+                    value={rel.through || ''}
+                    onChange={(e) => onUpdate({ ...rel, through: e.target.value || undefined })}
+                    className="w-full px-2 py-1.5 border border-surface-300 dark:border-zinc-700 rounded text-sm font-mono bg-white dark:bg-zinc-900"
+                    placeholder="Optional join entity"
+                  />
+                </div>
+              </>
+            )}
           </div>
 
           {/* Boolean flags */}
@@ -358,24 +377,28 @@ function RelationshipCard({
               />
               Show in detail
             </label>
-            <label className="flex items-center gap-2 text-sm text-surface-600 dark:text-zinc-400">
-              <input
-                type="checkbox"
-                checked={rel.inline_create ?? false}
-                onChange={(e) => onUpdate({ ...rel, inline_create: e.target.checked || undefined })}
-                className="rounded border-surface-300 dark:border-zinc-700"
-              />
-              Inline create
-            </label>
-            <label className="flex items-center gap-2 text-sm text-surface-600 dark:text-zinc-400">
-              <input
-                type="checkbox"
-                checked={rel.inline_edit ?? false}
-                onChange={(e) => onUpdate({ ...rel, inline_edit: e.target.checked || undefined })}
-                className="rounded border-surface-300 dark:border-zinc-700"
-              />
-              Inline edit
-            </label>
+            {!basicMode && (
+              <>
+                <label className="flex items-center gap-2 text-sm text-surface-600 dark:text-zinc-400">
+                  <input
+                    type="checkbox"
+                    checked={rel.inline_create ?? false}
+                    onChange={(e) => onUpdate({ ...rel, inline_create: e.target.checked || undefined })}
+                    className="rounded border-surface-300 dark:border-zinc-700"
+                  />
+                  Inline create
+                </label>
+                <label className="flex items-center gap-2 text-sm text-surface-600 dark:text-zinc-400">
+                  <input
+                    type="checkbox"
+                    checked={rel.inline_edit ?? false}
+                    onChange={(e) => onUpdate({ ...rel, inline_edit: e.target.checked || undefined })}
+                    className="rounded border-surface-300 dark:border-zinc-700"
+                  />
+                  Inline edit
+                </label>
+              </>
+            )}
           </div>
         </div>
       )}
@@ -404,6 +427,7 @@ function NewRelationshipForm({
   entityGroups,
   compositionCtx,
   localEntities,
+  basicMode,
   onAdd,
   onCancel,
 }: {
@@ -412,6 +436,7 @@ function NewRelationshipForm({
   entityGroups: EntityGroupOption[];
   compositionCtx: ReturnType<typeof useCompositionEditor>;
   localEntities: Entity[];
+  basicMode: boolean;
   onAdd: (rel: Relationship) => void;
   onCancel: () => void;
 }) {
@@ -503,13 +528,15 @@ function NewRelationshipForm({
             )}
           </select>
         </div>
-        <ForeignKeyField
-          value={foreignKey}
-          targetEntity={entity}
-          compositionCtx={compositionCtx}
-          localEntities={localEntities}
-          onChange={setForeignKey}
-        />
+        {!basicMode && (
+          <ForeignKeyField
+            value={foreignKey}
+            targetEntity={entity}
+            compositionCtx={compositionCtx}
+            localEntities={localEntities}
+            onChange={setForeignKey}
+          />
+        )}
         <div className="flex items-end">
           <label className="flex items-center gap-2 text-sm text-surface-600 dark:text-zinc-400">
             <input

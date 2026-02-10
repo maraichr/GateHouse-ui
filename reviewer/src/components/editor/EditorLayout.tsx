@@ -9,6 +9,7 @@ import { Button } from '../ui/Button';
 import { Dialog } from '../ui/Dialog';
 import { Skeleton } from '../ui/Skeleton';
 import { PreviewPanel } from './PreviewPanel';
+import { useEditorMode } from '../../hooks/useEditorMode';
 
 export function EditorLayout() {
   const { specId } = useParams<{ specId: string }>();
@@ -29,6 +30,12 @@ function EditorShell({ specId }: { specId: string }) {
   const [showDiscardDialog, setShowDiscardDialog] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
   const [generating, setGenerating] = useState(false);
+  const [publishDetails, setPublishDetails] = useState<{
+    warnings: string[];
+    blockingErrors: string[];
+    parityStatus: 'pass' | 'warn' | 'fail';
+  } | null>(null);
+  const { mode, setMode } = useEditorMode();
 
   // Block navigation when dirty
   const blocker = useBlocker(isDirty && !isSaving);
@@ -37,13 +44,13 @@ function EditorShell({ specId }: { specId: string }) {
     setPublishing(true);
     setPublishError(null);
     try {
-      const { warnings } = await publish();
-      if (warnings.length > 0) {
-        toast.warning(`Published with warnings`, { description: warnings.join('\n') });
+      const result = await publish();
+      if (result.blockingErrors.length > 0 || result.warnings.length > 0 || result.parityStatus !== 'pass') {
+        setPublishDetails(result);
       } else {
         toast.success('Spec published successfully');
+        navigate(`/specs/${specId}`);
       }
-      navigate(`/specs/${specId}`);
     } catch (err) {
       setPublishError(err instanceof Error ? err.message : 'Publish failed');
       toast.error('Publish failed');
@@ -157,6 +164,20 @@ function EditorShell({ specId }: { specId: string }) {
               {spec.app?.display_name || spec.app?.name || 'Untitled Spec'}
             </h1>
             <SaveIndicator isSaving={isSaving} isDirty={isDirty} lastSavedAt={lastSavedAt} />
+            <div className="inline-flex rounded-lg border border-surface-200 dark:border-zinc-700 overflow-hidden">
+              <button
+                onClick={() => setMode('basic')}
+                className={`px-2.5 py-1 text-xs ${mode === 'basic' ? 'bg-brand-100 dark:bg-brand-950 text-brand-700 dark:text-brand-400' : 'text-surface-500 dark:text-zinc-400 hover:bg-surface-50 dark:hover:bg-zinc-800'}`}
+              >
+                Basic
+              </button>
+              <button
+                onClick={() => setMode('advanced')}
+                className={`px-2.5 py-1 text-xs border-l border-surface-200 dark:border-zinc-700 ${mode === 'advanced' ? 'bg-brand-100 dark:bg-brand-950 text-brand-700 dark:text-brand-400' : 'text-surface-500 dark:text-zinc-400 hover:bg-surface-50 dark:hover:bg-zinc-800'}`}
+              >
+                Advanced
+              </button>
+            </div>
           </div>
           <div className="flex items-center gap-2">
             {error && <span className="text-sm text-danger-500">{error}</span>}
@@ -215,6 +236,52 @@ function EditorShell({ specId }: { specId: string }) {
           </>
         }
       />
+
+      <Dialog
+        open={publishDetails !== null}
+        onClose={() => setPublishDetails(null)}
+        title="Publish summary"
+        description={
+          publishDetails?.parityStatus === 'fail'
+            ? 'Published with parity blockers. Resolve before production rollout.'
+            : publishDetails?.parityStatus === 'warn'
+              ? 'Published with warnings.'
+              : 'Published successfully.'
+        }
+        size="md"
+        actions={
+          <>
+            <Button variant="ghost" color="neutral" onClick={() => setPublishDetails(null)}>Stay in editor</Button>
+            <Button
+              onClick={() => {
+                setPublishDetails(null);
+                navigate(`/specs/${specId}`);
+              }}
+            >
+              Go to overview
+            </Button>
+          </>
+        }
+      >
+        <div className="space-y-3 text-sm">
+          {(publishDetails?.blockingErrors || []).length > 0 && (
+            <div>
+              <p className="font-medium text-danger-600 dark:text-danger-400 mb-1">Blocking errors</p>
+              <ul className="list-disc pl-5 text-danger-600 dark:text-danger-400">
+                {publishDetails?.blockingErrors.map((item) => <li key={item}>{item}</li>)}
+              </ul>
+            </div>
+          )}
+          {(publishDetails?.warnings || []).length > 0 && (
+            <div>
+              <p className="font-medium text-warning-600 dark:text-warning-400 mb-1">Warnings</p>
+              <ul className="list-disc pl-5 text-warning-600 dark:text-warning-400">
+                {publishDetails?.warnings.map((item) => <li key={item}>{item}</li>)}
+              </ul>
+            </div>
+          )}
+        </div>
+      </Dialog>
 
       {/* Navigation blocker dialog */}
       <Dialog

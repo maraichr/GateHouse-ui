@@ -2,11 +2,12 @@ import { useParams, Link } from 'react-router';
 import {
   Database, FileText, Layout, ChevronRight,
   Boxes, Workflow, Lock, GitBranch, Navigation, PanelLeft, Layers, ExternalLink, Eye,
-  PenLine, Settings, Download, Box, Upload,
+  PenLine, Settings, Download, Box, Upload, Timer, History,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useComposition, useComposedCoverage } from '../hooks/useComposition';
 import { exportComposition } from '../api/compositions';
+import { getTimeToFirstSpecKPI } from '../api/specs';
 import { useAppSpecContext } from '../context/AppSpecContext';
 import { PageHeader } from '../components/layout/PageHeader';
 import { CoverageBadge } from '../components/coverage/CoverageBadge';
@@ -19,12 +20,18 @@ import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { StatSkeleton, CardSkeleton } from '../components/ui/Skeleton';
 import type { ComposedCoverageReport, ServiceCoverage } from '../types';
+import { useQuery } from '@tanstack/react-query';
 
 export function CompositionOverview() {
   const { compId } = useParams<{ compId: string }>();
   const { data: compData, isLoading: compLoading } = useComposition(compId);
   const { appSpec, basePath, sources, coverage } = useAppSpecContext();
   const { data: composedCoverage } = useComposedCoverage(compId);
+  const { data: ttfKpi } = useQuery({
+    queryKey: ['kpi', 'time-to-first-spec'],
+    queryFn: getTimeToFirstSpecKPI,
+    staleTime: 60_000,
+  });
 
   if (compLoading) {
     return (
@@ -69,6 +76,7 @@ export function CompositionOverview() {
     { label: 'Relationships', icon: GitBranch, path: 'relationships' },
     { label: 'Navigation', icon: Navigation, path: 'navigation', count: appSpec?.navigation?.items?.length },
     { label: 'Pages', icon: PanelLeft, path: 'pages', count: appSpec?.pages?.length },
+    { label: 'Publish Report', icon: History, path: 'publish-report' },
     { label: 'Live Preview', icon: Eye, path: 'preview' },
   ];
 
@@ -110,6 +118,11 @@ export function CompositionOverview() {
         <StatCard icon={Database} label="Entities" value={appSpec?.entities?.length ?? 0} color="info" />
         <StatCard icon={FileText} label="Fields" value={coverage?.summary.field_count ?? 0} color="accent" />
         <StatCard icon={Workflow} label="State Machines" value={coverage?.summary.state_machine_count ?? 0} color="success" />
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+        <StatCard icon={Timer} label="Avg Time To First Spec" value={`${Math.round(ttfKpi?.average_minutes || 0)}m`} color="brand" />
+        <StatCard icon={Timer} label="P50" value={`${Math.round(ttfKpi?.p50_minutes || 0)}m`} color="info" />
+        <StatCard icon={Timer} label="P90" value={`${Math.round(ttfKpi?.p90_minutes || 0)}m`} color="accent" />
       </div>
 
       {/* Main grid */}
@@ -316,7 +329,7 @@ export function CompositionOverview() {
   );
 }
 
-function StatCard({ icon: Icon, label, value, color = 'brand' }: { icon: React.FC<{ className?: string }>; label: string; value: number; color?: string }) {
+function StatCard({ icon: Icon, label, value, color = 'brand' }: { icon: React.FC<{ className?: string }>; label: string; value: number | string; color?: string }) {
   const borderColor: Record<string, string> = {
     brand: 'border-t-brand-500',
     info: 'border-t-info-500',

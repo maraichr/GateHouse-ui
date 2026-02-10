@@ -124,6 +124,7 @@ export interface Entity {
 export interface Field {
   name: string;
   type: string;
+  path?: string;
   display_name?: string;
   required?: boolean;
   hidden?: boolean;
@@ -156,11 +157,20 @@ export interface Field {
   permissions?: FieldPermissions;
   entity?: string;
   display_field?: string;
+  items?: FieldItem;
+  fields?: Field[];
   filter?: Record<string, unknown>;
   components?: Record<string, unknown>;
   toolbar?: string[];
   columns?: unknown[];
   fake?: string | FakeDepends;
+}
+
+export interface FieldItem {
+  type: string;
+  entity?: string;
+  label_field?: string;
+  fields?: Field[];
 }
 
 export interface FakeDepends {
@@ -240,6 +250,7 @@ export interface Relationship {
   show_in_detail?: boolean;
   inline_create?: boolean;
   inline_edit?: boolean;
+  default_sort?: { field: string; order: string };
 }
 
 export interface EntityViews {

@@ -325,6 +325,12 @@ func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(map[string]string{"status": status})
 }
 
+func (s *Server) handleCapabilities(w http.ResponseWriter, r *http.Request) {
+	report := engine.BuildCapabilitiesReport()
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(report)
+}
+
 func (s *Server) handleServices(w http.ResponseWriter, r *http.Request) {
 	if s.aggregator == nil {
 		w.Header().Set("Content-Type", "application/json")
