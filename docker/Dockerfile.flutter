@@ -17,8 +17,9 @@ COPY flutter_runtime/analysis_options.yaml ./
 COPY flutter_runtime/scripts/ scripts/
 RUN chmod +x scripts/flutter-hot-reload.sh
 
-# Pre-warm flutter web cache
-RUN flutter build web --release 2>/dev/null || true
+# Pre-warm flutter web cache + install static server
+RUN flutter build web --release --pwa-strategy=none 2>/dev/null || true \
+    && dart pub global activate dhttpd
 
 EXPOSE 6175
 

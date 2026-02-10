@@ -2,6 +2,7 @@ package store
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"time"
@@ -11,16 +12,18 @@ import (
 )
 
 type Spec struct {
-	ID          uuid.UUID  `json:"id"                    db:"id"`
-	AppName     string     `json:"app_name"              db:"app_name"`
-	DisplayName string     `json:"display_name"          db:"display_name"`
-	Description string     `json:"description,omitempty" db:"description"`
-	OwnerID     *uuid.UUID `json:"owner_id,omitempty"    db:"owner_id"`
-	CreatedAt   time.Time  `json:"created_at"            db:"created_at"`
-	UpdatedAt   time.Time  `json:"updated_at"            db:"updated_at"`
+	ID             uuid.UUID        `json:"id"                              db:"id"`
+	AppName        string           `json:"app_name"                        db:"app_name"`
+	DisplayName    string           `json:"display_name"                    db:"display_name"`
+	Description    string           `json:"description,omitempty"           db:"description"`
+	OwnerID        *uuid.UUID       `json:"owner_id,omitempty"              db:"owner_id"`
+	CreatedAt      time.Time        `json:"created_at"                      db:"created_at"`
+	UpdatedAt      time.Time        `json:"updated_at"                      db:"updated_at"`
+	DraftData      *json.RawMessage `json:"draft_data,omitempty"            db:"draft_data"`
+	DraftUpdatedAt *time.Time       `json:"draft_updated_at,omitempty"      db:"draft_updated_at"`
 }
 
-const specCols = `id, app_name, display_name, COALESCE(description, '') AS description, owner_id, created_at, updated_at`
+const specCols = `id, app_name, display_name, COALESCE(description, '') AS description, owner_id, created_at, updated_at, draft_data, draft_updated_at`
 
 type CreateSpecInput struct {
 	AppName     string    `json:"app_name"`
@@ -69,6 +72,49 @@ func (db *DB) DeleteSpec(ctx context.Context, id uuid.UUID) error {
 	_, err := db.Pool.Exec(ctx, `DELETE FROM specs WHERE id = $1`, id)
 	if err != nil {
 		return fmt.Errorf("delete spec: %w", err)
+	}
+	return nil
+}
+
+// Draft operations
+
+func (db *DB) GetDraft(ctx context.Context, specID uuid.UUID) (json.RawMessage, *time.Time, error) {
+	var draft *json.RawMessage
+	var updatedAt *time.Time
+	err := db.Pool.QueryRow(ctx,
+		`SELECT draft_data, draft_updated_at FROM specs WHERE id = $1`, specID,
+	).Scan(&draft, &updatedAt)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, nil, nil
+	}
+	if err != nil {
+		return nil, nil, fmt.Errorf("get draft: %w", err)
+	}
+	if draft == nil {
+		return nil, nil, nil
+	}
+	return *draft, updatedAt, nil
+}
+
+func (db *DB) SaveDraft(ctx context.Context, specID uuid.UUID, draftJSON json.RawMessage) error {
+	tag, err := db.Pool.Exec(ctx,
+		`UPDATE specs SET draft_data = $2, draft_updated_at = NOW() WHERE id = $1`,
+		specID, draftJSON)
+	if err != nil {
+		return fmt.Errorf("save draft: %w", err)
+	}
+	if tag.RowsAffected() == 0 {
+		return fmt.Errorf("spec not found")
+	}
+	return nil
+}
+
+func (db *DB) DiscardDraft(ctx context.Context, specID uuid.UUID) error {
+	_, err := db.Pool.Exec(ctx,
+		`UPDATE specs SET draft_data = NULL, draft_updated_at = NULL WHERE id = $1`,
+		specID)
+	if err != nil {
+		return fmt.Errorf("discard draft: %w", err)
 	}
 	return nil
 }

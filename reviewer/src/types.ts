@@ -160,6 +160,12 @@ export interface Field {
   components?: Record<string, unknown>;
   toolbar?: string[];
   columns?: unknown[];
+  fake?: string | FakeDepends;
+}
+
+export interface FakeDepends {
+  depends_on: string;
+  map: Record<string, string>;
 }
 
 export interface EnumValue {
@@ -251,7 +257,13 @@ export interface ListView {
   search?: SearchConfig;
   actions?: ActionConfig;
   bulk_actions?: BulkAction[];
+  presets?: FilterPreset[];
   empty?: EmptyState;
+}
+
+export interface FilterPreset {
+  label: string;
+  values: Record<string, unknown>;
 }
 
 export interface ListColumn {

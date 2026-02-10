@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { ChevronDown, ChevronRight } from 'lucide-react';
+import clsx from 'clsx';
 import { TypeBadge } from './TypeBadge';
 import { RequiredIndicator } from './RequiredIndicator';
 import { ShowInMatrix } from './ShowInMatrix';
@@ -26,39 +27,42 @@ export function FieldTable({ entity, appSpec }: FieldTableProps) {
   });
 
   return (
-    <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+    <div className="surface-card overflow-hidden">
       <table className="w-full text-sm">
         <thead>
-          <tr className="bg-gray-50 border-b border-gray-200">
+          <tr className="bg-surface-50 dark:bg-zinc-800/50 border-b border-surface-200 dark:border-zinc-800">
             <th className="w-8" />
             <th
-              className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:text-gray-700"
+              className="text-left px-4 py-3 text-xs font-medium text-surface-500 dark:text-zinc-400 uppercase tracking-wider cursor-pointer hover:text-surface-700 dark:hover:text-zinc-200 transition-colors"
               onClick={() => setSortBy('name')}
+              aria-sort={sortBy === 'name' ? 'ascending' : undefined}
             >
               Field {sortBy === 'name' && '↑'}
             </th>
             <th
-              className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:text-gray-700"
+              className="text-left px-4 py-3 text-xs font-medium text-surface-500 dark:text-zinc-400 uppercase tracking-wider cursor-pointer hover:text-surface-700 dark:hover:text-zinc-200 transition-colors"
               onClick={() => setSortBy('type')}
+              aria-sort={sortBy === 'type' ? 'ascending' : undefined}
             >
               Type {sortBy === 'type' && '↑'}
             </th>
             <th
-              className="text-center px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:text-gray-700"
+              className="text-center px-4 py-3 text-xs font-medium text-surface-500 dark:text-zinc-400 uppercase tracking-wider cursor-pointer hover:text-surface-700 dark:hover:text-zinc-200 transition-colors"
               onClick={() => setSortBy('required')}
+              aria-sort={sortBy === 'required' ? 'ascending' : undefined}
             >
               Req {sortBy === 'required' && '↑'}
             </th>
-            <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">
+            <th className="text-left px-4 py-3 text-xs font-medium text-surface-500 dark:text-zinc-400 uppercase tracking-wider">
               Show In
             </th>
-            <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">
+            <th className="text-left px-4 py-3 text-xs font-medium text-surface-500 dark:text-zinc-400 uppercase tracking-wider">
               Flags
             </th>
           </tr>
         </thead>
-        <tbody className="divide-y divide-gray-100">
-          {fields.map((field) => {
+        <tbody className="divide-y divide-surface-100 dark:divide-zinc-800/50">
+          {fields.map((field, i) => {
             const isExpanded = expandedField === field.name;
             const showIn = field.show_in || inferShowIn(entity, field);
             return (
@@ -67,6 +71,7 @@ export function FieldTable({ entity, appSpec }: FieldTableProps) {
                 field={field}
                 showIn={showIn}
                 isExpanded={isExpanded}
+                isStriped={i % 2 === 1}
                 onToggle={() => setExpandedField(isExpanded ? null : field.name)}
               />
             );
@@ -81,22 +86,27 @@ interface FieldRowProps {
   field: Field;
   showIn: { list: boolean; detail: boolean; create: boolean; edit: boolean };
   isExpanded: boolean;
+  isStriped: boolean;
   onToggle: () => void;
 }
 
-function FieldRow({ field, showIn, isExpanded, onToggle }: FieldRowProps) {
+function FieldRow({ field, showIn, isExpanded, isStriped, onToggle }: FieldRowProps) {
   return (
     <>
       <tr
-        className="hover:bg-gray-50 cursor-pointer transition-colors"
+        className={clsx(
+          'cursor-pointer transition-colors',
+          isStriped ? 'bg-surface-50/50 dark:bg-zinc-800/20' : '',
+          'hover:bg-brand-50/50 dark:hover:bg-brand-950/20',
+        )}
         onClick={onToggle}
       >
-        <td className="pl-3 py-3 text-gray-400">
+        <td className="pl-3 py-3 text-surface-400 dark:text-zinc-500">
           {isExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
         </td>
         <td className="px-4 py-3">
-          <div className="font-medium text-gray-900">{field.display_name || field.name}</div>
-          <div className="text-xs text-gray-400 font-mono">{field.name}</div>
+          <div className="font-medium text-surface-900 dark:text-zinc-100">{field.display_name || field.name}</div>
+          <div className="text-xs text-surface-400 dark:text-zinc-500 font-mono">{field.name}</div>
         </td>
         <td className="px-4 py-3">
           <TypeBadge type={field.type} />
@@ -120,7 +130,7 @@ function FieldRow({ field, showIn, isExpanded, onToggle }: FieldRowProps) {
       </tr>
       {isExpanded && (
         <tr>
-          <td colSpan={6} className="bg-gray-50 px-8 py-4">
+          <td colSpan={6} className="bg-surface-50 dark:bg-zinc-800/30 px-8 py-4">
             <FieldDetail field={field} />
           </td>
         </tr>
@@ -134,41 +144,41 @@ function FieldDetail({ field }: { field: Field }) {
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm animate-fade-in">
       {/* Basic info */}
       <div className="space-y-2">
-        <h4 className="font-medium text-gray-700 mb-2">Details</h4>
+        <h4 className="font-medium text-surface-700 dark:text-zinc-300 mb-2">Details</h4>
         {field.help_text && (
           <div>
-            <span className="text-gray-500">Help text:</span>{' '}
-            <span className="text-gray-700">{field.help_text}</span>
+            <span className="text-surface-500 dark:text-zinc-400">Help text:</span>{' '}
+            <span className="text-surface-700 dark:text-zinc-300">{field.help_text}</span>
           </div>
         )}
         {field.placeholder && (
           <div>
-            <span className="text-gray-500">Placeholder:</span>{' '}
+            <span className="text-surface-500 dark:text-zinc-400">Placeholder:</span>{' '}
             <InlineCode>{field.placeholder}</InlineCode>
           </div>
         )}
         {field.default !== undefined && (
           <div>
-            <span className="text-gray-500">Default:</span>{' '}
+            <span className="text-surface-500 dark:text-zinc-400">Default:</span>{' '}
             <InlineCode>{JSON.stringify(field.default)}</InlineCode>
           </div>
         )}
         {field.format && (
           <div>
-            <span className="text-gray-500">Format:</span>{' '}
+            <span className="text-surface-500 dark:text-zinc-400">Format:</span>{' '}
             <InlineCode>{field.format}</InlineCode>
           </div>
         )}
         {field.entity && (
           <div>
-            <span className="text-gray-500">Reference:</span>{' '}
+            <span className="text-surface-500 dark:text-zinc-400">Reference:</span>{' '}
             <Badge color="amber">{field.entity}</Badge>
-            {field.display_field && <span className="text-gray-400 ml-1">→ {field.display_field}</span>}
+            {field.display_field && <span className="text-surface-400 dark:text-zinc-500 ml-1">→ {field.display_field}</span>}
           </div>
         )}
         {field.mask_pattern && (
           <div>
-            <span className="text-gray-500">Mask:</span>{' '}
+            <span className="text-surface-500 dark:text-zinc-400">Mask:</span>{' '}
             <InlineCode>{field.mask_pattern}</InlineCode>
           </div>
         )}
@@ -176,10 +186,10 @@ function FieldDetail({ field }: { field: Field }) {
 
       {/* Constraints */}
       <div className="space-y-2">
-        <h4 className="font-medium text-gray-700 mb-2">Constraints</h4>
+        <h4 className="font-medium text-surface-700 dark:text-zinc-300 mb-2">Constraints</h4>
         {(field.min_length || field.max_length) && (
           <div>
-            <span className="text-gray-500">Length:</span>{' '}
+            <span className="text-surface-500 dark:text-zinc-400">Length:</span>{' '}
             {field.min_length && <span>{field.min_length}</span>}
             {field.min_length && field.max_length && <span> – </span>}
             {field.max_length && <span>{field.max_length}</span>}
@@ -187,7 +197,7 @@ function FieldDetail({ field }: { field: Field }) {
         )}
         {(field.min !== undefined || field.max !== undefined) && (
           <div>
-            <span className="text-gray-500">Range:</span>{' '}
+            <span className="text-surface-500 dark:text-zinc-400">Range:</span>{' '}
             {field.min !== undefined && <span>{String(field.min)}</span>}
             {field.min !== undefined && field.max !== undefined && <span> – </span>}
             {field.max !== undefined && <span>{String(field.max)}</span>}
@@ -195,14 +205,14 @@ function FieldDetail({ field }: { field: Field }) {
         )}
         {field.pattern && (
           <div>
-            <span className="text-gray-500">Pattern:</span>{' '}
+            <span className="text-surface-500 dark:text-zinc-400">Pattern:</span>{' '}
             <InlineCode>{field.pattern}</InlineCode>
-            {field.pattern_message && <span className="text-gray-400 text-xs ml-1">({field.pattern_message})</span>}
+            {field.pattern_message && <span className="text-surface-400 dark:text-zinc-500 text-xs ml-1">({field.pattern_message})</span>}
           </div>
         )}
         {field.precision !== undefined && (
           <div>
-            <span className="text-gray-500">Precision:</span> {field.precision}
+            <span className="text-surface-500 dark:text-zinc-400">Precision:</span> {field.precision}
           </div>
         )}
         {field.future_only && (
@@ -212,12 +222,12 @@ function FieldDetail({ field }: { field: Field }) {
         {/* Permissions */}
         {field.permissions && (
           <div>
-            <h4 className="font-medium text-gray-700 mt-3 mb-1">Permissions</h4>
+            <h4 className="font-medium text-surface-700 dark:text-zinc-300 mt-3 mb-1">Permissions</h4>
             {field.permissions.view && (
-              <div className="text-xs">View: {field.permissions.view.join(', ')}</div>
+              <div className="text-xs text-surface-600 dark:text-zinc-400">View: {field.permissions.view.join(', ')}</div>
             )}
             {field.permissions.edit && (
-              <div className="text-xs">Edit: {field.permissions.edit.join(', ')}</div>
+              <div className="text-xs text-surface-600 dark:text-zinc-400">Edit: {field.permissions.edit.join(', ')}</div>
             )}
           </div>
         )}
@@ -226,7 +236,7 @@ function FieldDetail({ field }: { field: Field }) {
       {/* Enum values */}
       {field.type === 'enum' && field.values && field.values.length > 0 && (
         <div className="col-span-full">
-          <h4 className="font-medium text-gray-700 mb-2">Values</h4>
+          <h4 className="font-medium text-surface-700 dark:text-zinc-300 mb-2">Values</h4>
           <EnumValueList values={field.values} />
         </div>
       )}
@@ -234,7 +244,7 @@ function FieldDetail({ field }: { field: Field }) {
       {/* Display rules */}
       {field.display_rules && field.display_rules.length > 0 && (
         <div className="col-span-full">
-          <h4 className="font-medium text-gray-700 mb-2">Display Rules</h4>
+          <h4 className="font-medium text-surface-700 dark:text-zinc-300 mb-2">Display Rules</h4>
           <div className="space-y-2">
             {field.display_rules.map((rule, i) => (
               <DisplayRuleCard key={i} rule={rule} />

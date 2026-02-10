@@ -11,7 +11,7 @@ export function AttentionList({ gaps, maxItems = 10 }: AttentionListProps) {
 
   if (items.length === 0) {
     return (
-      <p className="text-sm text-gray-500 py-4 text-center">
+      <p className="text-sm text-surface-500 dark:text-zinc-400 py-4 text-center">
         No attention items — looking good!
       </p>
     );
@@ -27,14 +27,14 @@ export function AttentionList({ gaps, maxItems = 10 }: AttentionListProps) {
             <Info className="w-4 h-4 text-blue-400 mt-0.5 shrink-0" />
           )}
           <div>
-            <span className="font-medium text-gray-700">{gap.entity}</span>
-            <span className="text-gray-400 mx-1">&middot;</span>
-            <span className="text-gray-500">{gap.message}</span>
+            <span className="font-medium text-surface-700 dark:text-zinc-300">{gap.entity}</span>
+            <span className="text-surface-400 dark:text-zinc-500 mx-1">&middot;</span>
+            <span className="text-surface-500 dark:text-zinc-400">{gap.message}</span>
           </div>
         </li>
       ))}
       {gaps.length > maxItems && (
-        <li className="text-xs text-gray-400 pl-6">
+        <li className="text-xs text-surface-400 dark:text-zinc-500 pl-6">
           +{gaps.length - maxItems} more items
         </li>
       )}

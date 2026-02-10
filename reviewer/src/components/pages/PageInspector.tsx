@@ -8,17 +8,17 @@ interface PageInspectorProps {
 
 export function PageInspector({ pages }: PageInspectorProps) {
   if (!pages || pages.length === 0) {
-    return <p className="text-sm text-gray-500">No custom pages defined in this spec.</p>;
+    return <p className="text-sm text-surface-500 dark:text-zinc-400">No custom pages defined in this spec.</p>;
   }
 
   return (
     <div className="space-y-6">
       {pages.map((page) => (
-        <div key={page.id} className="bg-white rounded-lg border border-gray-200 p-5">
+        <div key={page.id} className="surface-card">
           <div className="flex items-start justify-between mb-3">
             <div>
-              <h3 className="font-semibold text-gray-900">{page.title}</h3>
-              <span className="text-xs text-gray-400 font-mono">{page.path}</span>
+              <h3 className="font-semibold text-surface-900 dark:text-zinc-100">{page.title}</h3>
+              <span className="text-xs text-surface-400 dark:text-zinc-500 font-mono">{page.path}</span>
             </div>
             {page.permissions && page.permissions.length > 0 && (
               <div className="flex gap-1">
@@ -41,14 +41,14 @@ export function PageInspector({ pages }: PageInspectorProps) {
 
 function WidgetSchematic({ widget, index }: { widget: Widget; index: number }) {
   const typeColors: Record<string, string> = {
-    stat_cards: 'border-blue-200 bg-blue-50',
-    chart: 'border-green-200 bg-green-50',
-    entity_table: 'border-amber-200 bg-amber-50',
-    report_builder: 'border-purple-200 bg-purple-50',
-    settings_form: 'border-gray-200 bg-gray-50',
+    stat_cards: 'border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-950/30',
+    chart: 'border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-950/30',
+    entity_table: 'border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/30',
+    report_builder: 'border-purple-200 dark:border-purple-800 bg-purple-50 dark:bg-purple-950/30',
+    settings_form: 'border-surface-200 dark:border-zinc-700 bg-surface-50 dark:bg-zinc-800/50',
   };
 
-  const borderClass = typeColors[widget.type] || 'border-gray-200 bg-gray-50';
+  const borderClass = typeColors[widget.type] || 'border-surface-200 dark:border-zinc-700 bg-surface-50 dark:bg-zinc-800/50';
 
   return (
     <div className={`rounded-lg border p-3 ${borderClass}`}>
@@ -56,20 +56,20 @@ function WidgetSchematic({ widget, index }: { widget: Widget; index: number }) {
         <Badge color={widget.type === 'stat_cards' ? 'blue' : widget.type === 'chart' ? 'green' : widget.type === 'entity_table' ? 'amber' : 'gray'}>
           {widget.type}
         </Badge>
-        <span className="text-[10px] text-gray-400">#{index + 1}</span>
+        <span className="text-[10px] text-surface-400 dark:text-zinc-500">#{index + 1}</span>
       </div>
-      {widget.title && <div className="text-sm font-medium text-gray-700 mb-1">{widget.title}</div>}
+      {widget.title && <div className="text-sm font-medium text-surface-700 dark:text-zinc-300 mb-1">{widget.title}</div>}
       {widget.cards && (
-        <div className="text-xs text-gray-500">{widget.cards.length} stat cards</div>
+        <div className="text-xs text-surface-500 dark:text-zinc-400">{widget.cards.length} stat cards</div>
       )}
       {widget.chart_type && (
-        <div className="text-xs text-gray-500">
+        <div className="text-xs text-surface-500 dark:text-zinc-400">
           Chart: <InlineCode>{widget.chart_type}</InlineCode>
           {widget.source && <> from <InlineCode>{widget.source}</InlineCode></>}
         </div>
       )}
       {widget.entity && (
-        <div className="text-xs text-gray-500">
+        <div className="text-xs text-surface-500 dark:text-zinc-400">
           Entity: <InlineCode>{widget.entity}</InlineCode>
           {widget.query?.limit && <span> (limit {widget.query.limit})</span>}
         </div>

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { createAnnotation } from '../../api/specs';
+import { Button } from '../ui/Button';
 
 interface AddAnnotationProps {
   specId: string;
@@ -37,45 +38,43 @@ export function AddAnnotation({ specId, versionId, elementPath, elementType, onD
         onChange={(e) => setBody(e.target.value)}
         placeholder="Add your feedback..."
         rows={3}
-        className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-reviewer-300 focus:border-reviewer-400 resize-none"
+        className="w-full text-sm border border-surface-200 dark:border-zinc-700 rounded-lg px-3 py-2 bg-white dark:bg-zinc-900 text-surface-900 dark:text-zinc-100 placeholder:text-surface-400 dark:placeholder:text-zinc-500 outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 dark:focus:border-brand-500 resize-none"
       />
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <label className="flex items-center gap-1 text-xs text-gray-600">
+        <div className="flex items-center gap-3">
+          <label className="flex items-center gap-1.5 text-xs text-surface-600 dark:text-zinc-400 cursor-pointer">
             <input
               type="radio"
               name="state"
               checked={state === 'open'}
               onChange={() => setState('open')}
-              className="text-reviewer-600"
+              className="accent-brand-600"
             />
             Comment
           </label>
-          <label className="flex items-center gap-1 text-xs text-red-600">
+          <label className="flex items-center gap-1.5 text-xs text-danger-600 dark:text-danger-400 cursor-pointer">
             <input
               type="radio"
               name="state"
               checked={state === 'blocking'}
               onChange={() => setState('blocking')}
-              className="text-red-600"
+              className="accent-danger-600"
             />
             Blocking
           </label>
         </div>
         <div className="flex gap-2">
-          <button
-            onClick={onDone}
-            className="text-xs text-gray-500 hover:text-gray-700 px-2 py-1"
-          >
+          <Button variant="ghost" color="neutral" size="sm" onClick={onDone}>
             Cancel
-          </button>
-          <button
+          </Button>
+          <Button
+            size="sm"
             onClick={() => mutation.mutate()}
             disabled={!body.trim() || mutation.isPending}
-            className="text-xs bg-reviewer-600 text-white px-3 py-1 rounded-md hover:bg-reviewer-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            loading={mutation.isPending}
           >
-            {mutation.isPending ? 'Saving...' : 'Submit'}
-          </button>
+            Submit
+          </Button>
         </div>
       </div>
     </div>

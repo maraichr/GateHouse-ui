@@ -2,6 +2,19 @@ import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../utils/config.dart';
 
+/// Preview params captured once at load time (specId, compId, versionId).
+final Map<String, String> _previewParams = () {
+  final params = Uri.base.queryParameters;
+  final result = <String, String>{};
+  for (final key in ['specId', 'versionId', 'compId']) {
+    final val = params[key];
+    if (val != null && val.isNotEmpty) {
+      result[key] = val;
+    }
+  }
+  return result;
+}();
+
 /// Parses "api:GET /dashboard/stats" source strings and fetches widget data.
 /// Family provider keyed by source string — each unique source gets its own cache.
 final widgetDataProvider =
@@ -15,7 +28,10 @@ final widgetDataProvider =
     receiveTimeout: const Duration(seconds: 10),
   ));
 
-  final response = await dio.get(parsed);
+  final response = await dio.get(
+    parsed,
+    queryParameters: _previewParams.isNotEmpty ? _previewParams : null,
+  );
   if (response.data is Map) {
     return Map<String, dynamic>.from(response.data as Map);
   }

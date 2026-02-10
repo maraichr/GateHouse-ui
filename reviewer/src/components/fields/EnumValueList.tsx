@@ -10,7 +10,7 @@ export function EnumValueList({ values }: EnumValueListProps) {
       {values.map((v) => (
         <span
           key={v.value}
-          className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-gray-50 border border-gray-200 text-xs"
+          className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-surface-50 dark:bg-zinc-800/50 border border-surface-200 dark:border-zinc-700 text-xs"
         >
           {v.color && (
             <span
@@ -18,8 +18,8 @@ export function EnumValueList({ values }: EnumValueListProps) {
               style={{ backgroundColor: v.color }}
             />
           )}
-          <span className="font-medium text-gray-700">{v.label}</span>
-          <span className="text-gray-400 font-mono">{v.value}</span>
+          <span className="font-medium text-surface-700 dark:text-zinc-300">{v.label}</span>
+          <span className="text-surface-400 dark:text-zinc-500 font-mono">{v.value}</span>
         </span>
       ))}
     </div>

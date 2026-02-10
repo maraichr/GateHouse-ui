@@ -11,11 +11,11 @@ export function NavBlueprint({ appSpec }: NavBlueprintProps) {
   const pageIds = new Set((appSpec.pages || []).map((p) => p.id));
 
   if (!appSpec.navigation?.items?.length) {
-    return <p className="text-sm text-gray-500">No navigation defined in this spec.</p>;
+    return <p className="text-sm text-surface-500 dark:text-zinc-400">No navigation defined in this spec.</p>;
   }
 
   return (
-    <div className="bg-white rounded-lg border border-gray-200 p-5">
+    <div className="surface-card">
       <div className="space-y-1">
         {appSpec.navigation.items.map((item) => (
           <NavBlueprintItem
@@ -46,14 +46,14 @@ function NavBlueprintItem({ item, depth, entityNames, pageIds }: NavBlueprintIte
 
   return (
     <div style={{ paddingLeft: depth * 20 }}>
-      <div className="flex items-center gap-2 px-3 py-2 rounded-md hover:bg-gray-50 text-sm group">
+      <div className="flex items-center gap-2 px-3 py-2 rounded-md hover:bg-surface-50 dark:hover:bg-zinc-800/50 text-sm group transition-colors">
         {hasChildren ? (
-          <ChevronRight className="w-3 h-3 text-gray-400" />
+          <ChevronRight className="w-3 h-3 text-surface-400 dark:text-zinc-500" />
         ) : (
           <span className="w-3" />
         )}
-        {item.icon && <span className="text-gray-400 text-xs">{item.icon}</span>}
-        <span className="font-medium text-gray-700">{item.label}</span>
+        {item.icon && <span className="text-surface-400 dark:text-zinc-500 text-xs">{item.icon}</span>}
+        <span className="font-medium text-surface-700 dark:text-zinc-300">{item.label}</span>
 
         {/* Target info */}
         <div className="flex items-center gap-1.5 ml-auto">
@@ -68,7 +68,7 @@ function NavBlueprintItem({ item, depth, entityNames, pageIds }: NavBlueprintIte
             </Badge>
           )}
           {item.path && !item.entity && !item.page && (
-            <span className="text-xs text-gray-400 font-mono">{item.path}</span>
+            <span className="text-xs text-surface-400 dark:text-zinc-500 font-mono">{item.path}</span>
           )}
           {item.permissions && item.permissions.length > 0 && (
             <Badge color="gray">{item.permissions.join(', ')}</Badge>

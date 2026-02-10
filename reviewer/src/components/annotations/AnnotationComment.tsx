@@ -10,17 +10,17 @@ export function AnnotationComment({ annotation }: AnnotationCommentProps) {
 
   return (
     <div className="flex gap-2">
-      <div className="w-6 h-6 rounded-full bg-gray-200 flex items-center justify-center shrink-0">
-        <User className="w-3 h-3 text-gray-500" />
+      <div className="w-6 h-6 rounded-full bg-surface-100 dark:bg-zinc-800 flex items-center justify-center shrink-0">
+        <User className="w-3 h-3 text-surface-500 dark:text-zinc-400" />
       </div>
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
-          <span className="text-xs font-medium text-gray-800">
+          <span className="text-xs font-medium text-surface-800 dark:text-zinc-200">
             {annotation.author_name || 'Unknown'}
           </span>
-          <span className="text-[10px] text-gray-400">{timeAgo}</span>
+          <span className="text-[10px] text-surface-400 dark:text-zinc-500">{timeAgo}</span>
         </div>
-        <p className="text-xs text-gray-600 mt-0.5 whitespace-pre-wrap">{annotation.body}</p>
+        <p className="text-xs text-surface-600 dark:text-zinc-400 mt-0.5 whitespace-pre-wrap">{annotation.body}</p>
       </div>
     </div>
   );

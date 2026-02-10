@@ -32,6 +32,13 @@ func (s *Server) mountReviewerRoutes(r chi.Router) {
 	r.Get("/specs/{specID}", s.handleReviewerGetSpec)
 	r.Delete("/specs/{specID}", s.handleReviewerDeleteSpec)
 
+	// Drafts
+	r.Get("/specs/{specID}/draft", s.handleGetDraft)
+	r.Put("/specs/{specID}/draft", s.handleSaveDraft)
+	r.Delete("/specs/{specID}/draft", s.handleDiscardDraft)
+	r.Put("/specs/{specID}/draft/init", s.handleInitDraft)
+	r.Post("/specs/{specID}/publish", s.handlePublishDraft)
+
 	// Versions
 	r.Get("/specs/{specID}/versions", s.handleReviewerListVersions)
 	r.Post("/specs/{specID}/versions", s.handleReviewerCreateVersion)
@@ -348,6 +355,211 @@ func (s *Server) handleReviewerDeleteSpec(w http.ResponseWriter, r *http.Request
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]string{"status": "deleted"})
+}
+
+// --- Drafts ---
+
+func (s *Server) handleGetDraft(w http.ResponseWriter, r *http.Request) {
+	specID, err := uuid.Parse(chi.URLParam(r, "specID"))
+	if err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid spec ID"})
+		return
+	}
+	draft, updatedAt, err := s.store.GetDraft(r.Context(), specID)
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
+		return
+	}
+	if draft == nil {
+		writeJSON(w, http.StatusOK, map[string]any{"draft": nil, "updated_at": nil})
+		return
+	}
+	var updatedAtStr *string
+	if updatedAt != nil {
+		s := updatedAt.Format(time.RFC3339)
+		updatedAtStr = &s
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"draft": json.RawMessage(draft), "updated_at": updatedAtStr})
+}
+
+func (s *Server) handleSaveDraft(w http.ResponseWriter, r *http.Request) {
+	user := auth.UserFromContext(r.Context())
+	if user == nil {
+		writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "authentication required"})
+		return
+	}
+	specID, err := uuid.Parse(chi.URLParam(r, "specID"))
+	if err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid spec ID"})
+		return
+	}
+	if !auth.CanEditSpec(r.Context(), s.store, specID) {
+		writeJSON(w, http.StatusForbidden, map[string]string{"error": "edit permission required"})
+		return
+	}
+
+	body, err := io.ReadAll(r.Body)
+	if err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "failed to read body"})
+		return
+	}
+	if !json.Valid(body) {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid JSON"})
+		return
+	}
+
+	if err := s.store.SaveDraft(r.Context(), specID, body); err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]string{"status": "saved"})
+}
+
+func (s *Server) handleDiscardDraft(w http.ResponseWriter, r *http.Request) {
+	user := auth.UserFromContext(r.Context())
+	if user == nil {
+		writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "authentication required"})
+		return
+	}
+	specID, err := uuid.Parse(chi.URLParam(r, "specID"))
+	if err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid spec ID"})
+		return
+	}
+	if !auth.CanEditSpec(r.Context(), s.store, specID) {
+		writeJSON(w, http.StatusForbidden, map[string]string{"error": "edit permission required"})
+		return
+	}
+
+	if err := s.store.DiscardDraft(r.Context(), specID); err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
+		return
+	}
+	s.writeAudit(r, user, "draft.discard", "spec", specID, nil)
+	writeJSON(w, http.StatusOK, map[string]string{"status": "discarded"})
+}
+
+func (s *Server) handleInitDraft(w http.ResponseWriter, r *http.Request) {
+	user := auth.UserFromContext(r.Context())
+	if user == nil {
+		writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "authentication required"})
+		return
+	}
+	specID, err := uuid.Parse(chi.URLParam(r, "specID"))
+	if err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid spec ID"})
+		return
+	}
+	if !auth.CanEditSpec(r.Context(), s.store, specID) {
+		writeJSON(w, http.StatusForbidden, map[string]string{"error": "edit permission required"})
+		return
+	}
+
+	latest, err := s.store.GetLatestVersion(r.Context(), specID)
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
+		return
+	}
+	if latest == nil {
+		writeJSON(w, http.StatusNotFound, map[string]string{"error": "no published version to initialize from"})
+		return
+	}
+
+	if err := s.store.SaveDraft(r.Context(), specID, latest.SpecData); err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
+		return
+	}
+	s.writeAudit(r, user, "draft.init", "spec", specID, map[string]any{"from_version": latest.Version})
+	writeJSON(w, http.StatusOK, map[string]any{"draft": json.RawMessage(latest.SpecData)})
+}
+
+func (s *Server) handlePublishDraft(w http.ResponseWriter, r *http.Request) {
+	user := auth.UserFromContext(r.Context())
+	if user == nil {
+		writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "authentication required"})
+		return
+	}
+	specID, err := uuid.Parse(chi.URLParam(r, "specID"))
+	if err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid spec ID"})
+		return
+	}
+	if !auth.CanEditSpec(r.Context(), s.store, specID) {
+		writeJSON(w, http.StatusForbidden, map[string]string{"error": "edit permission required"})
+		return
+	}
+
+	var input struct {
+		Version       string `json:"version"`
+		ChangeSummary string `json:"change_summary"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid JSON"})
+		return
+	}
+
+	draft, _, err := s.store.GetDraft(r.Context(), specID)
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
+		return
+	}
+	if draft == nil {
+		writeJSON(w, http.StatusNotFound, map[string]string{"error": "no draft to publish"})
+		return
+	}
+
+	// Basic validation: ensure draft parses as JSON
+	var specCheck map[string]any
+	if err := json.Unmarshal(draft, &specCheck); err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "draft is not valid JSON: " + err.Error()})
+		return
+	}
+
+	var warnings []string
+	if specCheck["app"] == nil {
+		warnings = append(warnings, "spec is missing 'app' section")
+	}
+	if specCheck["entities"] == nil {
+		warnings = append(warnings, "spec has no entities defined")
+	}
+
+	// Auto-increment version if not provided
+	version := input.Version
+	if version == "" {
+		versions, _ := s.store.ListVersions(r.Context(), specID, "")
+		if len(versions) > 0 {
+			version = incrementVersion(versions[0].Version)
+		} else {
+			version = "1.0.0"
+		}
+	}
+
+	v, err := s.store.CreateVersion(r.Context(), store.CreateVersionInput{
+		SpecID:        specID,
+		Version:       version,
+		SpecData:      draft,
+		CreatedBy:     user.ID,
+		ChangeSummary: input.ChangeSummary,
+	})
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
+		return
+	}
+
+	_ = s.store.DiscardDraft(r.Context(), specID)
+
+	s.writeAudit(r, user, "draft.publish", "spec", specID, map[string]any{"version": version})
+	writeJSON(w, http.StatusOK, map[string]any{"version": v, "warnings": warnings})
+}
+
+// incrementVersion bumps the patch number of a semver string.
+func incrementVersion(v string) string {
+	parts := [3]int{1, 0, 0}
+	n, _ := fmt.Sscanf(v, "%d.%d.%d", &parts[0], &parts[1], &parts[2])
+	if n >= 3 {
+		parts[2]++
+	}
+	return fmt.Sprintf("%d.%d.%d", parts[0], parts[1], parts[2])
 }
 
 // --- Versions ---

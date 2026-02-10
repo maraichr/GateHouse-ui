@@ -16,7 +16,7 @@ export function StateMachineDiagram({ stateMachine }: StateMachineDiagramProps) 
 
   return (
     <div className="flex gap-6">
-      <div className="flex-1 bg-white rounded-lg border border-gray-200 p-4 overflow-auto">
+      <div className="flex-1 surface-card p-4 overflow-auto">
         <svg
           width={layout.width}
           height={layout.height}
@@ -32,8 +32,21 @@ export function StateMachineDiagram({ stateMachine }: StateMachineDiagramProps) 
               refY="3.5"
               orient="auto"
             >
-              <polygon points="0 0, 10 3.5, 0 7" fill="#6b7280" />
+              <polygon points="0 0, 10 3.5, 0 7" className="fill-surface-400 dark:fill-zinc-500" />
             </marker>
+            <marker
+              id="arrowhead-active"
+              markerWidth="10"
+              markerHeight="7"
+              refX="10"
+              refY="3.5"
+              orient="auto"
+            >
+              <polygon points="0 0, 10 3.5, 0 7" className="fill-brand-500" />
+            </marker>
+            <filter id="node-shadow" x="-20%" y="-20%" width="140%" height="140%">
+              <feDropShadow dx="0" dy="1" stdDeviation="2" floodOpacity="0.08" />
+            </filter>
           </defs>
 
           {/* Edges */}
@@ -89,25 +102,26 @@ function StateNode({
     <g onMouseEnter={onMouseEnter} onMouseLeave={onMouseLeave} className="cursor-pointer">
       {/* Initial state marker */}
       {node.isInitial && (
-        <circle cx={x - 12} cy={node.y} r={5} fill="#4c6ef5" />
+        <circle cx={x - 12} cy={node.y} r={5} className="fill-brand-500" />
       )}
       <rect
         x={x}
         y={y}
         width={node.width}
         height={node.height}
-        rx={8}
-        fill={isHighlighted ? '#eef2ff' : 'white'}
-        stroke={node.isInitial ? '#4c6ef5' : isHighlighted ? '#818cf8' : '#d1d5db'}
+        rx={10}
+        fill={isHighlighted ? 'var(--tw-brand-50, #eef2ff)' : 'var(--tw-surface, white)'}
+        stroke={node.isInitial ? 'var(--tw-brand-500, #6366f1)' : isHighlighted ? 'var(--tw-brand-400, #818cf8)' : 'var(--tw-border, #e2e8f0)'}
         strokeWidth={node.isInitial ? 2 : 1.5}
+        filter="url(#node-shadow)"
+        className={isHighlighted ? 'fill-brand-50 dark:fill-brand-950' : 'fill-white dark:fill-zinc-900'}
       />
       <text
         x={node.x}
         y={node.y + 1}
         textAnchor="middle"
         dominantBaseline="middle"
-        className="text-xs font-medium"
-        fill="#374151"
+        className="text-xs font-medium fill-surface-700 dark:fill-zinc-300"
       >
         {node.id}
       </text>
@@ -139,17 +153,16 @@ function EdgePath({
       <path
         d={pathData}
         fill="none"
-        stroke={isHighlighted ? '#818cf8' : '#9ca3af'}
+        className={isHighlighted ? 'stroke-brand-400' : 'stroke-surface-300 dark:stroke-zinc-600'}
         strokeWidth={isHighlighted ? 2 : 1.5}
-        markerEnd="url(#arrowhead)"
+        markerEnd={isHighlighted ? 'url(#arrowhead-active)' : 'url(#arrowhead)'}
       />
       {edge.label && (
         <text
           x={mid.x}
           y={mid.y - 6}
           textAnchor="middle"
-          className="text-[10px]"
-          fill={isHighlighted ? '#4f46e5' : '#6b7280'}
+          className={`text-[10px] ${isHighlighted ? 'fill-brand-600 dark:fill-brand-400' : 'fill-surface-500 dark:fill-zinc-400'}`}
         >
           {edge.label}
         </text>

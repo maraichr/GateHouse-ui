@@ -13,12 +13,12 @@ export function NavigationBlueprintPage() {
         title="Navigation Blueprint"
         subtitle="Sidebar navigation structure and targets"
         breadcrumb={
-          <nav className="flex items-center gap-1 text-sm text-gray-500">
-            <Link to="/" className="hover:text-gray-700">Specs</Link>
+          <nav className="flex items-center gap-1 text-sm text-surface-500 dark:text-zinc-400">
+            <Link to="/" className="hover:text-surface-700 dark:hover:text-zinc-200 transition-colors">Specs</Link>
             <ChevronRight className="w-3 h-3" />
-            <Link to={basePath} className="hover:text-gray-700">{specDisplayName}</Link>
+            <Link to={basePath} className="hover:text-surface-700 dark:hover:text-zinc-200 transition-colors">{specDisplayName}</Link>
             <ChevronRight className="w-3 h-3" />
-            <span className="text-gray-900">Navigation</span>
+            <span className="text-surface-900 dark:text-zinc-100">Navigation</span>
           </nav>
         }
       />

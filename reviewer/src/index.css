@@ -2,6 +2,101 @@
 @tailwind components;
 @tailwind utilities;
 
-body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+@layer base {
+  body {
+    font-family: 'Inter Variable', 'Inter', system-ui, -apple-system, sans-serif;
+    @apply bg-white text-surface-900 dark:bg-zinc-950 dark:text-zinc-100 antialiased;
+  }
+
+  /* Focus ring utility */
+  *:focus-visible {
+    @apply outline-none ring-2 ring-brand-500/50 ring-offset-2 ring-offset-white dark:ring-offset-zinc-950;
+  }
+}
+
+@layer components {
+  /* Surface cards */
+  .surface-card {
+    @apply bg-white border border-surface-200 rounded-xl shadow-elevation-sm
+           dark:bg-zinc-900 dark:border-zinc-800;
+  }
+
+  .surface-card-hover {
+    @apply transition-all duration-200;
+  }
+
+  .surface-card-hover:hover {
+    @apply shadow-elevation-md -translate-y-0.5 border-surface-300
+           dark:border-zinc-700;
+  }
+
+  /* Glass effect */
+  .glass {
+    @apply bg-white/80 backdrop-blur-xl border-b border-surface-200/60
+           dark:bg-zinc-950/80 dark:border-zinc-800/60;
+  }
+
+  /* Skeleton shimmer */
+  .skeleton-shimmer {
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(0, 0, 0, 0.04) 40%,
+      rgba(0, 0, 0, 0.04) 60%,
+      transparent 100%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 2s infinite linear;
+  }
+
+  .dark .skeleton-shimmer {
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(255, 255, 255, 0.06) 40%,
+      rgba(255, 255, 255, 0.06) 60%,
+      transparent 100%
+    );
+    background-size: 200% 100%;
+  }
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-surface-300 rounded-full dark:bg-zinc-700;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-surface-400 dark:bg-zinc-600;
+}
+
+/* Respect reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Print styles */
+@media print {
+  header, nav, .no-print {
+    display: none !important;
+  }
+  main {
+    max-width: 100% !important;
+    padding: 0 !important;
+  }
 }

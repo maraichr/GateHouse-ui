@@ -38,25 +38,27 @@ export function LivePreview() {
         title="Live Preview"
         subtitle="See the spec rendered in real time"
         breadcrumb={
-          <nav className="flex items-center gap-1 text-sm text-gray-500">
-            <Link to="/" className="hover:text-gray-700">Specs</Link>
+          <nav className="flex items-center gap-1 text-sm text-surface-500 dark:text-zinc-400">
+            <Link to="/" className="hover:text-surface-700 dark:hover:text-zinc-200 transition-colors">Specs</Link>
             <ChevronRight className="w-3 h-3" />
-            <Link to={basePath} className="hover:text-gray-700">{specDisplayName}</Link>
+            <Link to={basePath} className="hover:text-surface-700 dark:hover:text-zinc-200 transition-colors">{specDisplayName}</Link>
             <ChevronRight className="w-3 h-3" />
-            <span className="text-gray-900">Preview</span>
+            <span className="text-surface-900 dark:text-zinc-100">Preview</span>
           </nav>
         }
         actions={
           <div className="flex items-center gap-3">
             {/* Runtime selector */}
-            <div className="flex gap-1 bg-gray-100 rounded-lg p-0.5">
+            <div className="flex gap-1 bg-surface-100 dark:bg-zinc-800 rounded-lg p-0.5">
               {(['react', 'flutter'] as const).map((rt) => (
                 <button
                   key={rt}
                   onClick={() => setRuntime(rt)}
                   className={clsx(
-                    'px-3 py-1 text-xs rounded-md capitalize transition-colors',
-                    runtime === rt ? 'bg-white shadow-sm font-medium' : 'text-gray-500',
+                    'px-3 py-1 text-xs rounded-md capitalize transition-all',
+                    runtime === rt
+                      ? 'bg-white dark:bg-zinc-700 shadow-sm font-medium text-surface-900 dark:text-zinc-100'
+                      : 'text-surface-500 dark:text-zinc-400 hover:text-surface-700 dark:hover:text-zinc-300',
                   )}
                 >
                   {rt}
@@ -69,7 +71,7 @@ export function LivePreview() {
               <select
                 value={selectedVersionId}
                 onChange={(e) => setSelectedVersionId(e.target.value)}
-                className="text-sm border border-gray-200 rounded-lg px-2 py-1"
+                className="text-sm border border-surface-200 dark:border-zinc-700 rounded-lg px-2 py-1 bg-white dark:bg-zinc-900 text-surface-900 dark:text-zinc-100 focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 focus:outline-none"
               >
                 <option value="">Latest</option>
                 {versions.map((v: any) => (
@@ -84,7 +86,7 @@ export function LivePreview() {
             <select
               value={role}
               onChange={(e) => setRole(e.target.value)}
-              className="text-sm border border-gray-200 rounded-lg px-2 py-1"
+              className="text-sm border border-surface-200 dark:border-zinc-700 rounded-lg px-2 py-1 bg-white dark:bg-zinc-900 text-surface-900 dark:text-zinc-100 focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 focus:outline-none"
             >
               {roles.map((r) => (
                 <option key={r} value={r}>{r}</option>
@@ -95,7 +97,8 @@ export function LivePreview() {
               href={iframeUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-gray-400 hover:text-gray-600"
+              className="p-1.5 text-surface-400 dark:text-zinc-500 hover:text-surface-600 dark:hover:text-zinc-300 transition-colors"
+              aria-label="Open in new tab"
             >
               <ExternalLink className="w-4 h-4" />
             </a>
@@ -103,7 +106,10 @@ export function LivePreview() {
         }
       />
 
-      <div className="bg-white rounded-lg border border-gray-200 overflow-hidden" style={{ height: 'calc(100vh - 220px)' }}>
+      <div
+        className="surface-card overflow-hidden rounded-xl shadow-elevation-md dark:shadow-none"
+        style={{ height: 'calc(100vh - 220px)' }}
+      >
         <iframe
           src={iframeUrl}
           className="w-full h-full border-0"

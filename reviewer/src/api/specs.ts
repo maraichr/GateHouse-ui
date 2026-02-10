@@ -1,5 +1,6 @@
-import { apiGet, apiPost, apiPatch, apiDelete, apiPostYaml } from './client';
+import { apiGet, apiPost, apiPut, apiPatch, apiDelete, apiPostYaml } from './client';
 import type {
+  AppSpec,
   Spec,
   SpecVersion,
   SpecVersionSummary,
@@ -96,6 +97,35 @@ export const createUser = (data: { email: string; display_name: string; role: st
 
 export const updateUser = (userId: string, role: string) =>
   apiPatch<ReviewerUser>(`/users/${userId}`, { role });
+
+// Drafts
+export const getDraft = (specId: string) =>
+  apiGet<{ draft: AppSpec | null; updated_at: string | null }>(`/specs/${specId}/draft`);
+
+export const saveDraft = (specId: string, draft: AppSpec) =>
+  apiPut<{ status: string }>(`/specs/${specId}/draft`, draft);
+
+export const discardDraft = (specId: string) =>
+  apiDelete(`/specs/${specId}/draft`);
+
+export const initDraft = (specId: string) =>
+  apiPut<{ draft: AppSpec }>(`/specs/${specId}/draft/init`);
+
+export const publishDraft = (specId: string, version?: string, changeSummary?: string) =>
+  apiPost<{ version: SpecVersion; warnings: string[] }>(`/specs/${specId}/publish`, {
+    version,
+    change_summary: changeSummary,
+  });
+
+// Mock Data Generation
+export const generateMockData = (specId: string) =>
+  fetch(`/_reviewer/specs/${specId}/generate-mock-data`, {
+    method: 'POST',
+    credentials: 'include',
+  }).then((r) => {
+    if (!r.ok) throw new Error(`Generation failed: ${r.status}`);
+    return r.text();
+  });
 
 // Audit
 export const listAudit = (specId: string) =>

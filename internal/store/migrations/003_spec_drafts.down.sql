@@ -1,0 +1,2 @@
+ALTER TABLE specs DROP COLUMN IF EXISTS draft_updated_at;
+ALTER TABLE specs DROP COLUMN IF EXISTS draft_data;

@@ -84,7 +84,7 @@ export function DataTable({ columns, fields, data, entityRoute }: DataTableProps
           if (isDetailLink && entityRoute) {
             return (
               <button
-                onClick={() => navigate(`${entityRoute}/${info.row.original.id}`)}
+                onClick={(e) => { e.stopPropagation(); navigate(`${entityRoute}/${info.row.original.id}`); }}
                 className="hover:underline font-medium text-left"
                 style={{ color: 'var(--color-primary)' }}
               >
@@ -158,7 +158,13 @@ export function DataTable({ columns, fields, data, entityRoute }: DataTableProps
         </thead>
         <tbody style={{ backgroundColor: 'var(--color-surface)' }}>
           {table.getRowModel().rows.map((row) => (
-            <tr key={row.id} className="transition-colors" style={{ borderBottom: '1px solid var(--color-border, #e5e7eb)' }}
+            <tr key={row.id} className="transition-colors" style={{ borderBottom: '1px solid var(--color-border, #e5e7eb)', cursor: entityRoute ? 'pointer' : undefined }}
+              onClick={() => {
+                if (entityRoute) {
+                  const id = row.original.id;
+                  if (id != null) navigate(`${entityRoute}/${id}`);
+                }
+              }}
               onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'var(--color-bg, #f9fafb)'; }}
               onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = ''; }}
             >

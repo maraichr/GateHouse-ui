@@ -9,8 +9,16 @@ interface CoverageBadgeProps {
 export function CoverageBadge({ value, size = 'md' }: CoverageBadgeProps) {
   const iconSize = size === 'sm' ? 14 : 16;
   const Icon = value >= 80 ? ShieldCheck : value >= 50 ? ShieldAlert : ShieldQuestion;
-  const color = value >= 80 ? 'text-green-600' : value >= 50 ? 'text-amber-600' : 'text-red-600';
-  const bg = value >= 80 ? 'bg-green-50' : value >= 50 ? 'bg-amber-50' : 'bg-red-50';
+  const color = value >= 80
+    ? 'text-success-700 dark:text-success-400'
+    : value >= 50
+    ? 'text-warning-700 dark:text-warning-400'
+    : 'text-danger-700 dark:text-danger-400';
+  const bg = value >= 80
+    ? 'bg-success-50 dark:bg-success-950'
+    : value >= 50
+    ? 'bg-warning-50 dark:bg-warning-950'
+    : 'bg-danger-50 dark:bg-danger-950';
 
   return (
     <span

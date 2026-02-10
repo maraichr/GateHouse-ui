@@ -4,6 +4,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { AnnotationComment } from './AnnotationComment';
 import { AddAnnotation } from './AddAnnotation';
 import { Badge } from '../utility/Badge';
+import { Button } from '../ui/Button';
 import { updateAnnotation } from '../../api/specs';
 import type { Annotation } from '../../types';
 
@@ -45,20 +46,24 @@ export function AnnotationThread({
   });
 
   return (
-    <div className="bg-white rounded-lg border border-gray-200 shadow-lg w-96 max-h-[70vh] flex flex-col">
-      <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200">
+    <div className="bg-white dark:bg-zinc-900 rounded-xl border border-surface-200 dark:border-zinc-800 shadow-elevation-lg w-96 max-h-[70vh] flex flex-col animate-scale-in">
+      <div className="flex items-center justify-between px-4 py-3 border-b border-surface-200 dark:border-zinc-800">
         <div>
-          <h4 className="text-sm font-semibold text-gray-900">Annotations</h4>
-          <p className="text-xs text-gray-500 font-mono">{elementPath}</p>
+          <h4 className="text-sm font-semibold text-surface-900 dark:text-zinc-100">Annotations</h4>
+          <p className="text-xs text-surface-500 dark:text-zinc-400 font-mono">{elementPath}</p>
         </div>
-        <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
+        <button
+          onClick={onClose}
+          className="p-1 text-surface-400 dark:text-zinc-500 hover:text-surface-600 dark:hover:text-zinc-300 transition-colors"
+          aria-label="Close"
+        >
           <X className="w-4 h-4" />
         </button>
       </div>
 
       <div className="flex-1 overflow-y-auto p-4 space-y-3">
         {matching.length === 0 && !showAdd && (
-          <p className="text-sm text-gray-400 text-center py-4">No annotations yet</p>
+          <p className="text-sm text-surface-400 dark:text-zinc-500 text-center py-4">No annotations yet</p>
         )}
 
         {matching.map((annotation) => (
@@ -69,7 +74,7 @@ export function AnnotationThread({
               {annotation.state !== 'resolved' && (
                 <button
                   onClick={() => resolveAnnotation.mutate(annotation.id)}
-                  className="text-[10px] flex items-center gap-0.5 text-green-600 hover:text-green-800"
+                  className="text-[10px] flex items-center gap-0.5 text-success-600 dark:text-success-400 hover:text-success-800 dark:hover:text-success-300 transition-colors"
                 >
                   <CheckCircle2 className="w-3 h-3" /> Resolve
                 </button>
@@ -77,7 +82,7 @@ export function AnnotationThread({
               {annotation.state === 'open' && (
                 <button
                   onClick={() => blockAnnotation.mutate(annotation.id)}
-                  className="text-[10px] flex items-center gap-0.5 text-red-600 hover:text-red-800"
+                  className="text-[10px] flex items-center gap-0.5 text-danger-600 dark:text-danger-400 hover:text-danger-800 dark:hover:text-danger-300 transition-colors"
                 >
                   <AlertOctagon className="w-3 h-3" /> Block
                 </button>
@@ -87,7 +92,7 @@ export function AnnotationThread({
         ))}
       </div>
 
-      <div className="border-t border-gray-200 p-4">
+      <div className="border-t border-surface-200 dark:border-zinc-800 p-4">
         {showAdd ? (
           <AddAnnotation
             specId={specId}
@@ -97,12 +102,14 @@ export function AnnotationThread({
             onDone={() => setShowAdd(false)}
           />
         ) : (
-          <button
+          <Button
+            variant="ghost"
+            size="sm"
             onClick={() => setShowAdd(true)}
-            className="w-full text-sm text-reviewer-600 hover:text-reviewer-800 font-medium"
+            className="w-full"
           >
             + Add annotation
-          </button>
+          </Button>
         )}
       </div>
     </div>

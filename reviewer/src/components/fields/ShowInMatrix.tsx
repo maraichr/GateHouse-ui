@@ -21,8 +21,8 @@ export function ShowInMatrix({ showIn }: ShowInMatrixProps) {
           className={clsx(
             'w-5 h-5 flex items-center justify-center text-[10px] font-medium rounded',
             showIn[key]
-              ? 'bg-green-100 text-green-700'
-              : 'bg-gray-100 text-gray-400',
+              ? 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400'
+              : 'bg-surface-100 dark:bg-zinc-800 text-surface-400 dark:text-zinc-500',
           )}
         >
           {label}

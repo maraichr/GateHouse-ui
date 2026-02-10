@@ -2,6 +2,19 @@ import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../utils/config.dart';
 
+/// Preview params captured once at load time (specId, compId, versionId).
+final Map<String, String> _previewParams = () {
+  final params = Uri.base.queryParameters;
+  final result = <String, String>{};
+  for (final key in ['specId', 'versionId', 'compId']) {
+    final val = params[key];
+    if (val != null && val.isNotEmpty) {
+      result[key] = val;
+    }
+  }
+  return result;
+}();
+
 class NavBadgeParams {
   final Map<String, dynamic> badge;
   final String? apiResource;
@@ -38,7 +51,10 @@ final navBadgeProvider =
   final source = badge['source'] as String?;
   if (source != null && source.isNotEmpty) {
     final endpoint = source.replaceFirst(RegExp(r'^api:'), '');
-    final response = await dio.get(endpoint);
+    final response = await dio.get(
+      endpoint,
+      queryParameters: _previewParams.isNotEmpty ? _previewParams : null,
+    );
     final data = response.data;
     if (data is num) return data.toInt();
     if (data is Map) {
@@ -51,7 +67,10 @@ final navBadgeProvider =
   // Strategy 2: Count via list endpoint with filter
   final type = badge['type'] as String?;
   if (type == 'count' && apiResource != null && apiResource.isNotEmpty) {
-    final queryParams = <String, dynamic>{'page_size': '0'};
+    final queryParams = <String, dynamic>{
+      'page_size': '0',
+      ..._previewParams,
+    };
     final filter = badge['filter'];
     if (filter is Map) {
       for (final entry in filter.entries) {

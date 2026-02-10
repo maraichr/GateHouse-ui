@@ -1,97 +1,88 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Flutter hot reload automation via named pipe + inotifywait
-# Usage: cd flutter_runtime && bash scripts/flutter-hot-reload.sh
-#
-# Environment variables:
-#   FLUTTER_PORT     - Web server port (default: 6175)
-#   FLUTTER_HOST     - Web server hostname (default: 0.0.0.0)
-#   GO_SERVER_URL    - Go server URL for --dart-define (default: http://localhost:3000)
-#   API_BASE_URL     - API base URL for --dart-define (default: http://localhost:3000/api/v1)
-#   POLL_MODE        - Use polling instead of inotifywait (default: false)
-#   DEBOUNCE_SECS    - Debounce interval in seconds (default: 2)
+# Flutter web rebuild + static serve automation
+# Replaces hot-reload approach with build-and-serve for Docker reliability
 
 PORT="${FLUTTER_PORT:-6175}"
 HOST="${FLUTTER_HOST:-0.0.0.0}"
 GO_URL="${GO_SERVER_URL:-http://localhost:3000}"
 API_URL="${API_BASE_URL:-${GO_URL}/api/v1}"
 POLL="${POLL_MODE:-false}"
-DEBOUNCE="${DEBOUNCE_SECS:-2}"
+DEBOUNCE="${DEBOUNCE_SECS:-3}"
+BUILD_DIR="build/web"
 
-PIPE="/tmp/flutter_stdin_pipe_$$"
-FLUTTER_PID=""
+SERVE_PID=""
 WATCHER_PID=""
 
 cleanup() {
-  echo "[hot-reload] Shutting down..."
+  echo "[rebuild] Shutting down..."
   [ -n "$WATCHER_PID" ] && kill "$WATCHER_PID" 2>/dev/null || true
-  [ -n "$FLUTTER_PID" ] && kill "$FLUTTER_PID" 2>/dev/null || true
-  [ -p "$PIPE" ] && rm -f "$PIPE"
+  [ -n "$SERVE_PID" ] && kill "$SERVE_PID" 2>/dev/null || true
   exit 0
 }
 trap cleanup EXIT INT TERM
 
-# Create named pipe for flutter stdin
-mkfifo "$PIPE"
+do_build() {
+  if [ -f /tmp/building.lock ]; then
+    echo "[rebuild] Build already in progress, skipping"
+    return 0
+  fi
+  touch /tmp/building.lock
+  echo "[rebuild] Building flutter web..."
+  if flutter build web \
+    --release \
+    --pwa-strategy=none \
+    --dart-define="GO_SERVER_URL=$GO_URL" \
+    --dart-define="API_BASE_URL=$API_URL" 2>&1; then
+    # Inject auto-reload poller so connected browsers refresh after rebuilds
+    sed -i 's|</body>|<script>var _lm;setInterval(()=>fetch("/main.dart.js",{method:"HEAD"}).then(r=>{var m=r.headers.get("last-modified");if(_lm\&\&m!==_lm)location.reload();_lm=m}).catch(()=>{}),3000)</script></body>|' "$BUILD_DIR/index.html"
+    echo "[rebuild] Build complete"
+  else
+    echo "[rebuild] Build failed, keeping previous build"
+  fi
+  rm -f /tmp/building.lock
+}
 
-echo "[hot-reload] Starting flutter web on $HOST:$PORT"
-echo "[hot-reload] GO_SERVER_URL=$GO_URL"
-echo "[hot-reload] API_BASE_URL=$API_URL"
+# Initial build (pre-warm in Dockerfile means this is fast)
+do_build
 
-# Start flutter with stdin from the named pipe
-# Keep the pipe open for writing by opening a persistent fd
-flutter run -d web-server \
-  --web-port="$PORT" \
-  --web-hostname="$HOST" \
-  --dart-define="GO_SERVER_URL=$GO_URL" \
-  --dart-define="API_BASE_URL=$API_URL" \
-  < "$PIPE" &
-FLUTTER_PID=$!
+# Activate and start dhttpd (Dart is guaranteed present in Flutter image)
+dart pub global activate dhttpd 2>/dev/null
+echo "[rebuild] Serving $BUILD_DIR on $HOST:$PORT"
+dart pub global run dhttpd --host="$HOST" --port="$PORT" --path="$BUILD_DIR" --headers="X-Frame-Options=ALLOWALL;Access-Control-Allow-Origin=*;Cache-Control=no-store" &
+SERVE_PID=$!
 
-# Keep the write end of the pipe open (prevents EOF when writing 'r')
-exec 3>"$PIPE"
+# Give server a moment to bind
+sleep 2
 
-# Wait a moment for flutter to initialize
-sleep 5
-
-echo "[hot-reload] Watching lib/ for .dart changes (debounce=${DEBOUNCE}s)..."
+echo "[rebuild] Watching lib/ for .dart changes (debounce=${DEBOUNCE}s)..."
 
 if [ "$POLL" = "true" ]; then
-  # Polling fallback for environments without inotifywait (e.g., macOS Docker Desktop)
-  echo "[hot-reload] Using polling mode"
+  echo "[rebuild] Using polling mode"
   LAST_HASH=""
   while true; do
     HASH=$(find lib/ -name '*.dart' -exec stat -c '%Y' {} + 2>/dev/null | md5sum | cut -d' ' -f1)
     if [ -n "$LAST_HASH" ] && [ "$HASH" != "$LAST_HASH" ]; then
-      echo "[hot-reload] Change detected, triggering hot restart..."
-      echo "R" >&3
+      do_build
     fi
     LAST_HASH="$HASH"
     sleep "$DEBOUNCE"
   done &
   WATCHER_PID=$!
 else
-  # inotifywait mode (Linux / Docker)
   if ! command -v inotifywait &>/dev/null; then
-    echo "[hot-reload] ERROR: inotifywait not found. Install inotify-tools or set POLL_MODE=true"
+    echo "[rebuild] ERROR: inotifywait not found. Install inotify-tools or set POLL_MODE=true"
     exit 1
   fi
   (
-    LAST_TRIGGER=0
     while true; do
-      inotifywait -r -e modify,create,delete --include '\.dart$' lib/ 2>/dev/null
-      NOW=$(date +%s)
-      ELAPSED=$((NOW - LAST_TRIGGER))
-      if [ "$ELAPSED" -ge "$DEBOUNCE" ]; then
-        echo "[hot-reload] Change detected, triggering hot restart..."
-        echo "R" >&3
-        LAST_TRIGGER=$NOW
-      fi
+      inotifywait -r -q -e modify,create,delete --include '\.dart$' lib/ 2>/dev/null
+      sleep "$DEBOUNCE"
+      do_build
     done
   ) &
   WATCHER_PID=$!
 fi
 
-# Wait for flutter process
-wait "$FLUTTER_PID"
+wait "$SERVE_PID"

@@ -50,6 +50,15 @@ export const updateMember = (
   data: { nav_group?: string; nav_order?: number; prefix?: string },
 ) => apiPatch<CompositionMember>(`/compositions/${compId}/members/${memberId}`, data);
 
+// Export compose.yaml
+export const exportComposition = (compId: string) =>
+  fetch(`/_reviewer/compositions/${compId}/export`, {
+    credentials: 'include',
+  }).then((r) => {
+    if (!r.ok) throw new Error(`Export failed: ${r.status}`);
+    return r.text();
+  });
+
 // Import compose.yaml
 export const importComposition = (yamlContent: string, baseDir?: string) => {
   const q = baseDir ? `?base_dir=${encodeURIComponent(baseDir)}` : '';
