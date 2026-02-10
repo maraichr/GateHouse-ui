@@ -1,10 +1,10 @@
 import { NavLink, Outlet, useParams, useNavigate, useBlocker, useLocation } from 'react-router';
 import {
-  Settings, Database, Navigation, Loader2, Save, CheckCircle,
+  Settings, Database, Navigation, Save, CheckCircle,
   Upload, Trash2, ArrowLeft, Layers, ChevronDown, ChevronRight, Eye, GitBranch, LayoutDashboard, FileText,
-  X, RefreshCw,
+  X, RefreshCw, Download, Box,
 } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import {
   CompositionEditorProvider,
@@ -14,6 +14,7 @@ import { DraftEditorProvider, useDraftEditor } from '../../context/DraftEditorCo
 import { ServiceBadge } from '../utility/ServiceBadge';
 import { Button } from '../ui/Button';
 import { ConfirmDialog } from '../ui/Dialog';
+import { generateMockData } from '../../api/specs';
 
 export function CompositionEditorLayout() {
   const { compId } = useParams<{ compId: string }>();
@@ -43,6 +44,7 @@ function CompositionEditorShell({ compId }: { compId: string }) {
   const [showPreview, setShowPreview] = useState(false);
   const [previewRole, setPreviewRole] = useState('');
   const [previewKey, setPreviewKey] = useState(0);
+  const [generating, setGenerating] = useState(false);
 
   const blocker = useBlocker(isDirty && !isSaving);
 
@@ -51,13 +53,23 @@ function CompositionEditorShell({ compId }: { compId: string }) {
     activeSpecId, isHostSpec, activeServiceName, switchService,
   } = compCtx;
 
-  const basePath = `/compositions/${compId}/edit`;
+  const isSingleService = members.length === 0;
+  const basePath = `/projects/${compId}/edit`;
 
   // Are we on the composed overview (index route)?
   const isOverview = location.pathname === basePath || location.pathname === `${basePath}/`;
 
   // Are we viewing a specific service's editor?
   const isServiceView = location.pathname.includes('/services/');
+
+  // Auto-navigate to host spec on mount when single-service
+  useEffect(() => {
+    if (isSingleService && !isServiceView && !isOverview) return;
+    if (isSingleService && isOverview) {
+      switchService(hostSpecId);
+      navigate(`${basePath}/services/${hostSpecId}`, { replace: true });
+    }
+  }, [isSingleService, isOverview]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handlePublish = async () => {
     setPublishing(true);
@@ -86,11 +98,30 @@ function CompositionEditorShell({ compId }: { compId: string }) {
     navigate(`${basePath}/services/${specId}`);
   };
 
+  const handleDownloadMockData = async () => {
+    setGenerating(true);
+    try {
+      const data = await generateMockData(hostSpecId);
+      const blob = new Blob([data], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${spec?.app?.name || 'spec'}-data.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast.success('Mock data downloaded');
+    } catch {
+      toast.error('Mock data generation failed');
+    } finally {
+      setGenerating(false);
+    }
+  };
+
   if (compCtx.isLoading || isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <Loader2 className="w-6 h-6 animate-spin text-brand-500" />
-        <span className="ml-2 text-surface-500 dark:text-zinc-400">Loading composition editor...</span>
+        <span className="w-5 h-5 animate-spin rounded-full border-2 border-brand-500 border-t-transparent" />
+        <span className="ml-2 text-surface-500 dark:text-zinc-400">Loading editor...</span>
       </div>
     );
   }
@@ -100,21 +131,14 @@ function CompositionEditorShell({ compId }: { compId: string }) {
       <div className="text-center py-12 text-surface-500 dark:text-zinc-400">
         <p>Composition or spec not available.</p>
         <button
-          onClick={() => navigate(`/compositions/${compId}`)}
+          onClick={() => navigate(`/projects/${compId}`)}
           className="mt-4 text-brand-600 dark:text-brand-400 hover:underline"
         >
-          Back to composition
+          Back to project
         </button>
       </div>
     );
   }
-
-  // Determine current editing context label
-  const editingLabel = isOverview
-    ? composition.display_name
-    : isHostSpec
-    ? `${hostSpecName} (Host)`
-    : activeServiceName || 'Service';
 
   // Nav items for the active spec's editor sections
   const specNavBase = `${basePath}/services/${activeSpecId}`;
@@ -126,95 +150,118 @@ function CompositionEditorShell({ compId }: { compId: string }) {
     { to: `${specNavBase}/pages`, label: 'Pages', icon: FileText },
   ];
 
+  // Determine current editing context label
+  const editingLabel = isSingleService
+    ? (spec.app?.display_name || spec.app?.name || composition.display_name)
+    : isOverview
+    ? composition.display_name
+    : isHostSpec
+    ? `${hostSpecName} (Host)`
+    : activeServiceName || 'Service';
+
   return (
     <div className="flex gap-6 min-h-[calc(100vh-6rem)]">
       {/* Sidebar */}
       <aside className="w-60 flex-shrink-0">
         <button
-          onClick={() => navigate(`/compositions/${compId}`)}
+          onClick={() => navigate(`/projects/${compId}`)}
           className="flex items-center gap-2 text-sm text-surface-500 dark:text-zinc-400 hover:text-surface-700 dark:hover:text-zinc-200 mb-4"
         >
           <ArrowLeft className="w-4 h-4" />
-          Back to composition
+          Back to project
         </button>
 
-        {/* Composition name */}
+        {/* Project name */}
         <div className="flex items-center gap-2 mb-4">
-          <Layers className="w-4 h-4 text-indigo-500" />
+          {isSingleService ? (
+            <Box className="w-4 h-4 text-brand-500" />
+          ) : (
+            <Layers className="w-4 h-4 text-indigo-500" />
+          )}
           <h2 className="text-sm font-semibold text-surface-900 dark:text-zinc-100 truncate">
             {composition.display_name}
           </h2>
         </div>
 
-        {/* Composed overview link */}
-        <NavLink
-          to={basePath}
-          end
-          className={({ isActive }) =>
-            `w-full flex items-center gap-2 px-3 py-2 text-sm rounded-lg transition-colors mb-3 ${
-              isActive
-                ? 'bg-indigo-100 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 font-medium'
-                : 'text-surface-600 dark:text-zinc-400 hover:bg-surface-100 dark:hover:bg-zinc-800'
-            }`
-          }
-        >
-          <LayoutDashboard className="w-4 h-4" />
-          Composed Overview
-        </NavLink>
+        {/* Multi-service: Composed overview link + Host + Services sections */}
+        {!isSingleService && (
+          <>
+            {/* Composed overview link */}
+            <NavLink
+              to={basePath}
+              end
+              className={({ isActive }) =>
+                `w-full flex items-center gap-2 px-3 py-2 text-sm rounded-lg transition-colors mb-3 ${
+                  isActive
+                    ? 'bg-indigo-100 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 font-medium'
+                    : 'text-surface-600 dark:text-zinc-400 hover:bg-surface-100 dark:hover:bg-zinc-800'
+                }`
+              }
+            >
+              <LayoutDashboard className="w-4 h-4" />
+              Composed Overview
+            </NavLink>
 
-        {/* Host spec */}
-        <div className="mb-3">
-          <h3 className="text-xs font-semibold text-surface-400 dark:text-zinc-500 uppercase tracking-wider mb-1">Host</h3>
-          <button
-            onClick={() => handleSwitchService(hostSpecId)}
-            className={`w-full flex items-center gap-2 px-3 py-2 text-sm rounded-lg transition-colors ${
-              isServiceView && isHostSpec
-                ? 'bg-indigo-100 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 font-medium'
-                : 'text-surface-600 dark:text-zinc-400 hover:bg-surface-100 dark:hover:bg-zinc-800'
-            }`}
-          >
-            <span className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-100 dark:bg-indigo-950 px-1.5 py-0.5 rounded">HOST</span>
-            <span className="truncate">{hostSpecName}</span>
-          </button>
-        </div>
-
-        {/* Services */}
-        <div className="mb-4">
-          <button
-            onClick={() => setServicesExpanded(!servicesExpanded)}
-            className="flex items-center gap-1 text-xs font-semibold text-surface-400 dark:text-zinc-500 uppercase tracking-wider mb-1 hover:text-surface-600 dark:hover:text-zinc-300"
-          >
-            {servicesExpanded ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
-            Services ({members.length})
-          </button>
-          {servicesExpanded && (
-            <div className="space-y-0.5">
-              {members.map((m) => (
-                <button
-                  key={m.id}
-                  onClick={() => handleSwitchService(m.spec_id)}
-                  className={`w-full flex items-center gap-2 px-3 py-2 text-sm rounded-lg transition-colors ${
-                    isServiceView && activeSpecId === m.spec_id
-                      ? 'bg-brand-100 dark:bg-brand-950 text-brand-700 dark:text-brand-400 font-medium'
-                      : 'text-surface-600 dark:text-zinc-400 hover:bg-surface-100 dark:hover:bg-zinc-800'
-                  }`}
-                >
-                  <ServiceBadge service={m.service_name} />
-                  {m.optional && (
-                    <span className="text-[9px] text-surface-400 dark:text-zinc-500 italic">opt</span>
-                  )}
-                </button>
-              ))}
+            {/* Host spec */}
+            <div className="mb-3">
+              <h3 className="text-xs font-semibold text-surface-400 dark:text-zinc-500 uppercase tracking-wider mb-1">Host</h3>
+              <button
+                onClick={() => handleSwitchService(hostSpecId)}
+                className={`w-full flex items-center gap-2 px-3 py-2 text-sm rounded-lg transition-colors ${
+                  isServiceView && isHostSpec
+                    ? 'bg-indigo-100 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 font-medium'
+                    : 'text-surface-600 dark:text-zinc-400 hover:bg-surface-100 dark:hover:bg-zinc-800'
+                }`}
+              >
+                <span className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-100 dark:bg-indigo-950 px-1.5 py-0.5 rounded">HOST</span>
+                <span className="truncate">{hostSpecName}</span>
+              </button>
             </div>
-          )}
-        </div>
 
-        {/* Editor sections for active spec (only when a service is selected) */}
+            {/* Services */}
+            <div className="mb-4">
+              <button
+                onClick={() => setServicesExpanded(!servicesExpanded)}
+                className="flex items-center gap-1 text-xs font-semibold text-surface-400 dark:text-zinc-500 uppercase tracking-wider mb-1 hover:text-surface-600 dark:hover:text-zinc-300"
+              >
+                {servicesExpanded ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
+                Services ({members.length})
+              </button>
+              {servicesExpanded && (
+                <div className="space-y-0.5">
+                  {members.map((m) => (
+                    <button
+                      key={m.id}
+                      onClick={() => handleSwitchService(m.spec_id)}
+                      className={`w-full flex items-center gap-2 px-3 py-2 text-sm rounded-lg transition-colors ${
+                        isServiceView && activeSpecId === m.spec_id
+                          ? 'bg-brand-100 dark:bg-brand-950 text-brand-700 dark:text-brand-400 font-medium'
+                          : 'text-surface-600 dark:text-zinc-400 hover:bg-surface-100 dark:hover:bg-zinc-800'
+                      }`}
+                    >
+                      <ServiceBadge service={m.service_name} />
+                      {m.optional && (
+                        <span className="text-[9px] text-surface-400 dark:text-zinc-500 italic">opt</span>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          </>
+        )}
+
+        {/* Editor sections for active spec */}
         {isServiceView && (
-          <div className="border-t border-surface-200 dark:border-zinc-800 pt-3">
-            <h3 className="text-xs font-semibold text-surface-400 dark:text-zinc-500 uppercase tracking-wider mb-1">
-              Edit: {isHostSpec ? hostSpecName : activeServiceName}
-            </h3>
+          <div className={isSingleService ? '' : 'border-t border-surface-200 dark:border-zinc-800 pt-3'}>
+            {!isSingleService && (
+              <h3 className="text-xs font-semibold text-surface-400 dark:text-zinc-500 uppercase tracking-wider mb-1">
+                Edit: {isHostSpec ? hostSpecName : activeServiceName}
+              </h3>
+            )}
+            {isSingleService && (
+              <h3 className="text-xs font-semibold text-surface-400 dark:text-zinc-500 uppercase tracking-wider mb-2">Editor</h3>
+            )}
             <nav className="space-y-0.5">
               {editorNavItems.map(({ to, label, icon: Icon, end }) => (
                 <NavLink
@@ -248,32 +295,34 @@ function CompositionEditorShell({ compId }: { compId: string }) {
             }`}
           >
             <Eye className="w-4 h-4" />
-            Preview Composed
+            Preview
           </button>
-          <button
-            onClick={() => navigate(`/compositions/${compId}/settings`)}
-            className="flex items-center gap-2 px-3 py-2 text-sm text-surface-600 dark:text-zinc-400 hover:bg-surface-100 dark:hover:bg-zinc-800 rounded-lg w-full transition-colors"
-          >
-            <Settings className="w-4 h-4" />
-            Composition Settings
-          </button>
+          {!isSingleService && (
+            <button
+              onClick={() => navigate(`/projects/${compId}/settings`)}
+              className="flex items-center gap-2 px-3 py-2 text-sm text-surface-600 dark:text-zinc-400 hover:bg-surface-100 dark:hover:bg-zinc-800 rounded-lg w-full transition-colors"
+            >
+              <Settings className="w-4 h-4" />
+              Settings
+            </button>
+          )}
         </div>
       </aside>
 
       {/* Main */}
       <div className="flex-1 min-w-0">
         {/* Top bar */}
-        <div className="flex items-center justify-between mb-6 pb-4 border-b border-surface-200 dark:border-zinc-800">
+        <div className={`${isSingleService ? 'glass rounded-xl px-5 py-3' : ''} flex items-center justify-between mb-6 ${!isSingleService ? 'pb-4 border-b border-surface-200 dark:border-zinc-800' : ''}`}>
           <div className="flex items-center gap-3">
             <h1 className="text-lg font-semibold text-surface-900 dark:text-zinc-100">
               {editingLabel}
             </h1>
-            {isOverview ? (
+            {!isSingleService && isOverview ? (
               <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-indigo-100 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 text-xs font-medium">
                 <Layers className="w-3 h-3" />
                 All Services
               </span>
-            ) : (
+            ) : !isSingleService ? (
               <>
                 {isHostSpec ? (
                   <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-indigo-100 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 text-xs font-medium">
@@ -282,14 +331,28 @@ function CompositionEditorShell({ compId }: { compId: string }) {
                 ) : activeServiceName ? (
                   <ServiceBadge service={activeServiceName} />
                 ) : null}
-                <SaveIndicator isSaving={isSaving} isDirty={isDirty} lastSavedAt={lastSavedAt} />
               </>
+            ) : null}
+            {(isServiceView || isSingleService) && (
+              <EditorSaveIndicator isSaving={isSaving} isDirty={isDirty} lastSavedAt={lastSavedAt} />
             )}
           </div>
-          {isServiceView && (
+          {(isServiceView || isSingleService) && (
             <div className="flex items-center gap-2">
               {error && <span className="text-sm text-danger-500">{error}</span>}
               {publishError && <span className="text-sm text-danger-500">{publishError}</span>}
+              {isSingleService && (
+                <Button
+                  variant="outlined"
+                  color="neutral"
+                  size="sm"
+                  loading={generating}
+                  onClick={handleDownloadMockData}
+                  icon={<Download className="w-3.5 h-3.5" />}
+                >
+                  Mock Data
+                </Button>
+              )}
               <Button
                 variant="outlined"
                 color="neutral"
@@ -351,7 +414,7 @@ function CompositionEditorShell({ compId }: { compId: string }) {
             key={previewKey}
             src={`/_renderer/preview?compId=${compId}${previewRole ? `&role=${previewRole}` : ''}`}
             className="flex-1 w-full border-0"
-            title="Composition preview"
+            title="Preview"
           />
         </div>
       )}
@@ -399,7 +462,8 @@ function CompositionEditorShell({ compId }: { compId: string }) {
   );
 }
 
-function SaveIndicator({
+/** Design-token styled save indicator (unified from EditorLayout) */
+function EditorSaveIndicator({
   isSaving,
   isDirty,
   lastSavedAt,
@@ -410,24 +474,34 @@ function SaveIndicator({
 }) {
   if (isSaving) {
     return (
-      <span className="inline-flex items-center gap-1 text-xs text-surface-400 dark:text-zinc-500">
-        <Save className="w-3 h-3 animate-pulse" />
+      <span className="inline-flex items-center gap-1.5 text-xs text-surface-400 dark:text-zinc-500 animate-fade-in">
+        <span className="w-2 h-2 rounded-full bg-brand-500 animate-spin-slow" />
         Saving...
       </span>
     );
   }
   if (isDirty) {
     return (
-      <span className="inline-flex items-center gap-1 text-xs text-amber-500">
-        <Save className="w-3 h-3" />
+      <span className="inline-flex items-center gap-1.5 text-xs text-warning-500 animate-fade-in">
+        <span className="w-2 h-2 rounded-full bg-warning-500 animate-pulse-dot" />
         Unsaved
       </span>
     );
   }
   if (lastSavedAt) {
     return (
-      <span className="inline-flex items-center gap-1 text-xs text-green-500">
-        <CheckCircle className="w-3 h-3" />
+      <span className="inline-flex items-center gap-1.5 text-xs text-success-500 animate-fade-in">
+        <svg className="w-3.5 h-3.5" viewBox="0 0 16 16" fill="none">
+          <circle cx="8" cy="8" r="7" className="stroke-success-500" strokeWidth="1.5" fill="none" />
+          <path
+            d="M5 8l2 2 4-4"
+            className="stroke-success-500 animate-checkmark"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            style={{ strokeDasharray: 24, strokeDashoffset: 0 }}
+          />
+        </svg>
         Saved
       </span>
     );

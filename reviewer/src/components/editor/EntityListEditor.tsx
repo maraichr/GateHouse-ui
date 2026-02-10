@@ -21,8 +21,8 @@ export function EntityListEditor() {
 
   // Determine the base path for entity links
   const basePath = compId && specId
-    ? `/compositions/${compId}/edit/services/${specId}`
-    : `/specs/${specId}/edit`;
+    ? `/projects/${compId}/edit/services/${specId}`
+    : `/projects/${specId}/edit`;
 
   // Service name for attribution when in composition context
   const serviceName = compositionCtx

@@ -7,7 +7,7 @@ import { GlobalSearch } from '../search/GlobalSearch';
 import { useDarkMode } from '../../hooks/useDarkMode';
 
 const navItems = [
-  { label: 'Specs', path: '/' },
+  { label: 'Projects', path: '/' },
 ];
 
 export function TopNav() {

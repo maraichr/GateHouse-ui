@@ -24,8 +24,8 @@ export function PagesEditor() {
   const [confirmRemove, setConfirmRemove] = useState<number | null>(null);
 
   const basePath = compId && specId
-    ? `/compositions/${compId}/edit/services/${specId}`
-    : `/specs/${specId}/edit`;
+    ? `/projects/${compId}/edit/services/${specId}`
+    : `/projects/${specId}/edit`;
 
   if (!spec) return null;
 

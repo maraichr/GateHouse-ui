@@ -40,27 +40,27 @@ export function RelationshipMap({ appSpec, sources }: RelationshipMapProps) {
           return (
             <div
               key={entity.name}
-              className="surface-card"
+              className="surface-card p-4"
             >
-              <div className="flex items-center gap-2 mb-2">
-                <h3 className="font-semibold text-surface-900 dark:text-zinc-100">{entity.display_name || entity.name}</h3>
-                {entitySource && <ServiceBadge service={entitySource} />}
+              <div className="flex items-center gap-2 mb-2 min-w-0">
+                <h3 className="font-semibold text-surface-900 dark:text-zinc-100 truncate flex-1">{entity.display_name || entity.name}</h3>
+                {entitySource && <ServiceBadge service={entitySource} className="flex-shrink-0" />}
               </div>
-              <div className="text-xs text-surface-500 dark:text-zinc-400 mb-3">
+              <div className="text-xs text-surface-500 dark:text-zinc-400 mb-3 truncate">
                 {(entity.fields || []).slice(0, 3).map((f) => f.name).join(', ')}
                 {(entity.fields || []).length > 3 && `, +${(entity.fields || []).length - 3}`}
               </div>
               {rels.length > 0 && (
                 <div className="space-y-1">
                   {rels.map((rel, i) => (
-                    <div key={i} className="flex items-center gap-2 text-xs">
-                      <span className="text-surface-400 dark:text-zinc-500">-</span>
+                    <div key={i} className="flex items-center gap-2 text-xs min-w-0">
+                      <span className="text-surface-400 dark:text-zinc-500 flex-shrink-0">-</span>
                       <Badge color={rel.isExternal ? 'amber' : rel.isCrossService ? 'indigo' : 'blue'}>{rel.type}</Badge>
-                      <span className={rel.isExternal ? 'text-amber-600 dark:text-amber-400 italic' : rel.isCrossService ? 'text-indigo-600 dark:text-indigo-400' : 'text-surface-700 dark:text-zinc-300'}>
+                      <span className={`truncate ${rel.isExternal ? 'text-amber-600 dark:text-amber-400 italic' : rel.isCrossService ? 'text-indigo-600 dark:text-indigo-400' : 'text-surface-700 dark:text-zinc-300'}`}>
                         {rel.to}
                       </span>
-                      {rel.isExternal && <span className="text-amber-500 dark:text-amber-400 text-[10px]">(external)</span>}
-                      {rel.isCrossService && !rel.isExternal && <span className="text-indigo-500 dark:text-indigo-400 text-[10px]">(cross-service)</span>}
+                      {rel.isExternal && <span className="text-amber-500 dark:text-amber-400 text-[10px] flex-shrink-0 whitespace-nowrap">(ext)</span>}
+                      {rel.isCrossService && !rel.isExternal && <span className="text-indigo-500 dark:text-indigo-400 text-[10px] flex-shrink-0 whitespace-nowrap">(x-svc)</span>}
                     </div>
                   ))}
                 </div>
@@ -83,7 +83,8 @@ export function RelationshipMap({ appSpec, sources }: RelationshipMapProps) {
 
       {/* Relationship table */}
       <div className="surface-card overflow-hidden">
-        <table className="w-full text-sm">
+        <div className="overflow-x-auto">
+        <table className="w-full text-sm min-w-[640px]">
           <thead>
             <tr className="bg-surface-50 dark:bg-zinc-800/50 border-b border-surface-200 dark:border-zinc-800">
               <th className="text-left px-4 py-3 text-xs font-medium text-surface-500 dark:text-zinc-400 uppercase">From</th>
@@ -98,23 +99,23 @@ export function RelationshipMap({ appSpec, sources }: RelationshipMapProps) {
             {relationships.map((rel, i) => (
               <tr key={i} className="hover:bg-surface-50 dark:hover:bg-zinc-800/30">
                 <td className="px-4 py-2 font-medium text-surface-700 dark:text-zinc-300">
-                  <span className="flex items-center gap-1.5">
-                    {rel.fromDisplay}
+                  <span className="flex items-center gap-1.5 min-w-0">
+                    <span className="truncate">{rel.fromDisplay}</span>
                     {sources?.[rel.from] && <ServiceBadge service={sources[rel.from]} />}
                   </span>
                 </td>
                 <td className="px-4 py-2 text-surface-600 dark:text-zinc-400">{rel.name}</td>
                 <td className={`px-4 py-2 ${rel.isExternal ? 'text-amber-600 dark:text-amber-400 italic' : 'text-surface-700 dark:text-zinc-300'}`}>
-                  <span className="flex items-center gap-1.5">
-                    {rel.to}
-                    {rel.isExternal && <span className="text-[10px]">(ext)</span>}
-                    {rel.isCrossService && !rel.isExternal && <span className="text-indigo-500 dark:text-indigo-400 text-[10px]">(x-svc)</span>}
+                  <span className="flex items-center gap-1.5 min-w-0">
+                    <span className="truncate">{rel.to}</span>
+                    {rel.isExternal && <span className="text-[10px] flex-shrink-0 whitespace-nowrap">(ext)</span>}
+                    {rel.isCrossService && !rel.isExternal && <span className="text-indigo-500 dark:text-indigo-400 text-[10px] flex-shrink-0 whitespace-nowrap">(x-svc)</span>}
                   </span>
                 </td>
                 <td className="px-4 py-2"><Badge color={rel.isCrossService ? 'indigo' : 'blue'}>{rel.type}</Badge></td>
                 <td className="px-4 py-2 font-mono text-xs text-surface-500 dark:text-zinc-400">{rel.foreignKey || '—'}</td>
                 <td className="px-4 py-2">
-                  <div className="flex gap-1">
+                  <div className="flex gap-1 flex-wrap">
                     {rel.showInDetail && <Badge color="green">detail</Badge>}
                     {rel.inlineCreate && <Badge color="purple">inline</Badge>}
                   </div>
@@ -123,6 +124,7 @@ export function RelationshipMap({ appSpec, sources }: RelationshipMapProps) {
             ))}
           </tbody>
         </table>
+        </div>
       </div>
     </div>
   );

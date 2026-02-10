@@ -127,7 +127,7 @@ function ComposedEntitiesSection({
     const service = composedSources[entity.name];
     const specId = service ? serviceToSpecId[service] : undefined;
     if (specId) {
-      navigate(`/compositions/${compId}/edit/services/${specId}/entities`);
+      navigate(`/projects/${compId}/edit/services/${specId}/entities`);
     }
   };
 
@@ -258,7 +258,7 @@ function NavItemRow({
     if (service) {
       const specId = serviceToSpecId[service];
       if (specId) {
-        navigate(`/compositions/${compId}/edit/services/${specId}/navigation`);
+        navigate(`/projects/${compId}/edit/services/${specId}/navigation`);
       }
     }
   };
@@ -314,8 +314,8 @@ function EditInServiceLink({
 }) {
   const navigate = useNavigate();
   const to = path
-    ? `/compositions/${compId}/edit/services/${specId}/${path}`
-    : `/compositions/${compId}/edit/services/${specId}`;
+    ? `/projects/${compId}/edit/services/${specId}/${path}`
+    : `/projects/${compId}/edit/services/${specId}`;
 
   return (
     <button

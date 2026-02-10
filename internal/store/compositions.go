@@ -80,6 +80,44 @@ func (db *DB) ListCompositions(ctx context.Context) ([]Composition, error) {
 	return comps, nil
 }
 
+func (db *DB) GetCompositionByHostSpec(ctx context.Context, specID uuid.UUID) (*Composition, error) {
+	rows, _ := db.Pool.Query(ctx,
+		`SELECT `+compCols+` FROM compositions WHERE host_spec_id = $1`, specID)
+	c, err := pgx.CollectExactlyOneRow(rows, pgx.RowToAddrOfStructByName[Composition])
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf("get composition by host spec: %w", err)
+	}
+	return c, nil
+}
+
+type CompositionWithInfo struct {
+	Composition
+	HostSpecName string `json:"host_spec_name" db:"host_spec_name"`
+	MemberCount  int    `json:"member_count"   db:"member_count"`
+}
+
+func (db *DB) ListCompositionsWithInfo(ctx context.Context) ([]CompositionWithInfo, error) {
+	rows, _ := db.Pool.Query(ctx,
+		`SELECT c.id, c.name, c.display_name, COALESCE(c.description, '') AS description,
+		        c.host_spec_id, c.owner_id, c.created_at, c.updated_at,
+		        COALESCE(s.display_name, '') AS host_spec_name,
+		        COUNT(cm.id)::int AS member_count
+		 FROM compositions c
+		 LEFT JOIN specs s ON s.id = c.host_spec_id
+		 LEFT JOIN composition_members cm ON cm.composition_id = c.id
+		 GROUP BY c.id, c.name, c.display_name, c.description, c.host_spec_id,
+		          c.owner_id, c.created_at, c.updated_at, s.display_name
+		 ORDER BY c.display_name`)
+	comps, err := pgx.CollectRows(rows, pgx.RowToStructByName[CompositionWithInfo])
+	if err != nil {
+		return nil, fmt.Errorf("list compositions with info: %w", err)
+	}
+	return comps, nil
+}
+
 func (db *DB) DeleteComposition(ctx context.Context, id uuid.UUID) error {
 	_, err := db.Pool.Exec(ctx, `DELETE FROM compositions WHERE id = $1`, id)
 	if err != nil {

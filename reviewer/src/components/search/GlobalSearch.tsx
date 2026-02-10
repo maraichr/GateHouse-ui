@@ -1,25 +1,33 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { Search, X } from 'lucide-react';
-import { useNavigate, useParams } from 'react-router';
+import { useNavigate, useParams, useLocation } from 'react-router';
 import { useSpec } from '../../hooks/useSpec';
+import { useComposedSpec } from '../../hooks/useComposition';
 import { buildSearchIndex, searchEntries } from '../../utils/searchIndex';
 import { SearchResults } from './SearchResults';
 import type { AppSpec } from '../../types';
 
 export function GlobalSearch() {
-  const { specId } = useParams<{ specId: string }>();
+  const { specId, compId } = useParams<{ specId?: string; compId?: string }>();
   const { data: specData } = useSpec(specId);
+  const { data: composedData } = useComposedSpec(compId);
   const navigate = useNavigate();
+  const location = useLocation();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
   const [selectedIndex, setSelectedIndex] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
 
+  // Determine the base path for navigation
+  const basePath = compId ? `/projects/${compId}` : specId ? `/specs/${specId}` : null;
+
   const appSpec: AppSpec | null = useMemo(() => {
+    // Prefer composed spec if available
+    if (composedData?.composed_spec) return composedData.composed_spec;
     const sv = specData?.latest_version;
     if (!sv?.spec_data) return null;
     return typeof sv.spec_data === 'string' ? JSON.parse(sv.spec_data) : sv.spec_data;
-  }, [specData]);
+  }, [composedData, specData]);
 
   const index = useMemo(() => (appSpec ? buildSearchIndex(appSpec) : []), [appSpec]);
   const results = useMemo(() => searchEntries(index, query), [index, query]);
@@ -54,20 +62,20 @@ export function GlobalSearch() {
   const handleSelect = useCallback(
     (entry: { type: string; entityName?: string; path?: string }) => {
       setOpen(false);
-      if (!specId) return;
+      if (!basePath) return;
       if (entry.type === 'entity' && entry.entityName) {
-        navigate(`/specs/${specId}/entities/${entry.entityName}`);
+        navigate(`${basePath}/entities/${entry.entityName}`);
       } else if ((entry.type === 'field' || entry.type === 'enum_value' || entry.type === 'transition') && entry.entityName) {
-        navigate(`/specs/${specId}/entities/${entry.entityName}`);
+        navigate(`${basePath}/entities/${entry.entityName}`);
       } else if (entry.type === 'page') {
-        navigate(`/specs/${specId}/pages`);
+        navigate(`${basePath}/pages`);
       } else if (entry.type === 'nav_item') {
-        navigate(`/specs/${specId}/navigation`);
+        navigate(`${basePath}/navigation`);
       } else if (entry.type === 'permission') {
-        navigate(`/specs/${specId}/permissions`);
+        navigate(`${basePath}/permissions`);
       }
     },
-    [specId, navigate],
+    [basePath, navigate],
   );
 
   const handleKeyDown = useCallback(
@@ -86,7 +94,7 @@ export function GlobalSearch() {
     [results, selectedIndex, handleSelect],
   );
 
-  if (!specId) return null;
+  if (!basePath) return null;
 
   return (
     <>

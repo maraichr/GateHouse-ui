@@ -106,9 +106,9 @@ export function CompositionSettings() {
     <div className="max-w-3xl mx-auto">
       {/* Breadcrumb */}
       <nav className="flex items-center gap-1 text-sm text-surface-500 dark:text-zinc-400 mb-6">
-        <Link to="/" className="hover:text-surface-700 dark:hover:text-zinc-200 transition-colors">Specs</Link>
+        <Link to="/" className="hover:text-surface-700 dark:hover:text-zinc-200 transition-colors">Projects</Link>
         <ChevronRight className="w-3 h-3" />
-        <Link to={`/compositions/${compId}`} className="hover:text-surface-700 dark:hover:text-zinc-200 transition-colors">
+        <Link to={`/projects/${compId}`} className="hover:text-surface-700 dark:hover:text-zinc-200 transition-colors">
           {composition.display_name}
         </Link>
         <ChevronRight className="w-3 h-3" />
@@ -123,7 +123,7 @@ export function CompositionSettings() {
             {composition.display_name}
           </Badge>
         </div>
-        <Button variant="ghost" color="neutral" onClick={() => navigate(`/compositions/${compId}`)} icon={<ArrowLeft className="w-4 h-4" />}>
+        <Button variant="ghost" color="neutral" onClick={() => navigate(`/projects/${compId}`)} icon={<ArrowLeft className="w-4 h-4" />}>
           Back
         </Button>
       </div>
@@ -223,16 +223,17 @@ export function CompositionSettings() {
                   <input type="text" value={newMember.service_name} onChange={(e) => setNewMember({ ...newMember, service_name: e.target.value })} className={inputClasses} />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-surface-500 dark:text-zinc-400 mb-1">Nav Group</label>
-                  <input type="text" value={newMember.nav_group} onChange={(e) => setNewMember({ ...newMember, nav_group: e.target.value })} className={inputClasses} />
+                  <label className="block text-xs font-medium text-surface-500 dark:text-zinc-400 mb-1">Sidebar Group</label>
+                  <input type="text" value={newMember.nav_group} onChange={(e) => setNewMember({ ...newMember, nav_group: e.target.value })} className={inputClasses} placeholder="e.g. Payments, Accounts" />
+                  <p className="text-[10px] text-surface-400 dark:text-zinc-500 mt-0.5">Display label for the sidebar section header</p>
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-surface-500 dark:text-zinc-400 mb-1">Nav Order</label>
                   <input type="number" value={newMember.nav_order} onChange={(e) => setNewMember({ ...newMember, nav_order: parseInt(e.target.value) || 0 })} className={inputClasses} />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-surface-500 dark:text-zinc-400 mb-1">Prefix</label>
-                  <input type="text" value={newMember.prefix} onChange={(e) => setNewMember({ ...newMember, prefix: e.target.value })} className={inputClasses} />
+                  <label className="block text-xs font-medium text-surface-500 dark:text-zinc-400 mb-1">API Prefix</label>
+                  <input type="text" value={newMember.prefix} onChange={(e) => setNewMember({ ...newMember, prefix: e.target.value })} className={inputClasses} placeholder="e.g. /payments" />
                 </div>
                 <div className="flex items-end">
                   <label className="flex items-center gap-2 text-sm text-surface-600 dark:text-zinc-400">
@@ -330,7 +331,11 @@ function MemberRow({
 
       {!editing && (
         <div className="flex items-center gap-4 mt-2 text-xs text-surface-500 dark:text-zinc-400">
-          {member.nav_group && <span>Group: {member.nav_group}</span>}
+          {member.nav_group ? (
+            <span>Sidebar: <span className="text-surface-700 dark:text-zinc-300 font-medium">{member.nav_group}</span></span>
+          ) : (
+            <span className="italic">No sidebar group</span>
+          )}
           <span>Order: {member.nav_order}</span>
           {member.prefix && <span>Prefix: {member.prefix}</span>}
         </div>
@@ -339,16 +344,17 @@ function MemberRow({
       {editing && (
         <div className="grid grid-cols-3 gap-3 mt-3">
           <div>
-            <label className="block text-xs text-surface-500 dark:text-zinc-400 mb-1">Nav Group</label>
-            <input type="text" value={navGroup} onChange={(e) => setNavGroup(e.target.value)} className={inputClasses} />
+            <label className="block text-xs text-surface-500 dark:text-zinc-400 mb-1">Sidebar Group</label>
+            <input type="text" value={navGroup} onChange={(e) => setNavGroup(e.target.value)} className={inputClasses} placeholder="e.g. Payments, Accounts" />
+            <p className="text-[10px] text-surface-400 dark:text-zinc-500 mt-0.5">Display label shown in sidebar</p>
           </div>
           <div>
             <label className="block text-xs text-surface-500 dark:text-zinc-400 mb-1">Nav Order</label>
             <input type="number" value={navOrder} onChange={(e) => setNavOrder(parseInt(e.target.value) || 0)} className={inputClasses} />
           </div>
           <div>
-            <label className="block text-xs text-surface-500 dark:text-zinc-400 mb-1">Prefix</label>
-            <input type="text" value={prefix} onChange={(e) => setPrefix(e.target.value)} className={inputClasses} />
+            <label className="block text-xs text-surface-500 dark:text-zinc-400 mb-1">API Prefix</label>
+            <input type="text" value={prefix} onChange={(e) => setPrefix(e.target.value)} className={inputClasses} placeholder="e.g. /payments" />
           </div>
           <div className="col-span-3 flex justify-end">
             <Button size="sm" onClick={handleSave} icon={<Save className="w-3.5 h-3.5" />}>Save</Button>

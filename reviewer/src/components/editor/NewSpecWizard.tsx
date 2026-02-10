@@ -78,11 +78,17 @@ export function NewSpecWizard() {
       setError(null);
       try {
         if (mode === 'import') {
-          // Import YAML creates spec + version, then init draft for editing
+          // Import YAML creates spec + version + composition wrapper
           const result = await importSpecYaml(yamlContent);
-          navigate(`/specs/${result.spec.id}/edit`);
+          const compId = (result as any).composition_id;
+          if (compId) {
+            navigate(`/projects/${compId}/edit`);
+          } else {
+            // Fallback: redirect through legacy spec route
+            navigate(`/specs/${result.spec.id}/edit`);
+          }
         } else {
-          // Blank: create spec, then save draft
+          // Blank: create spec (auto-creates composition wrapper), then save draft
           const spec = await createSpec({
             app_name: appName,
             display_name: displayName,
@@ -92,7 +98,12 @@ export function NewSpecWizard() {
             app: { ...blankSpec.app, name: appName, display_name: displayName },
           };
           await saveDraft(spec.id, draftSpec);
-          navigate(`/specs/${spec.id}/edit`);
+          const compId = (spec as any).composition_id;
+          if (compId) {
+            navigate(`/projects/${compId}/edit`);
+          } else {
+            navigate(`/specs/${spec.id}/edit`);
+          }
         }
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to create spec');
@@ -105,15 +116,15 @@ export function NewSpecWizard() {
     <div className="max-w-2xl mx-auto">
       {/* Breadcrumb */}
       <nav className="flex items-center gap-1 text-sm text-surface-500 dark:text-zinc-400 mb-6">
-        <Link to="/" className="hover:text-surface-700 dark:hover:text-zinc-200">Specs</Link>
+        <Link to="/" className="hover:text-surface-700 dark:hover:text-zinc-200">Projects</Link>
         <ChevronRight className="w-3 h-3" />
-        <span className="text-surface-900 dark:text-zinc-100">New Spec</span>
+        <span className="text-surface-900 dark:text-zinc-100">New Project</span>
       </nav>
 
       {/* Step 1: Start */}
       {step === 'start' && (
         <div className="space-y-6">
-          <h1 className="text-2xl font-bold text-surface-900 dark:text-zinc-100">Create New Spec</h1>
+          <h1 className="text-2xl font-bold text-surface-900 dark:text-zinc-100">New Project</h1>
           <p className="text-surface-500 dark:text-zinc-400">Start from scratch or import an existing YAML spec.</p>
 
           <div className="grid grid-cols-2 gap-4">

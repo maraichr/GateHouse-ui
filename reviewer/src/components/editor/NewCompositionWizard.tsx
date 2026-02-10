@@ -106,7 +106,7 @@ export function NewCompositionWizard() {
       }
 
       queryClient.invalidateQueries({ queryKey: ['compositions'] });
-      navigate(`/compositions/${composition.id}`);
+      navigate(`/projects/${composition.id}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create composition');
       setStep('members');
@@ -126,7 +126,7 @@ export function NewCompositionWizard() {
     <div className="max-w-2xl mx-auto">
       {/* Breadcrumb */}
       <nav className="flex items-center gap-1 text-sm text-surface-500 dark:text-zinc-400 mb-6">
-        <Link to="/" className="hover:text-surface-700 dark:hover:text-zinc-200">Specs</Link>
+        <Link to="/" className="hover:text-surface-700 dark:hover:text-zinc-200">Projects</Link>
         <ChevronRight className="w-3 h-3" />
         <span className="text-surface-900 dark:text-zinc-100">New Composition</span>
       </nav>
@@ -278,14 +278,15 @@ export function NewCompositionWizard() {
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-surface-500 dark:text-zinc-400 mb-1">Nav Group</label>
+                    <label className="block text-xs font-medium text-surface-500 dark:text-zinc-400 mb-1">Sidebar Group</label>
                     <input
                       type="text"
                       value={m.nav_group}
                       onChange={(e) => updatePendingMember(i, { nav_group: e.target.value })}
                       className="w-full px-2 py-1.5 border border-surface-300 dark:border-zinc-600 rounded text-sm bg-white dark:bg-zinc-800 text-surface-900 dark:text-zinc-100"
-                      placeholder="e.g. Payments"
+                      placeholder="e.g. Payments, Accounts"
                     />
+                    <p className="text-[10px] text-surface-400 dark:text-zinc-500 mt-0.5">Display label for sidebar section</p>
                   </div>
                   <div>
                     <label className="block text-xs font-medium text-surface-500 dark:text-zinc-400 mb-1">Nav Order</label>
@@ -297,7 +298,7 @@ export function NewCompositionWizard() {
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-surface-500 dark:text-zinc-400 mb-1">Prefix</label>
+                    <label className="block text-xs font-medium text-surface-500 dark:text-zinc-400 mb-1">API Prefix</label>
                     <input
                       type="text"
                       value={m.prefix}

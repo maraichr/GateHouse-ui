@@ -31,6 +31,7 @@ func (s *Server) mountReviewerRoutes(r chi.Router) {
 	r.Post("/specs", s.handleReviewerCreateSpec)
 	r.Get("/specs/{specID}", s.handleReviewerGetSpec)
 	r.Delete("/specs/{specID}", s.handleReviewerDeleteSpec)
+	r.Get("/specs/{specID}/composition", s.handleReviewerGetSpecComposition)
 
 	// Drafts
 	r.Get("/specs/{specID}/draft", s.handleGetDraft)
@@ -248,8 +249,25 @@ func (s *Server) handleReviewerCreateSpec(w http.ResponseWriter, r *http.Request
 		}
 	}
 
+	// Auto-create composition wrapper
+	comp, compErr := s.store.CreateComposition(r.Context(), store.CreateCompositionInput{
+		Name:        input.AppName,
+		DisplayName: input.DisplayName,
+		Description: input.Description,
+		HostSpecID:  sp.ID,
+		OwnerID:     user.ID,
+	})
+	if compErr != nil {
+		slog.Warn("failed to auto-create composition for spec", "error", compErr)
+	}
+
 	s.writeAudit(r, user, "spec.create", "spec", sp.ID, nil)
-	writeJSON(w, http.StatusCreated, sp)
+
+	resp := map[string]any{"id": sp.ID, "name": sp.AppName, "display_name": sp.DisplayName, "description": sp.Description, "created_at": sp.CreatedAt, "updated_at": sp.UpdatedAt}
+	if comp != nil {
+		resp["composition_id"] = comp.ID
+	}
+	writeJSON(w, http.StatusCreated, resp)
 }
 
 func (s *Server) handleReviewerImportYAML(w http.ResponseWriter, r *http.Request, user *store.User) {
@@ -309,10 +327,26 @@ func (s *Server) handleReviewerImportYAML(w http.ResponseWriter, r *http.Request
 		return
 	}
 
+	// Auto-create composition wrapper
+	comp, compErr := s.store.CreateComposition(r.Context(), store.CreateCompositionInput{
+		Name:        appName,
+		DisplayName: displayName,
+		Description: appSpec.App.Description,
+		HostSpecID:  sp.ID,
+		OwnerID:     user.ID,
+	})
+	if compErr != nil {
+		slog.Warn("failed to auto-create composition for imported spec", "error", compErr)
+	}
+
 	s.writeAudit(r, user, "spec.create", "spec", sp.ID, map[string]any{"source": "yaml_import"})
 	s.writeAudit(r, user, "version.create", "version", v.ID, nil)
 
-	writeJSON(w, http.StatusCreated, map[string]any{"spec": sp, "version": v})
+	resp := map[string]any{"spec": sp, "version": v}
+	if comp != nil {
+		resp["composition_id"] = comp.ID
+	}
+	writeJSON(w, http.StatusCreated, resp)
 }
 
 func (s *Server) handleReviewerGetSpec(w http.ResponseWriter, r *http.Request) {
@@ -334,6 +368,24 @@ func (s *Server) handleReviewerGetSpec(w http.ResponseWriter, r *http.Request) {
 
 	latest, _ := s.store.GetLatestVersion(r.Context(), specID)
 	writeJSON(w, http.StatusOK, map[string]any{"spec": sp, "latest_version": latest})
+}
+
+func (s *Server) handleReviewerGetSpecComposition(w http.ResponseWriter, r *http.Request) {
+	specID, err := uuid.Parse(chi.URLParam(r, "specID"))
+	if err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid spec ID"})
+		return
+	}
+	comp, err := s.store.GetCompositionByHostSpec(r.Context(), specID)
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
+		return
+	}
+	if comp == nil {
+		writeJSON(w, http.StatusNotFound, map[string]string{"error": "no composition found for this spec"})
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"composition_id": comp.ID})
 }
 
 func (s *Server) handleReviewerDeleteSpec(w http.ResponseWriter, r *http.Request) {
@@ -1008,34 +1060,13 @@ func (s *Server) writeAudit(r *http.Request, user *store.User, action, resourceT
 // --- Compositions ---
 
 func (s *Server) handleReviewerListCompositions(w http.ResponseWriter, r *http.Request) {
-	comps, err := s.store.ListCompositions(r.Context())
+	result, err := s.store.ListCompositionsWithInfo(r.Context())
 	if err != nil {
 		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
 		return
 	}
-	if comps == nil {
-		comps = []store.Composition{}
-	}
-
-	// Enrich with host spec info and member count
-	type CompositionWithInfo struct {
-		store.Composition
-		HostSpecName string `json:"host_spec_name"`
-		MemberCount  int    `json:"member_count"`
-	}
-	var result []CompositionWithInfo
-	for _, c := range comps {
-		item := CompositionWithInfo{Composition: c}
-		if sp, _ := s.store.GetSpec(r.Context(), c.HostSpecID); sp != nil {
-			item.HostSpecName = sp.DisplayName
-		}
-		if members, _ := s.store.ListCompositionMembers(r.Context(), c.ID); members != nil {
-			item.MemberCount = len(members)
-		}
-		result = append(result, item)
-	}
 	if result == nil {
-		result = []CompositionWithInfo{}
+		result = []store.CompositionWithInfo{}
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"compositions": result})
 }

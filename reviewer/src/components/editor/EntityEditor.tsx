@@ -16,8 +16,8 @@ export function EntityEditor() {
   const { spec, updateEntity, addField, removeField } = useDraftEditor();
 
   const basePath = compId && specId
-    ? `/compositions/${compId}/edit/services/${specId}`
-    : `/specs/${specId}/edit`;
+    ? `/projects/${compId}/edit/services/${specId}`
+    : `/projects/${specId}/edit`;
 
   const entityIndex = parseInt(indexStr || '0', 10);
   if (!spec || entityIndex >= spec.entities.length) {

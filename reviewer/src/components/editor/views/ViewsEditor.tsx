@@ -32,8 +32,8 @@ export function ViewsEditor() {
   const entityIndex = parseInt(eiStr || '0', 10);
 
   const basePath = compId && specId
-    ? `/compositions/${compId}/edit/services/${specId}`
-    : `/specs/${specId}/edit`;
+    ? `/projects/${compId}/edit/services/${specId}`
+    : `/projects/${specId}/edit`;
 
   if (!spec || entityIndex >= spec.entities.length) {
     return <div className="text-surface-500 dark:text-zinc-400">Entity not found</div>;

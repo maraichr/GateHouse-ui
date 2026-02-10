@@ -34,6 +34,9 @@ export const getSpec = (specId: string) =>
 
 export const deleteSpec = (specId: string) => apiDelete(`/specs/${specId}`);
 
+export const getSpecComposition = (specId: string) =>
+  apiGet<{ composition_id: string }>(`/specs/${specId}/composition`);
+
 // Versions
 export const listVersions = (specId: string, status?: string) => {
   const q = status ? `?status=${status}` : '';
