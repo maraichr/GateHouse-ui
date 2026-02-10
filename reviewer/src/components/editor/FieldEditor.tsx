@@ -41,7 +41,7 @@ export function FieldEditor() {
 
   const field = entity.fields[fieldIndex];
   const { mode } = useEditorMode();
-  const isBasic = mode === 'basic';
+  const isGuided = mode === 'guided';
   const compositionCtx = useCompositionEditor();
   const localEntityNames = spec.entities.map((e) => e.name);
   const entityGroups = buildEntityGroups(compositionCtx, localEntityNames);
@@ -69,10 +69,10 @@ export function FieldEditor() {
         </h2>
       </div>
 
-      {isBasic && (
+      {isGuided && (
         <Card>
           <p className="text-sm text-surface-600 dark:text-zinc-400">
-            Basic mode is active. Advanced sections like permissions, display rules, and mock-data hints are hidden.
+            Guided mode is active. Expert sections like permissions, display rules, and mock-data hints are hidden.
           </p>
         </Card>
       )}
@@ -223,7 +223,7 @@ export function FieldEditor() {
       )}
 
       {/* Permissions */}
-      {!isBasic && roles.length > 0 && (
+      {!isGuided && roles.length > 0 && (
         <Section title="Permissions">
           <div className="grid grid-cols-2 gap-4">
             <div>
@@ -250,7 +250,7 @@ export function FieldEditor() {
         </Section>
       )}
 
-      {!isBasic && (
+      {!isGuided && (
         <>
           {/* Display Rules */}
           <Section title="Display Rules">

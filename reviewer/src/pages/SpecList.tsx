@@ -80,7 +80,10 @@ export function SpecList() {
               Import Compose YAML
             </Button>
             <Button onClick={() => navigate('/projects/new')} icon={<PenLine className="w-4 h-4" />}>
-              New Project
+              New Guided Project
+            </Button>
+            <Button variant="outlined" color="neutral" onClick={() => navigate('/projects/new-composition')} icon={<Layers className="w-4 h-4" />}>
+              Open Expert Studio
             </Button>
           </div>
         }
@@ -93,14 +96,14 @@ export function SpecList() {
       ) : !compositions || compositions.length === 0 ? (
         <EmptyState
           title="No projects yet"
-          message="Create a new project or import a YAML spec to get started"
+          message="Start with a guided project flow for PMs or open expert composition setup"
           action={
             <div className="flex gap-2">
               <Button variant="outlined" onClick={handleImportSpec} icon={<Plus className="w-4 h-4" />}>
                 Import YAML
               </Button>
               <Button onClick={() => navigate('/projects/new')} icon={<PenLine className="w-4 h-4" />}>
-                New Project
+                New Guided Project
               </Button>
             </div>
           }

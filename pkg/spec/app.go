@@ -2,11 +2,13 @@ package spec
 
 type AppSpec struct {
 	App           AppMeta          `yaml:"app" json:"app"`
+	Studio        *StudioConfig    `yaml:"studio" json:"studio,omitempty"`
 	Auth          AuthConfig       `yaml:"auth" json:"auth"`
 	API           APIConfig        `yaml:"api" json:"api"`
 	Shell         ShellConfig      `yaml:"shell" json:"shell"`
 	Navigation    NavigationConfig `yaml:"navigation" json:"navigation"`
 	Entities      []Entity         `yaml:"entities" json:"entities"`
+	Journeys      []Journey        `yaml:"journeys" json:"journeys,omitempty"`
 	Pages         []Page           `yaml:"pages" json:"pages,omitempty"`
 	Behaviors     BehaviorConfig   `yaml:"behaviors" json:"behaviors,omitempty"`
 	Responsive    ResponsiveConfig `yaml:"responsive" json:"responsive,omitempty"`

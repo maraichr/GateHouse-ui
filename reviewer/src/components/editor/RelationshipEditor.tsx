@@ -15,7 +15,7 @@ export function RelationshipEditor() {
   const { spec, updateSpec } = useDraftEditor();
   const compositionCtx = useCompositionEditor();
   const { mode } = useEditorMode();
-  const isBasic = mode === 'basic';
+  const isGuided = mode === 'guided';
   const [addingFor, setAddingFor] = useState<number | null>(null);
 
   if (!spec) return null;
@@ -89,10 +89,10 @@ export function RelationshipEditor() {
         </div>
       </div>
 
-      {isBasic && (
+      {isGuided && (
         <Card>
           <p className="text-sm text-surface-600 dark:text-zinc-400">
-            Basic mode is active. Advanced relationship settings are hidden.
+            Guided mode is active. Expert relationship settings are hidden.
           </p>
         </Card>
       )}
@@ -149,7 +149,7 @@ export function RelationshipEditor() {
                   compositionCtx={compositionCtx}
                   localEntities={entities}
                   isExternal={!allEntityNames.includes(rel.entity)}
-                  basicMode={isBasic}
+                  basicMode={isGuided}
                   onUpdate={(updated) => updateRelationship(entityIdx, relIdx, updated)}
                   onRemove={() => removeRelationship(entityIdx, relIdx)}
                 />
@@ -183,7 +183,7 @@ export function RelationshipEditor() {
                 entityGroups={entityGroups}
                 compositionCtx={compositionCtx}
                 localEntities={entities}
-                basicMode={isBasic}
+                basicMode={isGuided}
                 onAdd={(rel) => addRelationship(entityIdx, rel)}
                 onCancel={() => setAddingFor(null)}
               />

@@ -236,8 +236,101 @@ func Validate(s *spec.AppSpec) []ValidationError {
 		}
 	}
 
-	// Note: navigation entity/page references are not strictly validated
-	// because they may reference external entities or pages not in this spec.
+	pageIndex := make(map[string]spec.Page, len(s.Pages))
+	for i, page := range s.Pages {
+		if strings.TrimSpace(page.ID) == "" {
+			errs = append(errs, ValidationError{
+				Path:    fmt.Sprintf("pages[%d].id", i),
+				Message: "required",
+			})
+			continue
+		}
+		if _, exists := pageIndex[page.ID]; exists {
+			errs = append(errs, ValidationError{
+				Path:    fmt.Sprintf("pages[%d].id", i),
+				Message: fmt.Sprintf("duplicate page id %q", page.ID),
+			})
+		}
+		pageIndex[page.ID] = page
+	}
+
+	journeyIndex := make(map[string]spec.Journey, len(s.Journeys))
+	journeyStepIndex := make(map[string]map[string]bool, len(s.Journeys))
+	for i, journey := range s.Journeys {
+		if strings.TrimSpace(journey.ID) == "" {
+			errs = append(errs, ValidationError{
+				Path:    fmt.Sprintf("journeys[%d].id", i),
+				Message: "required",
+			})
+			continue
+		}
+		if _, exists := journeyIndex[journey.ID]; exists {
+			errs = append(errs, ValidationError{
+				Path:    fmt.Sprintf("journeys[%d].id", i),
+				Message: fmt.Sprintf("duplicate journey id %q", journey.ID),
+			})
+		}
+		journeyIndex[journey.ID] = journey
+
+		stepIDs := make(map[string]bool, len(journey.Steps))
+		for stepIdx, step := range journey.Steps {
+			if strings.TrimSpace(step.ID) == "" {
+				errs = append(errs, ValidationError{
+					Path:    fmt.Sprintf("journeys[%d].steps[%d].id", i, stepIdx),
+					Message: "required",
+				})
+				continue
+			}
+			if stepIDs[step.ID] {
+				errs = append(errs, ValidationError{
+					Path:    fmt.Sprintf("journeys[%d].steps[%d].id", i, stepIdx),
+					Message: fmt.Sprintf("duplicate step id %q", step.ID),
+				})
+			}
+			stepIDs[step.ID] = true
+			if strings.TrimSpace(step.PageID) != "" {
+				if _, ok := pageIndex[step.PageID]; !ok {
+					errs = append(errs, ValidationError{
+						Path:    fmt.Sprintf("journeys[%d].steps[%d].page_id", i, stepIdx),
+						Message: fmt.Sprintf("page %q not found", step.PageID),
+					})
+				}
+			}
+		}
+		journeyStepIndex[journey.ID] = stepIDs
+	}
+
+	for i, page := range s.Pages {
+		if strings.TrimSpace(page.Purpose) == "flow_step" {
+			if strings.TrimSpace(page.JourneyID) == "" {
+				errs = append(errs, ValidationError{
+					Path:    fmt.Sprintf("pages[%d].journey_id", i),
+					Message: "required when purpose=flow_step",
+				})
+			}
+			if strings.TrimSpace(page.StepID) == "" {
+				errs = append(errs, ValidationError{
+					Path:    fmt.Sprintf("pages[%d].step_id", i),
+					Message: "required when purpose=flow_step",
+				})
+			}
+		}
+		if strings.TrimSpace(page.JourneyID) != "" {
+			if _, ok := journeyIndex[page.JourneyID]; !ok {
+				errs = append(errs, ValidationError{
+					Path:    fmt.Sprintf("pages[%d].journey_id", i),
+					Message: fmt.Sprintf("journey %q not found", page.JourneyID),
+				})
+			} else if strings.TrimSpace(page.StepID) != "" && !journeyStepIndex[page.JourneyID][page.StepID] {
+				errs = append(errs, ValidationError{
+					Path:    fmt.Sprintf("pages[%d].step_id", i),
+					Message: fmt.Sprintf("step %q not found in journey %q", page.StepID, page.JourneyID),
+				})
+			}
+		}
+	}
+
+	errs = append(errs, validateNavTargets(s.Navigation.Items)...)
 
 	return errs
 }
@@ -275,4 +368,28 @@ func buildFieldPathIndex(fields []spec.Field, prefix string) map[string]bool {
 
 func isNestedPath(name string) bool {
 	return strings.Contains(name, ".") || strings.Contains(name, "[]")
+}
+
+func validateNavTargets(items []spec.NavItem) []ValidationError {
+	var errs []ValidationError
+	for _, item := range items {
+		if item.Target != nil {
+			if strings.TrimSpace(item.Target.Type) == "" {
+				errs = append(errs, ValidationError{
+					Path:    fmt.Sprintf("navigation.items[%s].target.type", item.ID),
+					Message: "required",
+				})
+			}
+			if strings.TrimSpace(item.Target.Ref) == "" {
+				errs = append(errs, ValidationError{
+					Path:    fmt.Sprintf("navigation.items[%s].target.ref", item.ID),
+					Message: "required",
+				})
+			}
+		}
+		if len(item.Children) > 0 {
+			errs = append(errs, validateNavTargets(item.Children)...)
+		}
+	}
+	return errs
 }

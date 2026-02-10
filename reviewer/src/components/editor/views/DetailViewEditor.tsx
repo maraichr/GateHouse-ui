@@ -27,14 +27,14 @@ export function DetailViewEditor({
   relationships = [],
 }: DetailViewEditorProps) {
   const { mode } = useEditorMode();
-  const isBasic = mode === 'basic';
+  const isGuided = mode === 'guided';
 
   return (
     <div className="space-y-5">
-      {isBasic && (
+      {isGuided && (
         <Card padding="sm">
           <p className="text-sm text-surface-600 dark:text-zinc-400">
-            Basic mode is active. Header stats and advanced tab controls are hidden.
+            Guided mode is active. Header stats and advanced tab controls are hidden.
           </p>
         </Card>
       )}
@@ -155,7 +155,7 @@ export function DetailViewEditor({
       </Card>
 
       {/* Header Stats */}
-      {!isBasic && (
+      {!isGuided && (
         <HeaderStatsEditor
           stats={view.header?.stats || []}
           onChange={(stats) =>
@@ -180,7 +180,7 @@ export function DetailViewEditor({
           availableFields={availableFields}
           roles={roles}
           relationships={relationships}
-          basicMode={isBasic}
+          basicMode={isGuided}
         />
       )}
       {view.layout === 'two_column' && (
@@ -304,7 +304,7 @@ function TabbedContent({
       </div>
       {basicMode && (
         <p className="text-[11px] text-surface-500 dark:text-zinc-400 mb-2">
-          Advanced mode enables relationship tabs and header stats.
+          Expert mode enables relationship tabs and header stats.
         </p>
       )}
       <p className="text-[11px] text-surface-400 dark:text-zinc-500 mb-3">

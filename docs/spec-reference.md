@@ -6,11 +6,13 @@ Complete reference for the YAML spec format consumed by GateHouse UI runtimes.
 
 ```yaml
 app:            # Application metadata, theme, i18n
+studio:         # Studio authoring metadata (schema_version, mode defaults)
 auth:           # Authentication provider and roles
 api:            # API connection settings
 shell:          # Sidebar and header configuration
 navigation:     # Sidebar navigation items
 entities:       # Data entity definitions (fields, views, forms, state machines)
+journeys:       # PM-friendly user journeys and steps
 pages:          # Custom pages (dashboards, landing pages)
 behaviors:      # App-level behaviors (notifications)
 ```
@@ -101,6 +103,7 @@ Each item:
 | `route` | string | URL path |
 | `entity` | string | Entity name (auto-generates routes) |
 | `page` | string | Custom page ID |
+| `target` | object | Normalized target: `{ type: page\|entity\|external, ref }` |
 | `badge` | object | Badge config: `{ type, filter, color, source }` |
 | `children` | array | Nested nav items (nav groups) |
 
@@ -281,8 +284,24 @@ relationships:
 |---|---|---|
 | `id` | string | Page identifier (referenced by navigation) |
 | `title` | string | Page title |
+| `purpose` | string | `screen` \| `dashboard` \| `flow_step` \| `settings` |
+| `journey_id` | string | Journey reference for guided authoring |
+| `step_id` | string | Journey step reference for guided authoring |
 | `layout` | string | `grid` for widget layout |
 | `widgets` | array | Widget configurations |
+
+---
+
+## `journeys[]`
+
+| Field | Type | Description |
+|---|---|---|
+| `id` | string | Journey identifier |
+| `name` | string | Human-friendly journey name |
+| `goal` | string | What the journey is trying to achieve |
+| `primary_roles` | array | Roles primarily responsible for this journey |
+| `entry` | boolean | Marks default starting journey |
+| `steps` | array | Ordered steps containing `page_id` and related entity refs |
 
 ### Widget Types
 

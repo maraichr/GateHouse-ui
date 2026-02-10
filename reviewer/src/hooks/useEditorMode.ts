@@ -1,13 +1,15 @@
 import { useCallback, useEffect, useState } from 'react';
 
-export type EditorMode = 'basic' | 'advanced';
+export type EditorMode = 'guided' | 'expert';
 
-const STORAGE_KEY = 'gh-studio-editor-mode';
-const EVENT_NAME = 'gh:editor-mode';
+const STORAGE_KEY = 'gh-studio-authoring-mode';
+const LEGACY_STORAGE_KEY = 'gh-studio-editor-mode';
+const EVENT_NAME = 'gh:authoring-mode';
 
 function readMode(): EditorMode {
-  const stored = localStorage.getItem(STORAGE_KEY);
-  return stored === 'advanced' ? 'advanced' : 'basic';
+  const stored = localStorage.getItem(STORAGE_KEY) ?? localStorage.getItem(LEGACY_STORAGE_KEY);
+  if (stored === 'expert' || stored === 'advanced') return 'expert';
+  return 'guided';
 }
 
 export function useEditorMode() {
@@ -22,7 +24,7 @@ export function useEditorMode() {
   useEffect(() => {
     const onModeChange = (event: Event) => {
       const custom = event as CustomEvent<EditorMode>;
-      if (custom.detail === 'advanced' || custom.detail === 'basic') {
+      if (custom.detail === 'expert' || custom.detail === 'guided') {
         setModeState(custom.detail);
       } else {
         setModeState(readMode());

@@ -5,16 +5,22 @@ type NavigationConfig struct {
 }
 
 type NavItem struct {
-	ID          string    `yaml:"id" json:"id"`
-	Label       string    `yaml:"label" json:"label"`
-	Icon        string    `yaml:"icon" json:"icon,omitempty"`
-	Path        string    `yaml:"path" json:"path,omitempty"`
-	Entity      string    `yaml:"entity" json:"entity,omitempty"`
-	Page        string    `yaml:"page" json:"page,omitempty"`
-	Position    string    `yaml:"position" json:"position,omitempty"`
-	Permissions []string  `yaml:"permissions" json:"permissions,omitempty"`
-	Badge       *NavBadge `yaml:"badge" json:"badge,omitempty"`
-	Children    []NavItem `yaml:"children" json:"children,omitempty"`
+	ID          string     `yaml:"id" json:"id"`
+	Label       string     `yaml:"label" json:"label"`
+	Icon        string     `yaml:"icon" json:"icon,omitempty"`
+	Path        string     `yaml:"path" json:"path,omitempty"`
+	Entity      string     `yaml:"entity" json:"entity,omitempty"`
+	Page        string     `yaml:"page" json:"page,omitempty"`
+	Target      *NavTarget `yaml:"target" json:"target,omitempty"`
+	Position    string     `yaml:"position" json:"position,omitempty"`
+	Permissions []string   `yaml:"permissions" json:"permissions,omitempty"`
+	Badge       *NavBadge  `yaml:"badge" json:"badge,omitempty"`
+	Children    []NavItem  `yaml:"children" json:"children,omitempty"`
+}
+
+type NavTarget struct {
+	Type string `yaml:"type" json:"type"`
+	Ref  string `yaml:"ref" json:"ref"`
 }
 
 type NavBadge struct {

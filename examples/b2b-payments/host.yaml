@@ -36,6 +36,11 @@ app:
     currency: USD
     timezone: America/New_York
 
+studio:
+  schema_version: gh.studio.vnext
+  mode_defaults:
+    editor: guided
+
 auth:
   provider: oidc
   config:
@@ -98,6 +103,10 @@ pages:
   - id: dashboard
     title: "Dashboard"
     path: /dashboard
+    purpose: flow_step
+    journey_id: operations_overview
+    step_id: dashboard
+    success_metric: "Operational KPIs reviewed daily"
     widgets:
       - type: stat_cards
         columns: 4
@@ -158,3 +167,14 @@ pages:
         link: /kyc-reviews
 
 entities: []
+
+journeys:
+  - id: operations_overview
+    name: "Operations Overview"
+    goal: "Monitor onboarding, compliance, and payment health from one entry point"
+    primary_roles: [operations_manager, compliance_officer, finance_manager]
+    entry: true
+    steps:
+      - id: dashboard
+        name: "Review dashboard"
+        page_id: dashboard

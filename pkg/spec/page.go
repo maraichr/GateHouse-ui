@@ -1,11 +1,16 @@
 package spec
 
 type Page struct {
-	ID          string   `yaml:"id" json:"id"`
-	Path        string   `yaml:"path" json:"path"`
-	Title       string   `yaml:"title" json:"title"`
-	Permissions []string `yaml:"permissions" json:"permissions,omitempty"`
-	Widgets     []Widget `yaml:"widgets" json:"widgets"`
+	ID            string   `yaml:"id" json:"id"`
+	Path          string   `yaml:"path" json:"path"`
+	Title         string   `yaml:"title" json:"title"`
+	Purpose       string   `yaml:"purpose" json:"purpose,omitempty"`
+	JourneyID     string   `yaml:"journey_id" json:"journey_id,omitempty"`
+	StepID        string   `yaml:"step_id" json:"step_id,omitempty"`
+	PrimaryEntity string   `yaml:"primary_entity" json:"primary_entity,omitempty"`
+	SuccessMetric string   `yaml:"success_metric" json:"success_metric,omitempty"`
+	Permissions   []string `yaml:"permissions" json:"permissions,omitempty"`
+	Widgets       []Widget `yaml:"widgets" json:"widgets"`
 }
 
 type Widget struct {
@@ -20,11 +25,11 @@ type Widget struct {
 	DataMapping map[string]any `yaml:"data_mapping" json:"data_mapping,omitempty"`
 	Height      int            `yaml:"height" json:"height,omitempty"`
 	// entity_table
-	Entity  string         `yaml:"entity" json:"entity,omitempty"`
-	Query   *WidgetQuery   `yaml:"query" json:"query,omitempty"`
-	Columns interface{}    `yaml:"columns" json:"columns,omitempty"`
-	Link    string         `yaml:"link" json:"link,omitempty"`
-	Actions *ActionConfig  `yaml:"actions" json:"actions,omitempty"`
+	Entity  string        `yaml:"entity" json:"entity,omitempty"`
+	Query   *WidgetQuery  `yaml:"query" json:"query,omitempty"`
+	Columns interface{}   `yaml:"columns" json:"columns,omitempty"`
+	Link    string        `yaml:"link" json:"link,omitempty"`
+	Actions *ActionConfig `yaml:"actions" json:"actions,omitempty"`
 	// report_builder
 	Reports []Report `yaml:"reports" json:"reports,omitempty"`
 	// settings_form
@@ -48,12 +53,12 @@ type WidgetQuery struct {
 }
 
 type Report struct {
-	ID           string          `yaml:"id" json:"id"`
-	Name         string          `yaml:"name" json:"name"`
-	Description  string          `yaml:"description" json:"description,omitempty"`
-	Endpoint     string          `yaml:"endpoint" json:"endpoint"`
-	Parameters   []ReportParam   `yaml:"parameters" json:"parameters,omitempty"`
-	ExportFormats []string       `yaml:"export_formats" json:"export_formats,omitempty"`
+	ID            string        `yaml:"id" json:"id"`
+	Name          string        `yaml:"name" json:"name"`
+	Description   string        `yaml:"description" json:"description,omitempty"`
+	Endpoint      string        `yaml:"endpoint" json:"endpoint"`
+	Parameters    []ReportParam `yaml:"parameters" json:"parameters,omitempty"`
+	ExportFormats []string      `yaml:"export_formats" json:"export_formats,omitempty"`
 }
 
 type ReportParam struct {
@@ -65,7 +70,7 @@ type ReportParam struct {
 }
 
 type SettingsSection struct {
-	Title  string         `yaml:"title" json:"title"`
+	Title  string          `yaml:"title" json:"title"`
 	Fields []SettingsField `yaml:"fields" json:"fields"`
 }
 

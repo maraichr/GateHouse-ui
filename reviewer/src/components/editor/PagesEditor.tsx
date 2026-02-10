@@ -21,6 +21,7 @@ export function PagesEditor() {
   const [newId, setNewId] = useState('');
   const [newTitle, setNewTitle] = useState('');
   const [newPath, setNewPath] = useState('');
+  const [newPurpose, setNewPurpose] = useState<'screen' | 'dashboard' | 'flow_step' | 'settings'>('screen');
   const [confirmRemove, setConfirmRemove] = useState<number | null>(null);
 
   const basePath = compId && specId
@@ -37,12 +38,14 @@ export function PagesEditor() {
       id: newId.trim(),
       title: newTitle.trim() || newId.trim().replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()),
       path: newPath.trim() || `/${newId.trim().replace(/_/g, '-')}`,
+      purpose: newPurpose,
       widgets: [],
     };
     addPage(page);
     setNewId('');
     setNewTitle('');
     setNewPath('');
+    setNewPurpose('screen');
     setShowAddForm(false);
     // Navigate to new page editor
     navigate(`${basePath}/pages/${pages.length}`);
@@ -75,7 +78,7 @@ export function PagesEditor() {
       {showAddForm && (
         <Card padding="sm">
           <h4 className="font-medium text-surface-900 dark:text-zinc-100 text-sm mb-3">New Page</h4>
-          <div className="grid grid-cols-3 gap-3 mb-3">
+          <div className="grid grid-cols-4 gap-3 mb-3">
             <div>
               <label className="block text-xs font-medium text-surface-600 dark:text-zinc-400 mb-1">ID</label>
               <input
@@ -106,6 +109,19 @@ export function PagesEditor() {
                 className="w-full px-2 py-1.5 border border-surface-300 dark:border-zinc-700 rounded text-sm font-mono bg-white dark:bg-zinc-900"
                 placeholder="/dashboard"
               />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-surface-600 dark:text-zinc-400 mb-1">Purpose</label>
+              <select
+                value={newPurpose}
+                onChange={(e) => setNewPurpose(e.target.value as 'screen' | 'dashboard' | 'flow_step' | 'settings')}
+                className="w-full px-2 py-1.5 border border-surface-300 dark:border-zinc-700 rounded text-sm bg-white dark:bg-zinc-900"
+              >
+                <option value="screen">Screen</option>
+                <option value="dashboard">Dashboard</option>
+                <option value="flow_step">Flow Step</option>
+                <option value="settings">Settings</option>
+              </select>
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -153,6 +169,11 @@ export function PagesEditor() {
                   <p className="text-xs text-surface-400 dark:text-zinc-500 font-mono mb-2">
                     {page.path}
                   </p>
+                  {page.purpose && (
+                    <p className="text-[10px] text-indigo-600 dark:text-indigo-400 uppercase tracking-wide mb-2">
+                      {page.purpose.replace(/_/g, ' ')}
+                    </p>
+                  )}
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="text-xs text-surface-500 dark:text-zinc-400">
                       {page.widgets.length} widget{page.widgets.length !== 1 ? 's' : ''}

@@ -177,6 +177,7 @@ export function NewSpecWizard() {
   const [displayName, setDisplayName] = useState('My App');
   const [yamlContent, setYamlContent] = useState('');
   const [templateId, setTemplateId] = useState<TemplateId>('ops');
+  const [primaryJourneyName, setPrimaryJourneyName] = useState('Core Workflow');
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -191,12 +192,54 @@ export function NewSpecWizard() {
 
   const buildDraftSpec = (): AppSpec => {
     const name = slugifyName(appName);
+    const journeyPageId = `${slugifyName(primaryJourneyName)}_home`;
+    const journeyPath = `/${journeyPageId.replace(/_/g, '-')}`;
     const base = {
       ...blankSpec,
+      studio: {
+        schema_version: 'gh.studio.vnext',
+        mode_defaults: { editor: 'guided' as const },
+      },
       app: {
         ...blankSpec.app,
         name,
         display_name: displayName.trim() || 'My App',
+      },
+      journeys: [
+        {
+          id: slugifyName(primaryJourneyName),
+          name: primaryJourneyName.trim() || 'Core Workflow',
+          entry: true,
+          steps: [
+            {
+              id: 'start',
+              name: 'Start',
+              page_id: journeyPageId,
+            },
+          ],
+        },
+      ],
+      pages: [
+        {
+          id: journeyPageId,
+          title: `${primaryJourneyName.trim() || 'Core Workflow'} Home`,
+          path: journeyPath,
+          purpose: 'flow_step',
+          journey_id: slugifyName(primaryJourneyName),
+          step_id: 'start',
+          widgets: [],
+        },
+      ],
+      navigation: {
+        items: [
+          {
+            id: `${journeyPageId}_nav`,
+            label: primaryJourneyName.trim() || 'Core Workflow',
+            page: journeyPageId,
+            path: journeyPath,
+            icon: 'flag',
+          },
+        ],
       },
     };
 
@@ -208,12 +251,15 @@ export function NewSpecWizard() {
       ...base,
       entities: selectedTemplate.entities,
       navigation: {
-        items: selectedTemplate.entities.map((entity) => ({
-          id: entity.name.toLowerCase(),
-          label: entity.display_name_plural || entity.display_name,
-          entity: entity.name,
-          path: `/${entity.name.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase()}`,
-        })),
+        items: [
+          ...(base.navigation?.items || []),
+          ...selectedTemplate.entities.map((entity) => ({
+            id: entity.name.toLowerCase(),
+            label: entity.display_name_plural || entity.display_name,
+            entity: entity.name,
+            path: `/${entity.name.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase()}`,
+          })),
+        ],
       },
     };
   };
@@ -277,7 +323,7 @@ export function NewSpecWizard() {
       {step === 'start' && (
         <div className="space-y-6">
           <h1 className="text-2xl font-bold text-surface-900 dark:text-zinc-100">Create Project</h1>
-          <p className="text-surface-500 dark:text-zinc-400">Pick a guided starting point, then fine-tune in the editor.</p>
+          <p className="text-surface-500 dark:text-zinc-400">Start from your primary user journey, then refine pages and data in Studio.</p>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <ModeCard
@@ -318,6 +364,19 @@ export function NewSpecWizard() {
                   className="w-full px-3 py-2 border border-surface-300 dark:border-zinc-600 rounded-lg text-sm bg-white dark:bg-zinc-800 text-surface-900 dark:text-zinc-100"
                   placeholder="Acme Operations"
                 />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-surface-700 dark:text-zinc-300 mb-1">Primary Journey</label>
+                <input
+                  type="text"
+                  value={primaryJourneyName}
+                  onChange={(e) => setPrimaryJourneyName(e.target.value)}
+                  className="w-full px-3 py-2 border border-surface-300 dark:border-zinc-600 rounded-lg text-sm bg-white dark:bg-zinc-800 text-surface-900 dark:text-zinc-100"
+                  placeholder="Customer onboarding"
+                />
+                <p className="mt-1 text-xs text-surface-400 dark:text-zinc-500">
+                  Studio scaffolds a starting page and navigation item from this journey.
+                </p>
               </div>
               <div>
                 <label className="block text-sm font-medium text-surface-700 dark:text-zinc-300 mb-1">App Name (auto-generated)</label>
@@ -414,7 +473,9 @@ export function NewSpecWizard() {
                 <div className="flex gap-2"><dt className="font-medium text-surface-500 dark:text-zinc-400 w-32">Display Name:</dt><dd className="text-surface-900 dark:text-zinc-100">{displayName}</dd></div>
                 <div className="flex gap-2"><dt className="font-medium text-surface-500 dark:text-zinc-400 w-32">App Name:</dt><dd className="font-mono text-surface-900 dark:text-zinc-100">{slugifyName(appName)}</dd></div>
                 <div className="flex gap-2"><dt className="font-medium text-surface-500 dark:text-zinc-400 w-32">Starting Point:</dt><dd className="text-surface-900 dark:text-zinc-100">{mode === 'template' ? templates[templateId].label : 'Blank Canvas'}</dd></div>
+                <div className="flex gap-2"><dt className="font-medium text-surface-500 dark:text-zinc-400 w-32">Primary Journey:</dt><dd className="text-surface-900 dark:text-zinc-100">{primaryJourneyName || 'Core Workflow'}</dd></div>
                 <div className="flex gap-2"><dt className="font-medium text-surface-500 dark:text-zinc-400 w-32">Entities:</dt><dd className="text-surface-900 dark:text-zinc-100">{mode === 'template' ? templates[templateId].entities.length : 0}</dd></div>
+                <div className="flex gap-2"><dt className="font-medium text-surface-500 dark:text-zinc-400 w-32">Scaffolded Pages:</dt><dd className="text-surface-900 dark:text-zinc-100">1</dd></div>
               </dl>
             )}
           </div>

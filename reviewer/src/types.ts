@@ -2,13 +2,22 @@
 
 export interface AppSpec {
   app: AppMeta;
+  studio?: StudioConfig;
   auth: AuthConfig;
   api: APIConfig;
   shell: ShellConfig;
   navigation: NavigationConfig;
   entities: Entity[];
+  journeys?: Journey[];
   pages: Page[];
   behaviors?: BehaviorConfig;
+}
+
+export interface StudioConfig {
+  schema_version?: string;
+  mode_defaults?: {
+    editor?: 'guided' | 'expert';
+  };
 }
 
 export interface AppMeta {
@@ -91,10 +100,16 @@ export interface NavItem {
   path?: string;
   entity?: string;
   page?: string;
+  target?: NavTarget;
   position?: string;
   permissions?: string[];
   badge?: NavBadge;
   children?: NavItem[];
+}
+
+export interface NavTarget {
+  type: 'page' | 'entity' | 'external' | string;
+  ref: string;
 }
 
 export interface NavBadge {
@@ -400,8 +415,30 @@ export interface Page {
   id: string;
   path: string;
   title: string;
+  purpose?: 'screen' | 'dashboard' | 'flow_step' | 'settings' | string;
+  journey_id?: string;
+  step_id?: string;
+  primary_entity?: string;
+  success_metric?: string;
   permissions?: string[];
   widgets: Widget[];
+}
+
+export interface Journey {
+  id: string;
+  name: string;
+  goal?: string;
+  primary_roles?: string[];
+  entry?: boolean;
+  steps?: JourneyStep[];
+}
+
+export interface JourneyStep {
+  id: string;
+  name: string;
+  page_id?: string;
+  entity_refs?: string[];
+  service_scope?: string;
 }
 
 export interface Widget {

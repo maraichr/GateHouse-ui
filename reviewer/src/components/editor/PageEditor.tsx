@@ -133,6 +133,59 @@ export function PageEditor() {
               className="w-full px-2 py-1.5 border border-surface-300 dark:border-zinc-700 rounded text-sm font-mono bg-white dark:bg-zinc-900"
             />
           </div>
+          <div>
+            <label className="block text-xs font-medium text-surface-600 dark:text-zinc-400 mb-1">Purpose</label>
+            <select
+              value={page.purpose || 'screen'}
+              onChange={(e) => setPage({ purpose: e.target.value })}
+              className="w-full px-2 py-1.5 border border-surface-300 dark:border-zinc-700 rounded text-sm bg-white dark:bg-zinc-900"
+            >
+              <option value="screen">Screen</option>
+              <option value="dashboard">Dashboard</option>
+              <option value="flow_step">Flow Step</option>
+              <option value="settings">Settings</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-surface-600 dark:text-zinc-400 mb-1">Journey ID</label>
+            <input
+              type="text"
+              value={page.journey_id || ''}
+              onChange={(e) => setPage({ journey_id: e.target.value || undefined })}
+              className="w-full px-2 py-1.5 border border-surface-300 dark:border-zinc-700 rounded text-sm font-mono bg-white dark:bg-zinc-900"
+              placeholder="onboarding_journey"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-surface-600 dark:text-zinc-400 mb-1">Step ID</label>
+            <input
+              type="text"
+              value={page.step_id || ''}
+              onChange={(e) => setPage({ step_id: e.target.value || undefined })}
+              className="w-full px-2 py-1.5 border border-surface-300 dark:border-zinc-700 rounded text-sm font-mono bg-white dark:bg-zinc-900"
+              placeholder="start"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-surface-600 dark:text-zinc-400 mb-1">Primary Entity</label>
+            <input
+              type="text"
+              value={page.primary_entity || ''}
+              onChange={(e) => setPage({ primary_entity: e.target.value || undefined })}
+              className="w-full px-2 py-1.5 border border-surface-300 dark:border-zinc-700 rounded text-sm bg-white dark:bg-zinc-900"
+              placeholder="Application"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-surface-600 dark:text-zinc-400 mb-1">Success Metric</label>
+            <input
+              type="text"
+              value={page.success_metric || ''}
+              onChange={(e) => setPage({ success_metric: e.target.value || undefined })}
+              className="w-full px-2 py-1.5 border border-surface-300 dark:border-zinc-700 rounded text-sm bg-white dark:bg-zinc-900"
+              placeholder="Application submitted"
+            />
+          </div>
         </div>
         {roles.length > 0 && (
           <div className="mt-3">

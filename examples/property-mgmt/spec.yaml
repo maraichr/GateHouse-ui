@@ -44,6 +44,11 @@ app:
     currency: USD
     timezone: America/New_York
 
+studio:
+  schema_version: gh.studio.vnext
+  mode_defaults:
+    editor: guided
+
 # --------------------------------------------------------------------------
 # 2. AUTHENTICATION & AUTHORIZATION
 # --------------------------------------------------------------------------
@@ -1961,12 +1966,27 @@ entities:
 # --------------------------------------------------------------------------
 # 6. CUSTOM PAGES
 # --------------------------------------------------------------------------
+journeys:
+  - id: portfolio_operations
+    name: "Portfolio Operations"
+    goal: "Monitor occupancy, maintenance, and lease health across the portfolio"
+    primary_roles: [property_manager, admin]
+    entry: true
+    steps:
+      - id: dashboard
+        name: "Review dashboard health"
+        page_id: dashboard
+
 pages:
 
   # ---- DASHBOARD ----
   - id: dashboard
     path: /dashboard
     title: "Dashboard"
+    purpose: flow_step
+    journey_id: portfolio_operations
+    step_id: dashboard
+    success_metric: "Issues triaged from dashboard widgets"
     layout: grid
     widgets:
       - type: stat_cards

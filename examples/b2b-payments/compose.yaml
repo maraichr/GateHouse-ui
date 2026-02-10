@@ -43,3 +43,18 @@ services:
     nav_group: Payments
     nav_order: 40
     watch: true
+
+service_boundaries:
+  - service: onboarding
+    owns: [Application]
+  - service: kyc
+    owns: [KYCReview]
+  - service: customer
+    owns: [Customer]
+  - service: payee
+    owns: [Payee]
+  - service: payments
+    owns: [Payment]
+
+journey_ownership:
+  operations_overview: host

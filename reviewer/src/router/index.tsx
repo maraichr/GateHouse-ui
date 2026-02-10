@@ -27,6 +27,8 @@ import { StateMachineEditor } from '../components/editor/StateMachineEditor';
 import { PagesEditor } from '../components/editor/PagesEditor';
 import { PageEditor } from '../components/editor/PageEditor';
 import { SpecRedirect } from '../components/utility/SpecRedirect';
+import { RouteErrorPage } from '../pages/RouteErrorPage';
+import { NotFoundPage } from '../pages/NotFoundPage';
 
 const sharedChildren = [
   { path: 'entities', element: <EntityExplorer /> },
@@ -54,6 +56,7 @@ const editorChildren = [
 export const router = createBrowserRouter([
   {
     element: <ReviewerShell />,
+    errorElement: <RouteErrorPage />,
     children: [
       { path: '/', element: <SpecList /> },
 
@@ -77,6 +80,7 @@ export const router = createBrowserRouter([
         element: <CompositionEditorLayout />,
         children: [
           { index: true, element: <ComposedOverviewEditor /> },
+          { path: 'services', element: <Navigate to=".." replace /> },
           {
             path: 'services/:specId',
             children: editorChildren,
@@ -91,6 +95,7 @@ export const router = createBrowserRouter([
       // Legacy redirects: /compositions/:compId/* → /projects/:compId/*
       { path: '/compositions/new', element: <Navigate to="/projects/new-composition" replace /> },
       { path: '/compositions/:compId/*', element: <CompositionRedirect /> },
+      { path: '*', element: <NotFoundPage /> },
     ],
   },
 ]);

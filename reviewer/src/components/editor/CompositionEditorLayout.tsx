@@ -151,10 +151,20 @@ function CompositionEditorShell({ compId }: { compId: string }) {
   const specNavBase = `${basePath}/services/${activeSpecId}`;
   const editorNavItems = [
     { to: specNavBase, label: 'Metadata', icon: Settings, end: true },
-    { to: `${specNavBase}/entities`, label: 'Entities', icon: Database },
-    { to: `${specNavBase}/relationships`, label: 'Relationships', icon: GitBranch },
-    { to: `${specNavBase}/navigation`, label: 'Navigation', icon: Navigation },
     { to: `${specNavBase}/pages`, label: 'Pages', icon: FileText },
+    { to: `${specNavBase}/entities`, label: 'Entities', icon: Database },
+    { to: `${specNavBase}/navigation`, label: 'Navigation', icon: Navigation },
+    { to: `${specNavBase}/relationships`, label: 'Relationships', icon: GitBranch },
+  ];
+  const progressItems = [
+    { label: 'Outcome', done: Boolean(spec.app?.name && spec.app?.display_name) },
+    { label: 'Pages', done: (spec.pages || []).length > 0 },
+    { label: 'Data Model', done: (spec.entities || []).length > 0 },
+    { label: 'Navigation', done: (spec.navigation?.items || []).length > 0 },
+    {
+      label: 'Relationships',
+      done: (spec.entities || []).some((entity) => (entity.relationships || []).length > 0),
+    },
   ];
 
   // Determine current editing context label
@@ -288,6 +298,21 @@ function CompositionEditorShell({ compId }: { compId: string }) {
                 </NavLink>
               ))}
             </nav>
+            {mode === 'guided' && (
+              <div className="mt-4 border-t border-surface-200 dark:border-zinc-800 pt-3">
+                <h4 className="text-xs font-semibold text-surface-400 dark:text-zinc-500 uppercase tracking-wider mb-2">
+                  Guided Flow
+                </h4>
+                <ul className="space-y-1.5">
+                  {progressItems.map((item) => (
+                    <li key={item.label} className="flex items-center gap-2 text-xs text-surface-600 dark:text-zinc-400">
+                      <CheckCircle className={`w-3.5 h-3.5 ${item.done ? 'text-success-500' : 'text-surface-300 dark:text-zinc-600'}`} />
+                      <span>{item.label}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
           </div>
         )}
 
@@ -345,16 +370,16 @@ function CompositionEditorShell({ compId }: { compId: string }) {
             )}
             <div className="inline-flex rounded-lg border border-surface-200 dark:border-zinc-700 overflow-hidden">
               <button
-                onClick={() => setMode('basic')}
-                className={`px-2.5 py-1 text-xs ${mode === 'basic' ? 'bg-brand-100 dark:bg-brand-950 text-brand-700 dark:text-brand-400' : 'text-surface-500 dark:text-zinc-400 hover:bg-surface-50 dark:hover:bg-zinc-800'}`}
+                onClick={() => setMode('guided')}
+                className={`px-2.5 py-1 text-xs ${mode === 'guided' ? 'bg-brand-100 dark:bg-brand-950 text-brand-700 dark:text-brand-400' : 'text-surface-500 dark:text-zinc-400 hover:bg-surface-50 dark:hover:bg-zinc-800'}`}
               >
-                Basic
+                Guided
               </button>
               <button
-                onClick={() => setMode('advanced')}
-                className={`px-2.5 py-1 text-xs border-l border-surface-200 dark:border-zinc-700 ${mode === 'advanced' ? 'bg-brand-100 dark:bg-brand-950 text-brand-700 dark:text-brand-400' : 'text-surface-500 dark:text-zinc-400 hover:bg-surface-50 dark:hover:bg-zinc-800'}`}
+                onClick={() => setMode('expert')}
+                className={`px-2.5 py-1 text-xs border-l border-surface-200 dark:border-zinc-700 ${mode === 'expert' ? 'bg-brand-100 dark:bg-brand-950 text-brand-700 dark:text-brand-400' : 'text-surface-500 dark:text-zinc-400 hover:bg-surface-50 dark:hover:bg-zinc-800'}`}
               >
-                Advanced
+                Expert
               </button>
             </div>
           </div>
